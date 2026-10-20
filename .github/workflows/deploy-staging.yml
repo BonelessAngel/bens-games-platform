@@ -1,0 +1,60 @@
+name: Staging bereitstellen
+
+# main geht automatisch nach staging.bens-games.de (siehe PLATTFORM-PLAN.md, Abschnitt 8).
+# Benötigte GitHub Secrets (nur für den eingeschränkten Staging-FTP-Benutzer):
+#   STAGING_FTP_SERVER, STAGING_FTP_USERNAME, STAGING_FTP_PASSWORD
+# Fehlen sie, wird gebaut und getestet, aber nichts hochgeladen.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    env:
+      HAS_FTP_SECRETS: ${{ secrets.STAGING_FTP_SERVER != '' && secrets.STAGING_FTP_USERNAME != '' && secrets.STAGING_FTP_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:staging
+
+      - name: Hochladen per FTPS
+        if: env.HAS_FTP_SECRETS == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.STAGING_FTP_SERVER }}
+          username: ${{ secrets.STAGING_FTP_USERNAME }}
+          password: ${{ secrets.STAGING_FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./dist/
+          # Der FTP-Benutzer ist im KAS auf /bens-games-staging/ beschränkt, sein Wurzelordner ist also das Ziel.
+          server-dir: ./
+          # Nur selbst hochgeladene Dateien werden ersetzt oder gelöscht.
+          # .htaccess/.htpasswd vom KAS-Verzeichnisschutz bleiben unangetastet.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.htaccess
+            **/.htpasswd
+
+      - name: Hinweis bei fehlenden Zugangsdaten
+        if: env.HAS_FTP_SECRETS != 'true'
+        run: echo "::notice::Staging-Zugangsdaten fehlen noch in den GitHub Secrets – Build erfolgreich, nichts hochgeladen."
