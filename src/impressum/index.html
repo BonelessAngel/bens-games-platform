@@ -27,24 +27,26 @@
     <h1>Impressum</h1>
 
     <!--
-      Alle Platzhalter in eckigen Klammern muss Ben vor der Veröffentlichung ersetzen.
-      Solange ein Platzhalter enthalten ist, bricht der Produktions-Build ab.
+      Name, Anschrift und E-Mail stehen nicht im Repo, sondern kommen beim Build aus den
+      GitHub-Variablen IMPRESSUM_NAME, IMPRESSUM_ADDRESS und IMPRESSUM_EMAIL (siehe lib/impressum.js).
+      Fehlt eine davon, bricht der Produktions-Build ab.
       Dies ist eine Vorlage, keine Rechtsberatung.
     -->
 
     <h2>Angaben gemäß § 5 DDG</h2>
     <p>
-      [AUSFÜLLEN: Vor- und Nachname]<br>
-      [AUSFÜLLEN: Straße und Hausnummer]<br>
-      [AUSFÜLLEN: PLZ und Ort]<br>
-      Deutschland
+      {{IMPRESSUM_NAME}}<br>
+      {{IMPRESSUM_ADDRESS}}
     </p>
 
     <h2>Kontakt</h2>
-    <p>E-Mail: [AUSFÜLLEN: E-Mail-Adresse für Anfragen]</p>
+    <p>E-Mail: {{IMPRESSUM_EMAIL}}</p>
 
     <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
-    <p>[AUSFÜLLEN: Vor- und Nachname, Anschrift wie oben]</p>
+    <p>
+      {{IMPRESSUM_NAME}}<br>
+      Anschrift wie oben
+    </p>
   </main>
 
   <footer class="site-footer">

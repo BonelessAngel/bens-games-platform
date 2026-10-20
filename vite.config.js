@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { renderLibrary, validateApps } from './lib/library.js';
 import { assertNoPlaceholders, environmentBanner, headTags, robotsTxt } from './lib/environment.js';
+import { fillImpressum } from './lib/impressum.js';
 
 const src = (path) => fileURLToPath(new URL(`./src/${path}`, import.meta.url));
 
@@ -17,13 +18,16 @@ function loadApps() {
 // damit die Seiten ohne JavaScript vollständig sind.
 function platform() {
   let mode;
+  let env;
   return {
     name: 'bens-games-platform',
     configResolved(config) {
       mode = config.mode;
+      // Liest IMPRESSUM_* aus der Umgebung (GitHub-Variablen) oder aus .env.local.
+      env = loadEnv(mode, fileURLToPath(new URL('.', import.meta.url)), 'IMPRESSUM_');
     },
     transformIndexHtml(html, ctx) {
-      const result = html
+      const result = fillImpressum(html, env)
         .replace('<!-- HEAD -->', headTags(mode))
         .replace('<!-- ENV_BANNER -->', environmentBanner(mode))
         .replace('<!-- LIBRARY -->', () => renderLibrary(loadApps()))
