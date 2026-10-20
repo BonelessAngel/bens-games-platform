@@ -43,8 +43,15 @@ final class Api
             'auth/verify' => ['POST', false, fn (): Response => $this->accounts()->verify($request->json(), $request)],
             'auth/resend-verification' => ['POST', false, fn (): Response => $this->accounts()->resendVerification($request->json(), $request)],
             'auth/login' => ['POST', false, fn (): Response => $this->accounts()->login($request->json(), $request)],
+            'auth/forgot-password' => ['POST', false, fn (): Response => $this->accounts()->forgotPassword($request->json(), $request)],
+            'auth/reset-password' => ['POST', false, fn (): Response => $this->accounts()->resetPassword($request->json(), $request)],
             'auth/logout' => ['POST', true, fn (array $session): Response => $this->accounts()->logout($session, $request)],
             'account/me' => ['GET', true, fn (array $session): Response => $this->accounts()->me($session)],
+            'account/password' => ['POST', true, fn (array $session): Response => $this->accounts()->changePassword($session, $request->json(), $request)],
+            'account/sessions' => ['GET', true, fn (array $session): Response => $this->accounts()->listSessions($session)],
+            'account/sessions/revoke' => ['POST', true, fn (array $session): Response => $this->accounts()->revokeSession($session, $request->json(), $request)],
+            'account/sessions/revoke-others' => ['POST', true, fn (array $session): Response => $this->accounts()->revokeOtherSessions($session, $request)],
+            'account/delete' => ['POST', true, fn (array $session): Response => $this->accounts()->deleteAccount($session, $request->json(), $request)],
         ];
 
         $route = $routes[$request->path] ?? null;
