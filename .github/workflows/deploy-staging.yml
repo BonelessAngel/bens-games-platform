@@ -33,6 +33,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build:staging
+        env:
+          IMPRESSUM_NAME: ${{ vars.IMPRESSUM_NAME }}
+          IMPRESSUM_ADDRESS: ${{ vars.IMPRESSUM_ADDRESS }}
+          IMPRESSUM_EMAIL: ${{ vars.IMPRESSUM_EMAIL }}
 
       - name: lftp installieren
         if: env.HAS_FTP_SECRETS == 'true'
