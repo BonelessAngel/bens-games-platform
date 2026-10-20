@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:staging": "vite build --mode staging",
+    "build": "vite build && node scripts/build-api.mjs",
+    "build:staging": "vite build --mode staging && node scripts/build-api.mjs",
     "preview": "vite preview",
     "test": "node --test",
     "import-game": "node scripts/import-game.mjs"

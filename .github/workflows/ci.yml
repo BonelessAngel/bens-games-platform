@@ -3,22 +3,58 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [main]
+    # Auch Arbeitsbranches, damit Fehler schon vor dem Pull Request auffallen.
+    branches: [main, 'claude/**', 'codex/**']
 
 permissions:
   contents: read
 
 jobs:
+  # Der Name "test" ist im Ruleset von main als Pflicht-Check eingetragen – nicht umbenennen.
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: bens_games_test
+          MARIADB_USER: test
+          MARIADB_PASSWORD: test
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_mysql
+          coverage: none
+
       - run: npm ci
       - run: npm test
+
+      - name: PHP-Syntax prüfen
+        run: find api -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: API-Tests mit Datenbank
+        env:
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: 3306
+          TEST_DB_NAME: bens_games_test
+          TEST_DB_USER: test
+          TEST_DB_PASSWORD: test
+        run: php api/tests/run.php
+
       - name: Staging-Build
         run: npm run build:staging
