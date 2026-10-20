@@ -8,6 +8,7 @@ require __DIR__ . '/src/bootstrap.php';
 use BensGames\Api;
 use BensGames\Config;
 use BensGames\Database;
+use BensGames\Request;
 
 $config = null;
 try {
@@ -22,8 +23,4 @@ $api = new Api(
     __DIR__ . '/migrations',
 );
 
-$path = (string) (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
-$path = (string) preg_replace('#^/api(?:/|$)#', '', $path);
-$headers = array_change_key_case(function_exists('getallheaders') ? (getallheaders() ?: []) : [], CASE_LOWER);
-
-$api->handle($_SERVER['REQUEST_METHOD'] ?? 'GET', $path, $headers)->send();
+$api->handle(Request::fromGlobals())->send();

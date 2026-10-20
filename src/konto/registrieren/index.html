@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Konto erstellen – Bens Games</title>
+  <meta name="color-scheme" content="dark light">
+  <!-- HEAD -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../styles/main.css">
+</head>
+<body>
+  <!-- ENV_BANNER -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="/">
+        <img class="brand__logo" src="/favicon.svg" alt="" width="28" height="28">
+        <span>Bens Games</span>
+      </a>
+      <nav aria-label="Hauptnavigation">
+        <a href="/">Bibliothek</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container auth" data-page="registrieren">
+    <h1>Konto erstellen</h1>
+    <p class="auth__lead">Ein Konto für alle Spiele und Apps von Bens Games.</p>
+
+    <p data-notice hidden></p>
+
+    <form class="form" novalidate>
+      <div class="field">
+        <label for="display_name">Name</label>
+        <input id="display_name" name="display_name" autocomplete="nickname" minlength="3" maxlength="24" required>
+        <p class="field__hint">So sehen dich andere, z. B. in Bestenlisten. 3 bis 24 Zeichen.</p>
+        <p class="field__error" data-error-for="display_name" hidden></p>
+      </div>
+      <div class="field">
+        <label for="email">E-Mail-Adresse</label>
+        <input id="email" name="email" type="email" autocomplete="email" required>
+        <p class="field__error" data-error-for="email" hidden></p>
+      </div>
+      <div class="field">
+        <label for="password">Passwort</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" minlength="10" required>
+        <p class="field__hint">Mindestens 10 Zeichen. Am besten ein Satz oder ein Passwort-Manager.</p>
+        <p class="field__error" data-error-for="password" hidden></p>
+      </div>
+      <p class="form__privacy">
+        Wir speichern deinen Namen, deine E-Mail-Adresse und vom Passwort nur einen nicht umkehrbaren Fingerabdruck (Hash).
+        Mehr dazu in der <a href="/datenschutz/">Datenschutzerklärung</a>.
+      </p>
+      <button class="button" type="submit">Konto erstellen</button>
+    </form>
+
+    <p class="auth__switch">Schon ein Konto? <a href="/konto/anmelden/">Anmelden</a></p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <span>© <!-- YEAR --> Bens Games</span>
+      <nav aria-label="Rechtliches">
+        <a href="/impressum/">Impressum</a>
+        <a href="/datenschutz/">Datenschutz</a>
+      </nav>
+    </div>
+  </footer>
+  <script type="module" src="../../scripts/account.js"></script>
+</body>
+</html>

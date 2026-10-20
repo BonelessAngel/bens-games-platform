@@ -18,6 +18,22 @@ final class Config
 {
     private const ENVIRONMENTS = ['staging', 'production', 'test'];
     private const MIN_SECRET_LENGTH = 32;
+    private const BASE_URLS = [
+        'staging' => 'https://staging.bens-games.de',
+        'production' => 'https://bens-games.de',
+        'test' => 'http://localhost',
+    ];
+
+    /**
+     * Eigene Adresse für Links in E-Mails und für die Herkunftsprüfung.
+     * Bewusst aus der Konfiguration und nie aus dem Host-Header der Anfrage.
+     * @param array<string, mixed> $config
+     */
+    public static function baseUrl(array $config): string
+    {
+        $url = $config['base_url'] ?? self::BASE_URLS[$config['environment'] ?? ''] ?? '';
+        return rtrim((string) $url, '/');
+    }
 
     public static function defaultPath(string $apiDir): string
     {
@@ -63,6 +79,13 @@ final class Config
             if (!is_string($value) || strlen($value) < self::MIN_SECRET_LENGTH || str_contains($value, 'HIER_')) {
                 throw new RuntimeException("$key muss mindestens " . self::MIN_SECRET_LENGTH . ' Zeichen lang und ausgefüllt sein.');
             }
+        }
+
+        if (isset($config['base_url']) && !preg_match('#^https?://[a-z0-9.-]+(:\d+)?$#', (string) $config['base_url'])) {
+            throw new RuntimeException('base_url muss eine Adresse wie https://bens-games.de sein (ohne Pfad).');
+        }
+        if (isset($config['mail']['from']) && !filter_var($config['mail']['from'], FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('mail.from ist keine gültige E-Mail-Adresse.');
         }
 
         return $config;

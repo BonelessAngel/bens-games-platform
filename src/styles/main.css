@@ -42,6 +42,11 @@ html {
   scroll-behavior: smooth;
 }
 
+/* hidden muss auch gegen display-Regeln (Formulare, Knöpfe) gewinnen */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -315,6 +320,148 @@ a.card:focus-visible .card__cta {
 
 .prose p {
   color: var(--text-muted);
+}
+
+/* Kontoseiten und Formulare */
+.auth {
+  max-width: 480px;
+  padding-top: 48px;
+  padding-bottom: 64px;
+}
+
+.auth h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+.auth__lead {
+  margin: 0 0 24px;
+  color: var(--text-muted);
+}
+
+.auth__switch {
+  margin-top: 24px;
+  color: var(--text-muted);
+}
+
+.auth__switch a,
+.form__privacy a {
+  color: var(--accent);
+}
+
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+}
+
+.field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--badge-maintenance);
+}
+
+.field__hint,
+.field__error,
+.form__privacy {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.field__error {
+  color: var(--badge-maintenance);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.button:hover {
+  filter: brightness(1.1);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.button--secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.notice {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.notice--error {
+  border-color: color-mix(in srgb, var(--badge-maintenance) 60%, var(--border));
+}
+
+.notice--success {
+  border-color: color-mix(in srgb, var(--accent-2) 60%, var(--border));
+}
+
+[data-resend] {
+  margin: -8px 0 20px;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 0 0 24px;
+}
+
+.details dt {
+  color: var(--text-muted);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 /* Fußzeile */

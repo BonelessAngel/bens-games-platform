@@ -18,9 +18,10 @@ test('keine echte Konfiguration im Repo', () => {
 
 test('alle API-Klassen sind im Repo (nicht versehentlich ignoriert)', async () => {
   const { execFileSync } = await import('node:child_process');
-  const tracked = execFileSync('git', ['ls-files', 'api/src'], { encoding: 'utf8' });
-  for (const file of ['Api.php', 'Config.php', 'Database.php', 'Migrator.php', 'Response.php', 'bootstrap.php']) {
-    assert.match(tracked, new RegExp(`api/src/${file.replace('.', '\\.')}`), `${file} fehlt in Git`);
+  const { readdirSync } = await import('node:fs');
+  const tracked = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'api/src'], { encoding: 'utf8' });
+  for (const file of readdirSync(new URL('../api/src/', import.meta.url))) {
+    assert.ok(tracked.includes(`api/src/${file}`), `${file} würde von .gitignore ausgeschlossen`);
   }
 });
 
