@@ -21,7 +21,8 @@ function fail(message) {
 }
 
 const git = (repo, ...args) =>
-  execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  // Nur am Ende kürzen: Bei "git status --porcelain" gehört das führende Leerzeichen zum Format.
+  execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trimEnd();
 
 const [id, repo, tag] = process.argv.slice(2);
 if (!id || !repo || !tag) fail('Aufruf: npm run import-game -- <spiel-id> <pfad-zum-spiel-repo> <tag>');
