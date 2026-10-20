@@ -1,0 +1,20 @@
+# Abhängigkeiten und Build
+node_modules/
+dist/
+
+# Geheimnisse – niemals committen (öffentliches Repo!)
+.env
+.env.*
+!.env.example
+config.php
+**/config.php
+*.htpasswd
+.ftp-deploy-sync-state.json
+
+# Sicherungen
+*.bundle
+
+# System
+.DS_Store
+Thumbs.db
+*.log
