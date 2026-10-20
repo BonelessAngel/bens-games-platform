@@ -30,6 +30,7 @@ final class Api
         private string $migrationsDir,
         private ?Mailer $mailer = null,
         private Clock $clock = new Clock(),
+        private ?string $appsFile = null,
     ) {
     }
 
@@ -38,6 +39,7 @@ final class Api
         // [Methode, braucht Anmeldung, Handler]
         $routes = [
             'health' => ['GET', false, fn (): Response => $this->health()],
+            'apps' => ['GET', false, fn (): Response => $this->apps($request)],
             'admin/migrate' => ['POST', false, fn (): Response => $this->migrate($request)],
             'auth/register' => ['POST', false, fn (): Response => $this->accounts()->register($request->json(), $request)],
             'auth/verify' => ['POST', false, fn (): Response => $this->accounts()->verify($request->json(), $request)],
@@ -184,6 +186,23 @@ final class Api
         }
 
         $migrator = new Migrator($this->pdo(), $this->migrationsDir);
-        return new Response(200, ['applied' => $migrator->migrate(), 'schema' => $migrator->currentVersion()]);
+        $applied = $migrator->migrate();
+
+        // App-Verzeichnis aus apps.json abgleichen (wird beim Build nach api/data/ kopiert).
+        $synced = 0;
+        if ($this->appsFile !== null && is_file($this->appsFile)) {
+            $apps = json_decode((string) file_get_contents($this->appsFile), true, flags: JSON_THROW_ON_ERROR);
+            $synced = (new AppCatalog($this->pdo(), $this->clock))->sync($apps);
+        }
+
+        return new Response(200, ['applied' => $applied, 'schema' => $migrator->currentVersion(), 'apps_synced' => $synced]);
+    }
+
+    /** Für Gäste die öffentlichen Apps, für Angemeldete zusätzlich ihre freigegebenen. */
+    private function apps(Request $request): Response
+    {
+        $session = (new Sessions($this->pdo(), $this->clock))->current($request);
+        $apps = (new AppCatalog($this->pdo(), $this->clock))->visibleFor($session === null ? null : (int) $session['id']);
+        return new Response(200, ['apps' => $apps]);
     }
 }

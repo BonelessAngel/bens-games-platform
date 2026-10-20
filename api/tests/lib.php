@@ -127,6 +127,7 @@ final class TestApp
             migrationsDir(),
             $this->mailer,
             new Clock(fn (): int => $this->time),
+            __DIR__ . '/../../src/data/apps.json',
         );
         same(200, $this->api->handle(new Request('POST', 'admin/migrate', ['x-migration-token' => TEST_MIGRATION_TOKEN]))->status, 'Migration');
     }

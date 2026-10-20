@@ -21,6 +21,7 @@ $api = new Api(
     $config,
     $config === null ? null : static fn (): PDO => Database::connect($config['db']),
     __DIR__ . '/migrations',
+    appsFile: __DIR__ . '/data/apps.json',
 );
 
 $api->handle(Request::fromGlobals())->send();

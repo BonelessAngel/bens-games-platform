@@ -63,6 +63,13 @@ test('Bibliothek trennt Spiele und Apps und zeigt Hinweise', () => {
   assert.match(html, /badge--beta/);
 });
 
+test('vom Server gefilterte Listen werden nicht noch einmal gefiltert', () => {
+  const html = renderLibrary([app({ visibility: 'selected', status: 'beta' })], { filter: false });
+  assert.match(html, /href="\/games\/demo\/"/);
+  assert.match(html, /badge--beta/);
+  assert.doesNotMatch(renderLibrary([app({ visibility: 'selected' })]), /href="\/games\/demo\/"/);
+});
+
 test('leere Bereiche zeigen einen Hinweistext', () => {
   const html = renderLibrary([app()]);
   assert.match(html, /Hier erscheinen bald Apps\./);
