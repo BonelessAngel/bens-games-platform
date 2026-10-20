@@ -8,7 +8,7 @@ const app = (overrides = {}) => ({
   name: 'Demo',
   type: 'game',
   description: 'Ein Testspiel',
-  icon: '/icons/demo.svg',
+  icon: '/app-icons/demo.svg',
   status: 'public',
   visibility: 'all',
   version: '1.0.0',
@@ -37,6 +37,7 @@ test('ungültige Einträge werden erkannt', () => {
   assert.match(validateApps([app({ path: '/apps/demo/' })]).join(), /Pfad muss "\/games\/demo\/"/);
   assert.match(validateApps([app({ type: 'tool', path: '/games/demo/' })]).join(), /Pfad muss "\/apps\/demo\/"/);
   assert.match(validateApps([app({ icon: 'javascript:alert(1)' })]).join(), /Symbol/);
+  assert.match(validateApps([app({ icon: '/icons/demo.svg' })]).join(), /Symbol/);
   assert.match(validateApps([{ id: 'x' }]).join(), /Feld "name" fehlt/);
   assert.match(validateApps({}).join(), /Liste/);
 });
