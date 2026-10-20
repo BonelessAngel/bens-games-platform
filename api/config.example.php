@@ -26,6 +26,8 @@ return [
     //   $b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); -join ($b | ForEach-Object { $_.ToString('x2') })
     // migration_token muss zusätzlich als GitHub Secret STAGING_MIGRATION_TOKEN hinterlegt werden.
     'migration_token' => 'HIER_ZUFALLSWERT_1',
+    // Nur fürs tägliche Aufräumen (Produktion: GitHub Secret PRODUCTION_MAINTENANCE_TOKEN). Optional.
+    'maintenance_token' => 'HIER_ZUFALLSWERT_3',
     // app_secret bleibt nur hier (für Signaturen und Verschlüsselung, z. B. der Zwei-Faktor-Schlüssel).
     'app_secret' => 'HIER_ZUFALLSWERT_2',
 ];

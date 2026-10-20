@@ -1,0 +1,55 @@
+name: Täglich aufräumen
+
+# Löscht Daten nach den Fristen der Datenschutzerklärung (api/src/Cleanup.php), z. B. das Protokoll
+# nach 90 Tagen. Ersetzt einen Cronjob, den der ALL-INKL-Tarif nicht hat.
+#
+# Benötigte Repository-Secrets:
+#   Staging:    STAGING_MIGRATION_TOKEN, STAGING_HTTP_USER, STAGING_HTTP_PASSWORD (gibt es schon)
+#   Produktion: PRODUCTION_MAINTENANCE_TOKEN (gleich wie maintenance_token in /bens-games-live-config/config.php)
+# Der Wartungsschlüssel darf nur aufräumen, nicht migrieren – deshalb liegt er als Repository-Secret
+# und braucht keine Freigabe, während der Migrationsschlüssel im geschützten Environment "production" bleibt.
+#
+# Hinweis: GitHub pausiert zeitgesteuerte Workflows, wenn im Repo 60 Tage lang nichts passiert.
+# Dann unter Actions → „Täglich aufräumen“ wieder aktivieren.
+
+on:
+  schedule:
+    - cron: '17 3 * * *' # täglich 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Staging
+        env:
+          TOKEN: ${{ secrets.STAGING_MIGRATION_TOKEN }}
+          HTTP_USER: ${{ secrets.STAGING_HTTP_USER }}
+          HTTP_PASSWORD: ${{ secrets.STAGING_HTTP_PASSWORD }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$HTTP_USER" ]; then
+            echo "::notice::Staging-Schlüssel fehlen – übersprungen."
+            exit 0
+          fi
+          curl -fsS --user "$HTTP_USER:$HTTP_PASSWORD" -X POST -H "X-Maintenance-Token: $TOKEN" \
+            https://staging.bens-games.de/api/admin/cleanup
+          echo
+
+      - name: Produktion
+        env:
+          TOKEN: ${{ secrets.PRODUCTION_MAINTENANCE_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::PRODUCTION_MAINTENANCE_TOKEN fehlt – übersprungen."
+            exit 0
+          fi
+          curl -fsS -X POST -H "X-Maintenance-Token: $TOKEN" https://bens-games.de/api/admin/cleanup
+          echo

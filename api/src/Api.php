@@ -41,6 +41,7 @@ final class Api
             'health' => ['GET', false, fn (): Response => $this->health()],
             'apps' => ['GET', false, fn (): Response => $this->apps($request)],
             'admin/migrate' => ['POST', false, fn (): Response => $this->migrate($request)],
+            'admin/cleanup' => ['POST', false, fn (): Response => $this->cleanup($request)],
             'auth/register' => ['POST', false, fn (): Response => $this->accounts()->register($request->json(), $request)],
             'auth/verify' => ['POST', false, fn (): Response => $this->accounts()->verify($request->json(), $request)],
             'auth/resend-verification' => ['POST', false, fn (): Response => $this->accounts()->resendVerification($request->json(), $request)],
@@ -71,10 +72,12 @@ final class Api
         }
 
         try {
-            if ($request->path !== 'health' && $request->path !== 'admin/migrate' && $this->config === null) {
+            $internal = in_array($request->path, ['health', 'admin/migrate', 'admin/cleanup'], true);
+            if (!$internal && $this->config === null) {
                 throw new HttpError(503, 'unavailable');
             }
-            if ($method === 'POST' && $request->path !== 'admin/migrate') {
+            // Interne Aufrufe von GitHub Actions haben eigene Schlüssel statt Origin und CSRF.
+            if ($method === 'POST' && !$internal) {
                 $this->assertSameOrigin($request);
             }
             if (!$needsSession) {
@@ -196,6 +199,30 @@ final class Api
         }
 
         return new Response(200, ['applied' => $applied, 'schema' => $migrator->currentVersion(), 'apps_synced' => $synced]);
+    }
+
+    /**
+     * Tägliches Aufräumen. Akzeptiert maintenance_token (nur fürs Aufräumen, darf ohne Freigabe laufen)
+     * oder migration_token.
+     */
+    private function cleanup(Request $request): Response
+    {
+        if ($this->config === null || $this->connect === null) {
+            return new Response(503, ['error' => 'config']);
+        }
+        $given = $request->header('x-maintenance-token');
+        $allowed = array_filter([
+            (string) ($this->config['maintenance_token'] ?? ''),
+            (string) $this->config['migration_token'],
+        ], static fn (string $token): bool => strlen($token) >= 32);
+        $valid = false;
+        foreach ($allowed as $token) {
+            $valid = hash_equals($token, $given) || $valid;
+        }
+        if (!$valid) {
+            return new Response(403, ['error' => 'forbidden']);
+        }
+        return new Response(200, ['deleted' => (new Cleanup($this->pdo(), $this->clock))->run()]);
     }
 
     /** Für Gäste die öffentlichen Apps, für Angemeldete zusätzlich ihre freigegebenen. */
