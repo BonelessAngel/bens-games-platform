@@ -1,0 +1,2 @@
+# Übernommene Spiele byte-genau speichern, damit die Prüfsummen in VERSION.json überall stimmen.
+public/games/** -text
