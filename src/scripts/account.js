@@ -141,5 +141,39 @@ const pages = {
   },
 };
 
+// „Anzeigen“-Knopf neben jedem Passwortfeld.
+function addPasswordToggles() {
+  for (const input of document.querySelectorAll('input[type="password"]')) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'field__password';
+    input.replaceWith(wrapper);
+    wrapper.append(input);
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'field__toggle';
+    toggle.textContent = 'Anzeigen';
+    toggle.setAttribute('aria-controls', input.id);
+    toggle.setAttribute('aria-pressed', 'false');
+    toggle.addEventListener('click', () => {
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      toggle.textContent = visible ? 'Verbergen' : 'Anzeigen';
+      toggle.setAttribute('aria-pressed', String(visible));
+      input.focus();
+    });
+    wrapper.append(toggle);
+
+    // Vor dem Absenden wieder verbergen, damit der Browser es als Passwort speichert.
+    input.form?.addEventListener('submit', () => {
+      input.type = 'password';
+      toggle.textContent = 'Anzeigen';
+      toggle.setAttribute('aria-pressed', 'false');
+    });
+  }
+}
+
+addPasswordToggles();
+
 const root = document.querySelector('[data-page]');
 pages[root?.dataset.page]?.(root);
