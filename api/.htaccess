@@ -1,0 +1,13 @@
+# Alle Anfragen unter /api/ gehen an index.php. Keine andere Datei (src/, migrations/ …) ist direkt abrufbar.
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^index\.php$ - [L]
+  RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# Ohne mod_rewrite lieber gar nichts ausliefern als Quelltext oder SQL.
+<IfModule !mod_rewrite.c>
+  Require all denied
+</IfModule>

@@ -51,3 +51,17 @@ jobs:
           FTP_USERNAME: ${{ secrets.PRODUCTION_FTP_USERNAME }}
           LFTP_PASSWORD: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
         run: bash scripts/deploy-ftp.sh
+
+      # Erst aktiv, wenn die Produktions-Datenbank eingerichtet ist (Secret PRODUCTION_MIGRATION_TOKEN).
+      - name: Datenbank-Migrationen und Statusabfrage
+        env:
+          MIGRATION_TOKEN: ${{ secrets.PRODUCTION_MIGRATION_TOKEN }}
+        run: |
+          if [ -z "$MIGRATION_TOKEN" ]; then
+            echo "::notice::PRODUCTION_MIGRATION_TOKEN fehlt – Produktion noch ohne Datenbank, Migrationen übersprungen."
+            exit 0
+          fi
+          curl -fsS -X POST -H "X-Migration-Token: $MIGRATION_TOKEN" https://bens-games.de/api/admin/migrate
+          echo
+          curl -fsS https://bens-games.de/api/health
+          echo

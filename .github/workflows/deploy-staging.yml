@@ -24,6 +24,7 @@ jobs:
     environment: staging
     env:
       HAS_FTP_SECRETS: ${{ secrets.STAGING_FTP_SERVER != '' && secrets.STAGING_FTP_USERNAME != '' && secrets.STAGING_FTP_PASSWORD != '' }}
+      HAS_API_SECRETS: ${{ secrets.STAGING_MIGRATION_TOKEN != '' && secrets.STAGING_HTTP_USER != '' && secrets.STAGING_HTTP_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -60,6 +61,27 @@ jobs:
             exit 1
           fi
           echo "Verzeichnisschutz aktiv (401)."
+
+      # Datenbank-Migrationen über den geschützten API-Endpunkt (ohne SSH).
+      # Benötigt: STAGING_MIGRATION_TOKEN (gleich wie migration_token in der Server-config.php) sowie
+      # STAGING_HTTP_USER/STAGING_HTTP_PASSWORD (eigener Benutzer im KAS-Verzeichnisschutz nur für GitHub).
+      - name: Datenbank-Migrationen und Statusabfrage
+        if: env.HAS_FTP_SECRETS == 'true' && env.HAS_API_SECRETS == 'true'
+        env:
+          MIGRATION_TOKEN: ${{ secrets.STAGING_MIGRATION_TOKEN }}
+          HTTP_USER: ${{ secrets.STAGING_HTTP_USER }}
+          HTTP_PASSWORD: ${{ secrets.STAGING_HTTP_PASSWORD }}
+        run: |
+          curl -fsS --user "$HTTP_USER:$HTTP_PASSWORD" -X POST \
+            -H "X-Migration-Token: $MIGRATION_TOKEN" \
+            https://staging.bens-games.de/api/admin/migrate
+          echo
+          curl -fsS --user "$HTTP_USER:$HTTP_PASSWORD" https://staging.bens-games.de/api/health
+          echo
+
+      - name: Hinweis bei fehlenden API-Zugangsdaten
+        if: env.HAS_FTP_SECRETS == 'true' && env.HAS_API_SECRETS != 'true'
+        run: echo "::notice::STAGING_MIGRATION_TOKEN / STAGING_HTTP_USER / STAGING_HTTP_PASSWORD fehlen – Migrationen übersprungen."
 
       - name: Hinweis bei fehlenden Zugangsdaten
         if: env.HAS_FTP_SECRETS != 'true'
