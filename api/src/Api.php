@@ -43,7 +43,12 @@ final class Api
             'auth/verify' => ['POST', false, fn (): Response => $this->accounts()->verify($request->json(), $request)],
             'auth/resend-verification' => ['POST', false, fn (): Response => $this->accounts()->resendVerification($request->json(), $request)],
             'auth/login' => ['POST', false, fn (): Response => $this->accounts()->login($request->json(), $request)],
-            'auth/forgot-password' => ['POST', false, fn (): Response => $this->accounts()->forgotPassword($request->json(), $request)],
+            'auth/login/two-factor' => ['POST', false, fn (): Response => $this->accounts()->loginTwoFactor($request->json(), $request)],
+            'account/2fa/setup' => ['POST', true, fn (array $session): Response => $this->twoFactor()->setup($session, $request->json(), $request)],
+            'account/2fa/enable' => ['POST', true, fn (array $session): Response => $this->twoFactor()->enable($session, $request->json(), $request)],
+            'account/2fa/disable' => ['POST', true, fn (array $session): Response => $this->twoFactor()->disable($session, $request->json(), $request)],
+            'account/2fa/recovery-codes' => ['POST', true, fn (array $session): Response => $this->twoFactor()->regenerateRecoveryCodes($session, $request->json(), $request)],
+            'auth/forgot-password' =>['POST', false, fn (): Response => $this->accounts()->forgotPassword($request->json(), $request)],
             'auth/reset-password' => ['POST', false, fn (): Response => $this->accounts()->resetPassword($request->json(), $request)],
             'auth/logout' => ['POST', true, fn (array $session): Response => $this->accounts()->logout($session, $request)],
             'account/me' => ['GET', true, fn (array $session): Response => $this->accounts()->me($session)],
@@ -104,18 +109,40 @@ final class Api
     private function accounts(): Accounts
     {
         $pdo = $this->pdo();
-        $mailer = $this->mailer ?? new PhpMailer(
-            (string) ($this->config['mail']['from'] ?? 'noreply@bens-games.de'),
-            (string) ($this->config['mail']['from_name'] ?? 'Bens Games'),
-        );
         return new Accounts(
             $pdo,
             $this->clock,
-            $mailer,
+            $this->mailer(),
             new RateLimiter($pdo, $this->clock),
             new Sessions($pdo, $this->clock),
             new AuditLog($pdo, $this->clock),
             Config::baseUrl($this->config ?? []),
+            $this->twoFactor(),
+            new Reauth(new RateLimiter($pdo, $this->clock)),
+        );
+    }
+
+    private function twoFactor(): TwoFactor
+    {
+        $pdo = $this->pdo();
+        $appSecret = (string) ($this->config['app_secret'] ?? '');
+        return new TwoFactor(
+            $pdo,
+            $this->clock,
+            new SecretBox($appSecret, 'totp'),
+            $appSecret,
+            $this->mailer(),
+            new AuditLog($pdo, $this->clock),
+            new Sessions($pdo, $this->clock),
+            new Reauth(new RateLimiter($pdo, $this->clock)),
+        );
+    }
+
+    private function mailer(): Mailer
+    {
+        return $this->mailer ??= new PhpMailer(
+            (string) ($this->config['mail']['from'] ?? 'noreply@bens-games.de'),
+            (string) ($this->config['mail']['from_name'] ?? 'Bens Games'),
         );
     }
 

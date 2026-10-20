@@ -560,6 +560,64 @@ a.card:focus-visible .card__cta {
   font-size: 0.85rem;
 }
 
+.steps {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: var(--text-muted);
+}
+
+.qr {
+  width: 200px;
+  max-width: 100%;
+  margin: 0 0 12px;
+  padding: 8px;
+  border-radius: 12px;
+  background: #fff; /* QR-Codes brauchen hellen Hintergrund, auch im Dunkelmodus */
+}
+
+.qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.panel code,
+.codes {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+
+.panel code {
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
+.codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 12px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.codes li {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+[data-2fa="codes"] .button {
+  margin: 0 8px 8px 0;
+}
+
 .details {
   display: grid;
   grid-template-columns: max-content 1fr;
