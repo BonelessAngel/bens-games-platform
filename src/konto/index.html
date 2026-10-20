@@ -55,6 +55,67 @@
         </form>
       </section>
 
+      <section class="panel" aria-labelledby="titel-2fa">
+        <h2 id="titel-2fa">Zwei-Faktor-Anmeldung</h2>
+        <p data-notice="2fa" hidden></p>
+
+        <div data-2fa="off" hidden>
+          <p class="auth__lead">
+            Schützt dein Konto zusätzlich: Bei der Anmeldung brauchst du neben dem Passwort einen Code
+            aus einer Authenticator-App (z. B. Google Authenticator, Microsoft Authenticator, Aegis oder 2FAS).
+          </p>
+          <form class="form" data-form="2fa-setup" novalidate>
+            <div class="field">
+              <label for="setup_password">Passwort zur Bestätigung</label>
+              <input id="setup_password" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <button class="button" type="submit">Einrichten</button>
+          </form>
+        </div>
+
+        <div data-2fa="setup" hidden>
+          <ol class="steps">
+            <li>Öffne deine Authenticator-App und scanne diesen QR-Code.</li>
+            <li>Gib den 6-stelligen Code ein, den die App anzeigt.</li>
+          </ol>
+          <div class="qr" data-qr></div>
+          <p class="field__hint">Scannen nicht möglich? Diesen Schlüssel in der App eingeben: <code data-secret></code></p>
+          <form class="form" data-form="2fa-enable" novalidate>
+            <div class="field">
+              <label for="enable_code">Code aus der App</label>
+              <input id="enable_code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required>
+            </div>
+            <button class="button" type="submit">Einschalten</button>
+          </form>
+        </div>
+
+        <div data-2fa="codes" hidden>
+          <p><strong>Speichere diese Wiederherstellungscodes jetzt sicher ab</strong> – z. B. im Passwort-Manager oder ausgedruckt.
+            Jeder Code funktioniert einmal, falls du keinen Zugriff auf deine App hast. Sie werden nur jetzt angezeigt.</p>
+          <ul class="codes" data-codes></ul>
+          <button class="button button--secondary" type="button" data-copy-codes>Codes kopieren</button>
+          <button class="button" type="button" data-codes-done>Ich habe die Codes gespeichert</button>
+        </div>
+
+        <div data-2fa="on" hidden>
+          <p class="auth__lead">Die Zwei-Faktor-Anmeldung ist <strong>eingeschaltet</strong>. Übrige Wiederherstellungscodes: <span data-codes-left></span></p>
+          <form class="form" data-form="2fa-manage" novalidate>
+            <div class="field">
+              <label for="manage_password">Passwort</label>
+              <input id="manage_password" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <div class="field">
+              <label for="manage_code">Code aus der App (nur zum Ausschalten)</label>
+              <input id="manage_code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="11">
+            </div>
+            <div class="button-row">
+              <button class="button button--secondary" type="submit" data-action="recovery-codes">Neue Wiederherstellungscodes</button>
+              <button class="button button--danger" type="submit" data-action="disable">Ausschalten</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <section class="panel" aria-labelledby="titel-geraete">
         <h2 id="titel-geraete">Angemeldete Geräte</h2>
         <p class="auth__lead">Hier bist du gerade angemeldet. Kennst du ein Gerät nicht, melde es ab und ändere dein Passwort.</p>

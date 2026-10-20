@@ -47,6 +47,15 @@
       <button class="button" type="submit">Anmelden</button>
     </form>
 
+    <form class="form" data-form="two-factor" novalidate hidden>
+      <div class="field">
+        <label for="code">Code aus deiner Authenticator-App</label>
+        <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="11" required>
+        <p class="field__hint">Kein Zugriff auf die App? Gib stattdessen einen deiner Wiederherstellungscodes ein.</p>
+      </div>
+      <button class="button" type="submit">Bestätigen</button>
+    </form>
+
     <p class="auth__switch">Noch kein Konto? <a href="/konto/registrieren/">Konto erstellen</a></p>
   </main>
 

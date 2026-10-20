@@ -10,6 +10,11 @@ const MESSAGES = {
   unavailable: 'Konten sind gerade nicht verfügbar. Bitte versuche es später erneut.',
   validation: 'Bitte prüfe deine Eingaben.',
   wrong_password: 'Das Passwort ist nicht richtig.',
+  wrong_code: 'Der Code ist nicht richtig. Nimm den aktuellen Code aus der App – jeder Code gilt nur einmal.',
+  invalid_challenge: 'Die Anmeldung hat zu lange gedauert. Bitte gib E-Mail und Passwort noch einmal ein.',
+  already_enabled: 'Die Zwei-Faktor-Anmeldung ist bereits eingeschaltet.',
+  not_enabled: 'Die Zwei-Faktor-Anmeldung ist nicht eingeschaltet.',
+  setup_required: 'Bitte starte die Einrichtung noch einmal.',
 };
 const FALLBACK = 'Etwas ist schiefgelaufen. Bitte versuche es später erneut.';
 
@@ -114,18 +119,47 @@ const pages = {
 
   anmelden(root) {
     const form = root.querySelector('form');
+    const twoFactorForm = root.querySelector('[data-form="two-factor"]');
     const notice = root.querySelector('[data-notice]');
     const resend = root.querySelector('[data-resend]');
+    let challenge = '';
+
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       busy(form, async () => {
         const { ok, data } = await api('auth/login', { method: 'POST', body: formData(form) });
+        if (ok && data.status === 'two_factor_required') {
+          challenge = data.challenge;
+          form.hidden = true;
+          twoFactorForm.hidden = false;
+          notice.hidden = true;
+          twoFactorForm.elements.code.focus();
+          return;
+        }
         if (ok) {
           window.location.href = '/konto/';
           return;
         }
         show(notice, MESSAGES[data.error] ?? FALLBACK);
         resend.hidden = data.error !== 'email_not_verified';
+      });
+    });
+
+    twoFactorForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      busy(twoFactorForm, async () => {
+        const { ok, data } = await api('auth/login/two-factor', { method: 'POST', body: { challenge, code: twoFactorForm.elements.code.value } });
+        if (ok) {
+          window.location.href = '/konto/';
+          return;
+        }
+        if (data.error === 'invalid_challenge' || data.error === 'too_many_attempts') {
+          // Neu anfangen: zurück zu E-Mail und Passwort.
+          twoFactorForm.hidden = true;
+          twoFactorForm.reset();
+          form.hidden = false;
+        }
+        show(notice, MESSAGES[data.error] ?? FALLBACK);
       });
     });
     resend.addEventListener('click', async () => {
@@ -230,6 +264,8 @@ const pages = {
       });
     });
 
+    setupTwoFactor(root, data.user, csrf, () => loadSessions());
+
     // Geräte
     const list = root.querySelector('[data-sessions]');
     async function loadSessions() {
@@ -289,6 +325,92 @@ const pages = {
     });
   },
 };
+
+// Bereich „Zwei-Faktor-Anmeldung“ auf „Mein Konto“: aus → einrichten → Codes zeigen → an.
+function setupTwoFactor(root, user, csrf, onDevicesChanged) {
+  const notice = root.querySelector('[data-notice="2fa"]');
+  const states = Object.fromEntries([...root.querySelectorAll('[data-2fa]')].map((el) => [el.dataset['2fa'], el]));
+  const showState = (name) => {
+    for (const [key, element] of Object.entries(states)) element.hidden = key !== name;
+  };
+  showState(user.two_factor ? 'on' : 'off');
+  root.querySelector('[data-codes-left]').textContent = String(user.recovery_codes_left ?? 0);
+
+  const showCodes = (codes) => {
+    const list = root.querySelector('[data-codes]');
+    list.replaceChildren(...codes.map((code) => Object.assign(document.createElement('li'), { textContent: code })));
+    root.querySelector('[data-codes-left]').textContent = String(codes.length);
+    showState('codes');
+    root.querySelector('[data-copy-codes]').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(codes.join('\n'));
+        show(notice, 'Codes in die Zwischenablage kopiert.', 'success');
+      } catch {
+        show(notice, 'Kopieren hat nicht geklappt – bitte die Codes abschreiben oder markieren und kopieren.');
+      }
+    };
+  };
+  root.querySelector('[data-codes-done]').addEventListener('click', () => {
+    notice.hidden = true;
+    showState('on');
+  });
+
+  const setupForm = root.querySelector('[data-form="2fa-setup"]');
+  setupForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    busy(setupForm, async () => {
+      const { ok, data } = await api('account/2fa/setup', { method: 'POST', body: formData(setupForm), csrf });
+      if (!ok) {
+        show(notice, MESSAGES[data.error] ?? FALLBACK);
+        return;
+      }
+      setupForm.reset();
+      notice.hidden = true;
+      const { default: QRCode } = await import('qrcode');
+      root.querySelector('[data-qr]').innerHTML = await QRCode.toString(data.uri, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
+      root.querySelector('[data-secret]').textContent = data.secret.match(/.{1,4}/g).join(' ');
+      showState('setup');
+    });
+  });
+
+  const enableForm = root.querySelector('[data-form="2fa-enable"]');
+  enableForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    busy(enableForm, async () => {
+      const { ok, data } = await api('account/2fa/enable', { method: 'POST', body: formData(enableForm), csrf });
+      if (!ok) {
+        show(notice, MESSAGES[data.error] ?? FALLBACK);
+        return;
+      }
+      enableForm.reset();
+      show(notice, 'Die Zwei-Faktor-Anmeldung ist eingeschaltet. Andere Geräte wurden abgemeldet.', 'success');
+      showCodes(data.recovery_codes);
+      onDevicesChanged();
+    });
+  });
+
+  const manageForm = root.querySelector('[data-form="2fa-manage"]');
+  manageForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const action = event.submitter?.dataset.action ?? 'recovery-codes';
+    busy(manageForm, async () => {
+      const path = action === 'disable' ? 'account/2fa/disable' : 'account/2fa/recovery-codes';
+      const { ok, data } = await api(path, { method: 'POST', body: formData(manageForm), csrf });
+      if (!ok) {
+        show(notice, MESSAGES[data.error] ?? FALLBACK);
+        return;
+      }
+      manageForm.reset();
+      if (action === 'disable') {
+        show(notice, 'Die Zwei-Faktor-Anmeldung ist ausgeschaltet.', 'success');
+        showState('off');
+      } else {
+        show(notice, 'Neue Wiederherstellungscodes erstellt. Die alten gelten nicht mehr.', 'success');
+        showCodes(data.recovery_codes);
+      }
+    });
+  });
+}
 
 // „Anzeigen“-Knopf neben jedem Passwortfeld.
 function addPasswordToggles() {

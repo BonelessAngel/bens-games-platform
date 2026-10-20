@@ -21,6 +21,7 @@ final class Accounts
 {
     public const VERIFY_LIFETIME = 86400; // Bestätigungslink: 24 Stunden
     public const RESET_LIFETIME = 3600;   // Link zum Zurücksetzen: 1 Stunde
+    public const CHALLENGE_LIFETIME = 300; // Zeit für den zweiten Faktor nach dem Passwort: 5 Minuten
     private const PASSWORD_MIN = 10;
     private const PASSWORD_MAX = 200;
 
@@ -32,6 +33,8 @@ final class Accounts
         private Sessions $sessions,
         private AuditLog $audit,
         private string $baseUrl,
+        private TwoFactor $twoFactor,
+        private Reauth $reauth,
     ) {
     }
 
@@ -159,13 +162,57 @@ final class Accounts
         if (Security::needsRehash($user['password_hash'])) {
             $this->pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([Security::hashPassword($password), $userId]);
         }
-        $this->pdo->prepare('UPDATE users SET last_login_at = ? WHERE id = ?')->execute([$this->clock->datetime(), $userId]);
         $this->limiter->clear('login:email', $normalized);
 
-        $session = $this->sessions->create($userId, $request, $remember);
-        $this->audit->log('user.login', $request, actorUserId: $userId, targetType: 'user', targetId: (string) $userId, details: ['remember' => $remember]);
+        // Mit Zwei-Faktor-Anmeldung gibt es erst nach dem Code aus der App eine Sitzung.
+        if (TwoFactor::enabled($user)) {
+            $challenge = Security::randomToken();
+            $this->pdo->prepare(
+                'INSERT INTO login_challenges (user_id, token_hash, remember, created_at, expires_at) VALUES (?, ?, ?, ?, ?)'
+            )->execute([$userId, Security::hashToken($challenge), $remember ? 1 : 0, $this->clock->datetime(), $this->clock->datetime(self::CHALLENGE_LIFETIME)]);
+            return new Response(200, ['status' => 'two_factor_required', 'challenge' => $challenge]);
+        }
 
-        return (new Response(200, ['user' => self::publicUser($user), 'csrf' => $session['csrf']]))
+        return $this->startSession($user, $request, $remember, twoFactor: false);
+    }
+
+    /** Zweiter Schritt der Anmeldung: Code aus der App oder Wiederherstellungscode. @param array<string, mixed> $input */
+    public function loginTwoFactor(array $input, Request $request): Response
+    {
+        $challenge = (string) ($input['challenge'] ?? '');
+        if (!preg_match('/^[0-9a-f]{64}$/', $challenge)) {
+            throw new HttpError(400, 'invalid_challenge');
+        }
+        $statement = $this->pdo->prepare(
+            "SELECT c.id AS challenge_id, c.remember, u.* FROM login_challenges c JOIN users u ON u.id = c.user_id
+             WHERE c.token_hash = ? AND c.used_at IS NULL AND c.expires_at > ? AND u.status = 'active'"
+        );
+        $statement->execute([Security::hashToken($challenge), $this->clock->datetime()]);
+        $row = $statement->fetch();
+        if (!$row) {
+            throw new HttpError(400, 'invalid_challenge');
+        }
+
+        $this->limit('2fa:challenge', $challenge, 5, self::CHALLENGE_LIFETIME);
+        $this->limit('2fa:user', (string) $row['id'], 10, 900);
+        if (!$this->twoFactor->verify($row, (string) ($input['code'] ?? ''))) {
+            $this->audit->log('user.2fa_failed', $request, targetType: 'user', targetId: (string) $row['id']);
+            throw new HttpError(403, 'wrong_code');
+        }
+
+        $this->pdo->prepare('UPDATE login_challenges SET used_at = ? WHERE id = ?')->execute([$this->clock->datetime(), $row['challenge_id']]);
+        return $this->startSession($row, $request, (bool) $row['remember'], twoFactor: true);
+    }
+
+    /** @param array<string, mixed> $user */
+    private function startSession(array $user, Request $request, bool $remember, bool $twoFactor): Response
+    {
+        $userId = (int) $user['id'];
+        $this->pdo->prepare('UPDATE users SET last_login_at = ? WHERE id = ?')->execute([$this->clock->datetime(), $userId]);
+        $session = $this->sessions->create($userId, $request, $remember);
+        $this->audit->log('user.login', $request, actorUserId: $userId, targetType: 'user', targetId: (string) $userId, details: ['remember' => $remember, 'two_factor' => $twoFactor]);
+
+        return (new Response(200, ['status' => 'logged_in', 'user' => self::publicUser($user), 'csrf' => $session['csrf']]))
             ->withCookie(Sessions::COOKIE, $session['token'], $session['expires']);
     }
 
@@ -180,7 +227,11 @@ final class Accounts
     /** @param array<string, mixed> $session */
     public function me(array $session): Response
     {
-        return new Response(200, ['user' => self::publicUser($session), 'csrf' => $session['csrf_token']]);
+        $user = self::publicUser($session);
+        if ($user['two_factor']) {
+            $user['recovery_codes_left'] = $this->twoFactor->remainingRecoveryCodes($session);
+        }
+        return new Response(200, ['user' => $user, 'csrf' => $session['csrf_token']]);
     }
 
     // --- Passwort vergessen und ändern --------------------------------------
@@ -234,7 +285,7 @@ final class Accounts
      */
     public function changePassword(array $session, array $input, Request $request): Response
     {
-        $this->assertPassword($session, (string) ($input['current_password'] ?? ''));
+        $this->reauth->assertPassword($session, (string) ($input['current_password'] ?? ''));
         $password = (string) ($input['new_password'] ?? '');
         if (($error = self::passwordError($password)) !== null) {
             throw new HttpError(422, 'validation', ['fields' => ['new_password' => $error]]);
@@ -297,7 +348,7 @@ final class Accounts
      */
     public function deleteAccount(array $session, array $input, Request $request): Response
     {
-        $this->assertPassword($session, (string) ($input['password'] ?? ''));
+        $this->reauth->assertPassword($session, (string) ($input['password'] ?? ''));
         if (($input['confirm'] ?? false) !== true) {
             throw new HttpError(422, 'validation', ['fields' => ['confirm' => 'Bitte bestätige, dass du dein Konto löschen möchtest.']]);
         }
@@ -330,6 +381,7 @@ final class Accounts
             'email' => $user['email'],
             'display_name' => $user['display_name'],
             'email_verified' => $user['email_verified_at'] !== null,
+            'two_factor' => TwoFactor::enabled($user),
         ];
     }
 
@@ -355,15 +407,6 @@ final class Accounts
     {
         if (!$this->limiter->hit($kind, $value, $limit, $windowSeconds)) {
             throw new HttpError(429, 'too_many_attempts');
-        }
-    }
-
-    /** Prüft das Passwort für heikle Aktionen, mit Begrenzung der Fehlversuche. @param array<string, mixed> $session */
-    private function assertPassword(array $session, string $password): void
-    {
-        $this->limit('password:user', (string) $session['id'], 10, 900);
-        if (!password_verify($password, (string) $session['password_hash'])) {
-            throw new HttpError(403, 'wrong_password');
         }
     }
 
