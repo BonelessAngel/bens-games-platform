@@ -8,6 +8,8 @@ dist/
 !.env.example
 config.php
 **/config.php
+# Ausnahme: Programmcode der Klasse Config (Windows ignoriert sonst wegen Groß-/Kleinschreibung auch diese Datei)
+!api/src/Config.php
 *.htpasswd
 .ftp-deploy-sync-state.json
 
