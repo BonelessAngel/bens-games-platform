@@ -1,0 +1,53 @@
+name: Produktion veröffentlichen
+
+# Nur manuell und nur nach Bens ausdrücklichem „veröffentlichen“ (PLATTFORM-PLAN.md, Abschnitt 2 und 8).
+# Zusätzlich gesperrt durch das GitHub-Environment "production" mit Ben als erforderlichem Prüfer.
+# Benötigte Environment-Secrets (nur für den auf /bens-games-live/ beschränkten FTP-Benutzer):
+#   PRODUCTION_FTP_SERVER, PRODUCTION_FTP_USERNAME, PRODUCTION_FTP_PASSWORD
+
+on:
+  workflow_dispatch:
+    inputs:
+      bestaetigung:
+        description: 'Zum Veröffentlichen genau "veröffentlichen" eintippen'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && inputs.bestaetigung == 'veröffentlichen'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+      # Bricht ab, solange Impressum-Angaben fehlen.
+      - run: npm run build
+        env:
+          IMPRESSUM_NAME: ${{ vars.IMPRESSUM_NAME }}
+          IMPRESSUM_ADDRESS: ${{ vars.IMPRESSUM_ADDRESS }}
+          IMPRESSUM_EMAIL: ${{ vars.IMPRESSUM_EMAIL }}
+
+      - name: lftp installieren
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Hochladen per FTPS
+        env:
+          FTP_SERVER: ${{ secrets.PRODUCTION_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.PRODUCTION_FTP_USERNAME }}
+          LFTP_PASSWORD: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
+        run: bash scripts/deploy-ftp.sh

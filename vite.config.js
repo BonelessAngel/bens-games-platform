@@ -52,6 +52,7 @@ export default defineConfig({
       input: {
         main: src('index.html'),
         impressum: src('impressum/index.html'),
+        datenschutz: src('datenschutz/index.html'),
       },
     },
   },

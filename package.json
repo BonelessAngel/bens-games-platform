@@ -7,7 +7,8 @@
     "build": "vite build",
     "build:staging": "vite build --mode staging",
     "preview": "vite preview",
-    "test": "node --test"
+    "test": "node --test",
+    "import-game": "node scripts/import-game.mjs"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
