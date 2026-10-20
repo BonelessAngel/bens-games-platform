@@ -25,8 +25,8 @@ jobs:
     env:
       HAS_FTP_SECRETS: ${{ secrets.STAGING_FTP_SERVER != '' && secrets.STAGING_FTP_USERNAME != '' && secrets.STAGING_FTP_PASSWORD != '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -34,26 +34,30 @@ jobs:
       - run: npm test
       - run: npm run build:staging
 
+      - name: lftp installieren
+        if: env.HAS_FTP_SECRETS == 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      # Der FTP-Benutzer ist im KAS auf /bens-games-staging/ beschränkt, sein Wurzelordner ist also das Ziel.
+      # Versteckte Dateien (.htaccess/.htpasswd vom KAS-Verzeichnisschutz) werden weder hochgeladen noch gelöscht.
       - name: Hochladen per FTPS
         if: env.HAS_FTP_SECRETS == 'true'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.STAGING_FTP_SERVER }}
-          username: ${{ secrets.STAGING_FTP_USERNAME }}
-          password: ${{ secrets.STAGING_FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./dist/
-          # Der FTP-Benutzer ist im KAS auf /bens-games-staging/ beschränkt, sein Wurzelordner ist also das Ziel.
-          server-dir: ./
-          # Nur selbst hochgeladene Dateien werden ersetzt oder gelöscht.
-          # .htaccess/.htpasswd vom KAS-Verzeichnisschutz bleiben unangetastet.
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/.htaccess
-            **/.htpasswd
+        env:
+          FTP_SERVER: ${{ secrets.STAGING_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.STAGING_FTP_USERNAME }}
+          LFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
+        run: |
+          lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" -e "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-protect-list true;
+            set ssl:verify-certificate true;
+            set ftp:passive-mode true;
+            set net:timeout 30;
+            set net:max-retries 3;
+            mirror --reverse --delete --verbose --exclude-glob '.*' dist/ ./;
+            bye
+          "
 
       - name: Hinweis bei fehlenden Zugangsdaten
         if: env.HAS_FTP_SECRETS != 'true'
