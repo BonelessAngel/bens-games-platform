@@ -36,8 +36,20 @@ final class Api
 
     public function handle(Request $request): Response
     {
+        // Pfade mit Spiel-ID, z. B. games/nova-bastion/save → games/{id}/save
+        $path = $request->path;
+        $gameId = '';
+        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?)$#', $path, $match)) {
+            $gameId = $match[1];
+            $path = 'games/{id}/' . $match[2];
+        }
+
         // [Methode, braucht Anmeldung, Handler]
         $routes = [
+            'games/{id}/save' => ['GET', true, fn (array $session): Response => $this->gameSaves()->get($session, $gameId)],
+            'games/{id}/save/put' => ['POST', true, fn (array $session): Response => $this->gameSaves()->put($session, $gameId, $request->json())],
+            'games/{id}/save/delete' => ['POST', true, fn (array $session): Response => $this->gameSaves()->delete($session, $gameId, $request)],
+            'account/games' => ['GET', true, fn (array $session): Response => $this->gameSaves()->overview($session)],
             'health' => ['GET', false, fn (): Response => $this->health()],
             'apps' => ['GET', false, fn (): Response => $this->apps($request)],
             'admin/migrate' => ['POST', false, fn (): Response => $this->migrate($request)],
@@ -62,7 +74,7 @@ final class Api
             'account/delete' => ['POST', true, fn (array $session): Response => $this->accounts()->deleteAccount($session, $request->json(), $request)],
         ];
 
-        $route = $routes[$request->path] ?? null;
+        $route = $routes[$path] ?? null;
         if ($route === null) {
             return new Response(404, ['error' => 'not_found']);
         }
@@ -125,6 +137,12 @@ final class Api
             $this->twoFactor(),
             new Reauth(new RateLimiter($pdo, $this->clock)),
         );
+    }
+
+    private function gameSaves(): GameSaves
+    {
+        $pdo = $this->pdo();
+        return new GameSaves($pdo, $this->clock, new RateLimiter($pdo, $this->clock), new AuditLog($pdo, $this->clock));
     }
 
     private function twoFactor(): TwoFactor

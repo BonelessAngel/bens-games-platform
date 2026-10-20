@@ -1,5 +1,6 @@
 // Kontoseiten: Registrieren, Anmelden, E-Mail bestätigen, Mein Konto.
 // Spricht mit der API unter /api/ auf derselben Adresse; das Sitzungs-Cookie setzt und liest nur der Server.
+import { safeReturnPath } from '../../lib/return-path.js';
 
 const MESSAGES = {
   invalid_credentials: 'E-Mail oder Passwort ist falsch.',
@@ -137,7 +138,7 @@ const pages = {
           return;
         }
         if (ok) {
-          window.location.href = '/konto/';
+          window.location.href = safeReturnPath(window.location.search);
           return;
         }
         show(notice, MESSAGES[data.error] ?? FALLBACK);
@@ -150,7 +151,7 @@ const pages = {
       busy(twoFactorForm, async () => {
         const { ok, data } = await api('auth/login/two-factor', { method: 'POST', body: { challenge, code: twoFactorForm.elements.code.value } });
         if (ok) {
-          window.location.href = '/konto/';
+          window.location.href = safeReturnPath(window.location.search);
           return;
         }
         if (data.error === 'invalid_challenge' || data.error === 'too_many_attempts') {
@@ -265,6 +266,7 @@ const pages = {
     });
 
     setupTwoFactor(root, data.user, csrf, () => loadSessions());
+    loadGames(root, csrf);
 
     // Geräte
     const list = root.querySelector('[data-sessions]');
@@ -325,6 +327,43 @@ const pages = {
     });
   },
 };
+
+// Bereich „Spielstände“ auf „Mein Konto“: gesicherte Spiele mit Erfolgen, einzeln löschbar.
+async function loadGames(root, csrf) {
+  const list = root.querySelector('[data-games]');
+  const empty = root.querySelector('[data-games-empty]');
+  const { ok, data } = await api('account/games');
+  const games = ok ? data.games ?? [] : [];
+  list.replaceChildren();
+  empty.hidden = games.length > 0;
+
+  for (const game of games) {
+    const item = document.createElement('li');
+    item.className = 'sessions__item';
+    const text = document.createElement('div');
+    const title = document.createElement('strong');
+    const link = Object.assign(document.createElement('a'), { href: game.path, textContent: game.name });
+    title.append(link);
+    const meta = document.createElement('span');
+    const achievements = game.achievements === 1 ? '1 Erfolg' : `${game.achievements} Erfolge`;
+    meta.textContent = `Gesichert: ${formatDate(game.updated_at)} · ${achievements}`;
+    text.append(title, meta);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button button--secondary button--small';
+    button.textContent = 'Löschen';
+    button.addEventListener('click', async () => {
+      if (!window.confirm(`Spielstand und Erfolge von ${game.name} im Konto löschen? Der Stand auf deinen Geräten bleibt erhalten.`)) return;
+      button.disabled = true;
+      await api(`games/${encodeURIComponent(game.id)}/save/delete`, { method: 'POST', body: {}, csrf });
+      loadGames(root, csrf);
+    });
+
+    item.append(text, button);
+    list.append(item);
+  }
+}
 
 // Bereich „Zwei-Faktor-Anmeldung“ auf „Mein Konto“: aus → einrichten → Codes zeigen → an.
 function setupTwoFactor(root, user, csrf, onDevicesChanged) {
