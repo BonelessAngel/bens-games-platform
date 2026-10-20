@@ -14,6 +14,14 @@ use BensGames\Migrator;
 $tests = [];
 $failures = 0;
 
+// Abbrüche außerhalb einzelner Tests ebenfalls in GitHub sichtbar machen.
+register_shutdown_function(static function (): void {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true) && getenv('GITHUB_ACTIONS')) {
+        echo '::error title=PHP-Abbruch::' . str_replace(["\r", "\n"], ' ', "{$error['message']} ({$error['file']}:{$error['line']})") . "\n";
+    }
+});
+
 function test(string $name, callable $fn): void
 {
     $GLOBALS['tests'][] = [$name, $fn];
@@ -183,6 +191,11 @@ foreach ($tests as [$name, $fn]) {
     } catch (Throwable $e) {
         $failures++;
         echo "✖ $name\n  " . $e->getMessage() . "\n";
+        // In GitHub Actions zusätzlich als sichtbarer Hinweis am Lauf.
+        if (getenv('GITHUB_ACTIONS')) {
+            $where = basename($e->getFile()) . ':' . $e->getLine();
+            echo '::error title=API-Test::' . str_replace(["\r", "\n"], ' ', "$name – {$e->getMessage()} ($where)") . "\n";
+        }
     }
 }
 
