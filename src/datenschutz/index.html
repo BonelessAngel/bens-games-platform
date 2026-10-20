@@ -26,7 +26,9 @@
 
   <main class="container prose">
     <!--
-      Kurzfassung für die Plattform ohne Benutzerkonten (Phase 2). Mit den Konten in Phase 3 wird sie erweitert.
+      Fassung mit Benutzerkonten (Phase 3.6). Bei jeder neuen Funktion, die Daten verarbeitet
+      (z. B. Statistik in Phase 5), muss dieser Text mitwachsen.
+      Fristen stehen auch in api/src/Cleanup.php und müssen übereinstimmen.
       Vorlage, keine Rechtsberatung. Name, Anschrift und E-Mail kommen aus denselben Variablen wie das Impressum.
     -->
     <h1>Datenschutzerklärung</h1>
@@ -41,8 +43,9 @@
 
     <h2>2. Kurz gesagt</h2>
     <p>
-      Bens Games verwendet keine Cookies, kein Tracking, keine Werbung und keine Analysedienste wie Google Analytics.
-      Es gibt derzeit keine Benutzerkonten. Alle Inhalte werden vom eigenen Webspace geladen, ohne Dienste Dritter.
+      Bens Games verwendet kein Tracking, keine Werbung und keine Analysedienste wie Google Analytics.
+      Alle Inhalte werden vom eigenen Webspace geladen, ohne Dienste Dritter. Ein Cookie gibt es nur, wenn du dich
+      mit einem Konto anmeldest. Spielen kannst du auch ganz ohne Konto.
     </p>
 
     <h2>3. Hosting und Server-Logdateien</h2>
@@ -66,13 +69,73 @@
       (Rechtsgrundlage: § 25 Abs. 2 Nr. 2 TDDDG, da für den von dir gewünschten Dienst unbedingt erforderlich).
     </p>
 
-    <h2>5. Kontakt per E-Mail</h2>
+    <h2>5. Benutzerkonto</h2>
+    <p>
+      Ein Konto ist freiwillig. Wenn du eines anlegst, speichern wir:
+    </p>
+    <ul>
+      <li>deinen Namen (für andere sichtbar, z. B. später in Bestenlisten) und deine E-Mail-Adresse,</li>
+      <li>dein Passwort nur als nicht umkehrbaren Fingerabdruck (Hash) – niemand kann es lesen, auch wir nicht,</li>
+      <li>wann du dich registriert, deine E-Mail-Adresse bestätigt und zuletzt angemeldet hast,</li>
+      <li>falls du die Zwei-Faktor-Anmeldung einschaltest: den Schlüssel deiner Authenticator-App verschlüsselt
+        und deine Wiederherstellungscodes nur als Fingerabdruck,</li>
+      <li>falls dir einzelne Apps freigegeben wurden: diese Freigaben.</li>
+    </ul>
+    <p>
+      Rechtsgrundlage ist die Bereitstellung deines Kontos, also die Erfüllung des Nutzungsverhältnisses
+      (Art. 6 Abs. 1 lit. b DSGVO). Die Daten bleiben gespeichert, bis du dein Konto löschst.
+      Konten, deren E-Mail-Adresse nie bestätigt wurde, löschen wir automatisch nach 7 Tagen.
+    </p>
+
+    <h2>6. E-Mails</h2>
+    <p>
+      Wir schicken dir nur E-Mails, die für dein Konto nötig sind: den Bestätigungslink, Links zum Zurücksetzen des
+      Passworts und Hinweise zur Sicherheit (z. B. wenn dein Passwort geändert oder die Zwei-Faktor-Anmeldung
+      ein- oder ausgeschaltet wurde). Keine Werbung, keine Newsletter. Versendet werden sie über den Mailserver
+      unseres Hosters ALL-INKL. Links in diesen E-Mails gelten nur kurz (Bestätigung 24 Stunden, Passwort 1 Stunde)
+      und nur einmal; gespeichert wird von ihnen nur ein Fingerabdruck. Verbrauchte oder abgelaufene Links löschen
+      wir nach 7 Tagen.
+    </p>
+
+    <h2>7. Anmeldung und Cookie</h2>
+    <p>
+      Wenn du dich anmeldest, setzen wir ein einziges Cookie namens <code>__Host-bg_session</code>. Es enthält
+      nur eine zufällige Kennung deiner Anmeldung, gilt nur für diese Webseite und ist für Skripte nicht lesbar.
+      Ohne „Angemeldet bleiben“ wird es beim Schließen des Browsers gelöscht und die Anmeldung endet spätestens nach
+      24 Stunden; mit „Angemeldet bleiben“ gilt es 30 Tage. Das Cookie ist für die Anmeldung unbedingt erforderlich
+      (§ 25 Abs. 2 Nr. 2 TDDDG); eine Einwilligung ist deshalb nicht nötig.
+    </p>
+    <p>
+      Zu jeder Anmeldung speichern wir, wann sie begonnen hat und zuletzt aktiv war, die Browser-Kennung
+      (z. B. „Chrome auf Windows“) und eine gekürzte IP-Adresse (die letzten Stellen werden entfernt).
+      So kannst du unter „Mein Konto“ sehen, wo du angemeldet bist, und fremde Geräte abmelden.
+      Beendete oder abgelaufene Anmeldungen löschen wir nach 7 Tagen.
+    </p>
+
+    <h2>8. Schutz vor Missbrauch und Protokoll</h2>
+    <p>
+      Um dein Konto zu schützen, zählen wir fehlgeschlagene Anmeldeversuche und bremsen zu viele Versuche.
+      Dafür speichern wir nur einen Fingerabdruck der E-Mail-Adresse bzw. der gekürzten IP-Adresse,
+      und löschen ihn nach spätestens zwei Tagen. Außerdem protokollieren wir wichtige Vorgänge wie Registrierung, An- und Abmeldung,
+      fehlgeschlagene Anmeldungen, Passwortänderungen und das Löschen eines Kontos – mit Zeitpunkt, Konto-Nummer
+      und gekürzter IP-Adresse, aber ohne Passwörter oder E-Mail-Adressen. Dieses Protokoll löschen wir nach 90 Tagen
+      (Rechtsgrundlage: unser berechtigtes Interesse an der Sicherheit der Konten, Art. 6 Abs. 1 lit. f DSGVO).
+    </p>
+
+    <h2>9. Konto löschen</h2>
+    <p>
+      Unter „Mein Konto“ kannst du dein Konto jederzeit selbst löschen. Dabei entfernen wir sofort Name,
+      E-Mail-Adresse, Passwort-Fingerabdruck, Zwei-Faktor-Daten, Anmeldungen und Freigaben. Übrig bleiben nur
+      Protokolleinträge mit der früheren Konto-Nummer, die nach spätestens 90 Tagen gelöscht werden.
+    </p>
+
+    <h2>10. Kontakt per E-Mail</h2>
     <p>
       Wenn du uns per E-Mail schreibst, verwenden wir deine Angaben nur zur Bearbeitung deiner Anfrage
       (Art. 6 Abs. 1 lit. f DSGVO) und löschen sie, sobald sie dafür nicht mehr nötig sind.
     </p>
 
-    <h2>6. Deine Rechte</h2>
+    <h2>11. Deine Rechte</h2>
     <p>
       Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit
       und Widerspruch gegen die Verarbeitung (Art. 15 bis 21 DSGVO). Wende dich dafür an die oben genannte E-Mail-Adresse.

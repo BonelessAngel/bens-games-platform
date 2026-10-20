@@ -11,7 +11,8 @@ test('Staging wird nicht von Suchmaschinen erfasst', () => {
 
 test('Produktion ist für Suchmaschinen offen und ohne Test-Hinweis', () => {
   assert.doesNotMatch(robotsTxt('production'), /Disallow/);
-  assert.equal(headTags('production'), '');
+  assert.doesNotMatch(headTags('production'), /noindex/);
+  assert.match(headTags('production'), /bg-accounts/);
   assert.equal(environmentBanner('production'), '');
 });
 

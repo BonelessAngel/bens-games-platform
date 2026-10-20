@@ -2,8 +2,9 @@ name: Produktion veröffentlichen
 
 # Nur manuell und nur nach Bens ausdrücklichem „veröffentlichen“ (PLATTFORM-PLAN.md, Abschnitt 2 und 8).
 # Zusätzlich gesperrt durch das GitHub-Environment "production" mit Ben als erforderlichem Prüfer.
-# Benötigte Environment-Secrets (nur für den auf /bens-games-live/ beschränkten FTP-Benutzer):
-#   PRODUCTION_FTP_SERVER, PRODUCTION_FTP_USERNAME, PRODUCTION_FTP_PASSWORD
+# Benötigte Environment-Secrets im Environment "production":
+#   PRODUCTION_FTP_SERVER, PRODUCTION_FTP_USERNAME, PRODUCTION_FTP_PASSWORD (FTP-Benutzer nur für /bens-games-live/)
+#   PRODUCTION_MIGRATION_TOKEN (gleich wie migration_token in /bens-games-live-config/config.php)
 
 on:
   workflow_dispatch:
@@ -42,6 +43,17 @@ jobs:
           IMPRESSUM_ADDRESS: ${{ vars.IMPRESSUM_ADDRESS }}
           IMPRESSUM_EMAIL: ${{ vars.IMPRESSUM_EMAIL }}
 
+      # Seit Phase 3.6 gibt es Konten auch auf der Live-Seite – ohne Datenbank wäre die Anmeldung kaputt.
+      # Deshalb vor dem Upload prüfen, dass der Schlüssel für die Produktions-Datenbank hinterlegt ist.
+      - name: Produktions-Datenbank eingerichtet?
+        env:
+          MIGRATION_TOKEN: ${{ secrets.PRODUCTION_MIGRATION_TOKEN }}
+        run: |
+          if [ -z "$MIGRATION_TOKEN" ]; then
+            echo "::error::PRODUCTION_MIGRATION_TOKEN fehlt – erst die Produktions-Datenbank einrichten (siehe scripts/config-erstellen.ps1)."
+            exit 1
+          fi
+
       - name: lftp installieren
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
@@ -52,15 +64,10 @@ jobs:
           LFTP_PASSWORD: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
         run: bash scripts/deploy-ftp.sh
 
-      # Erst aktiv, wenn die Produktions-Datenbank eingerichtet ist (Secret PRODUCTION_MIGRATION_TOKEN).
       - name: Datenbank-Migrationen und Statusabfrage
         env:
           MIGRATION_TOKEN: ${{ secrets.PRODUCTION_MIGRATION_TOKEN }}
         run: |
-          if [ -z "$MIGRATION_TOKEN" ]; then
-            echo "::notice::PRODUCTION_MIGRATION_TOKEN fehlt – Produktion noch ohne Datenbank, Migrationen übersprungen."
-            exit 0
-          fi
           curl -fsS -X POST -H "X-Migration-Token: $MIGRATION_TOKEN" https://bens-games.de/api/admin/migrate
           echo
           curl -fsS https://bens-games.de/api/health

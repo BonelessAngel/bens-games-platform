@@ -30,7 +30,9 @@ $dbPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.Intero
 if (-not $dbName -or -not $dbUser -or -not $dbPassword) { throw 'Name, Benutzer und Passwort müssen ausgefüllt sein.' }
 
 $migrationToken = New-Secret
+$maintenanceToken = New-Secret
 $appSecret = New-Secret
+$maintenanceSecretName = if ($Umgebung -eq 'staging') { $null } else { 'PRODUCTION_MAINTENANCE_TOKEN' }
 
 $php = @"
 <?php
@@ -45,6 +47,7 @@ return [
         'password' => $(ConvertTo-PhpString $dbPassword),
     ],
     'migration_token' => $(ConvertTo-PhpString $migrationToken),
+    'maintenance_token' => $(ConvertTo-PhpString $maintenanceToken),
     'app_secret' => $(ConvertTo-PhpString $appSecret),
 ];
 "@
@@ -54,11 +57,25 @@ New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
 $target = Join-Path $targetDir 'config.php'
 [IO.File]::WriteAllText($target, $php, (New-Object Text.UTF8Encoding $false))
 
-Set-Clipboard -Value $migrationToken
 Write-Host ''
 Write-Host "Fertig: $target" -ForegroundColor Green
 Write-Host ''
-Write-Host "Der Wert für das GitHub Secret $secretName ist jetzt in der Zwischenablage." -ForegroundColor Yellow
-Write-Host 'Füge ihn direkt bei GitHub ein (Strg+V) und nirgendwo sonst.'
+Set-Clipboard -Value $migrationToken
+Write-Host "1) Der Wert für das GitHub Secret $secretName ist jetzt in der Zwischenablage." -ForegroundColor Yellow
+if ($Umgebung -eq 'production') {
+  Write-Host '   Anlegen unter Settings → Environments → production → Environment secrets.'
+} else {
+  Write-Host '   Anlegen unter Settings → Secrets and variables → Actions → Repository secrets.'
+}
+Write-Host '   Füge ihn direkt bei GitHub ein (Strg+V) und nirgendwo sonst.'
+if ($maintenanceSecretName) {
+  Read-Host '   Danach Enter drücken' | Out-Null
+  Set-Clipboard -Value $maintenanceToken
+  Write-Host ''
+  Write-Host "2) Der Wert für das GitHub Secret $maintenanceSecretName ist jetzt in der Zwischenablage." -ForegroundColor Yellow
+  Write-Host '   Anlegen unter Settings → Secrets and variables → Actions → Repository secrets (nicht im Environment).'
+  Read-Host '   Danach Enter drücken' | Out-Null
+}
+Set-Clipboard -Value ' '
 Write-Host ''
 Write-Host "Danach: config.php per WebFTP in den Ordner /$folder/ hochladen und den Desktop-Ordner löschen."

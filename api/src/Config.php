@@ -81,6 +81,9 @@ final class Config
             }
         }
 
+        if (isset($config['maintenance_token']) && (!is_string($config['maintenance_token']) || strlen($config['maintenance_token']) < self::MIN_SECRET_LENGTH)) {
+            throw new RuntimeException('maintenance_token muss mindestens ' . self::MIN_SECRET_LENGTH . ' Zeichen lang sein.');
+        }
         if (isset($config['base_url']) && !preg_match('#^https?://[a-z0-9.-]+(:\d+)?$#', (string) $config['base_url'])) {
             throw new RuntimeException('base_url muss eine Adresse wie https://bens-games.de sein (ohne Pfad).');
         }
