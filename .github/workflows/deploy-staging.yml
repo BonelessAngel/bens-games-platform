@@ -42,26 +42,24 @@ jobs:
         if: env.HAS_FTP_SECRETS == 'true'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      # Der FTP-Benutzer ist im KAS auf /bens-games-staging/ beschränkt, sein Wurzelordner ist also das Ziel.
-      # Versteckte Dateien (.htaccess/.htpasswd vom KAS-Verzeichnisschutz) werden weder hochgeladen noch gelöscht.
       - name: Hochladen per FTPS
         if: env.HAS_FTP_SECRETS == 'true'
         env:
           FTP_SERVER: ${{ secrets.STAGING_FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.STAGING_FTP_USERNAME }}
           LFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
+        run: bash scripts/deploy-ftp.sh
+
+      # Sicherheitsnetz: Staging muss nach jedem Upload weiterhin passwortgeschützt sein.
+      - name: Verzeichnisschutz prüfen
+        if: env.HAS_FTP_SECRETS == 'true'
         run: |
-          lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" -e "
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
-            set ftp:ssl-protect-list true;
-            set ssl:verify-certificate true;
-            set ftp:passive-mode true;
-            set net:timeout 30;
-            set net:max-retries 3;
-            mirror --reverse --delete --verbose --exclude-glob '.*' dist/ ./;
-            bye
-          "
+          status=$(curl -s -o /dev/null -w '%{http_code}' https://staging.bens-games.de/)
+          if [ "$status" != "401" ]; then
+            echo "::error::staging.bens-games.de antwortet mit $status statt 401 – Verzeichnisschutz prüfen!"
+            exit 1
+          fi
+          echo "Verzeichnisschutz aktiv (401)."
 
       - name: Hinweis bei fehlenden Zugangsdaten
         if: env.HAS_FTP_SECRETS != 'true'
