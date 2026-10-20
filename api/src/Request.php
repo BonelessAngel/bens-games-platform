@@ -29,7 +29,8 @@ final class Request
             method: (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'),
             path: trim((string) preg_replace('#^/api(?:/|$)#', '', $path), '/'),
             headers: array_change_key_case($headers, CASE_LOWER),
-            body: (string) file_get_contents('php://input', length: 65536),
+            // Höchstens 2 MB lesen: reicht für Spielstände bis 512 KB, auch wenn sie als Text im JSON maskiert sind.
+            body: (string) file_get_contents('php://input', length: 2097152),
             cookies: array_map('strval', $_COOKIE),
             ip: (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
         );
