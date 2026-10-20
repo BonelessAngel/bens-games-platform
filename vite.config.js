@@ -2,7 +2,15 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import { renderLibrary, validateApps } from './lib/library.js';
-import { assertNoPlaceholders, environmentBanner, headTags, robotsTxt } from './lib/environment.js';
+import {
+  ACCOUNT_PAGES,
+  accountNav,
+  accountsEnabled,
+  assertNoPlaceholders,
+  environmentBanner,
+  headTags,
+  robotsTxt,
+} from './lib/environment.js';
 import { fillImpressum } from './lib/impressum.js';
 
 const src = (path) => fileURLToPath(new URL(`./src/${path}`, import.meta.url));
@@ -30,6 +38,7 @@ function platform() {
       const result = fillImpressum(html, env)
         .replace('<!-- HEAD -->', headTags(mode))
         .replace('<!-- ENV_BANNER -->', environmentBanner(mode))
+        .replace('<!-- ACCOUNT_NAV -->', accountNav(mode))
         .replace('<!-- LIBRARY -->', () => renderLibrary(loadApps()))
         .replace('<!-- YEAR -->', String(new Date().getFullYear()));
       assertNoPlaceholders(result, ctx.filename, mode);
@@ -41,19 +50,24 @@ function platform() {
   };
 }
 
-export default defineConfig({
-  root: 'src',
-  publicDir: '../public',
-  plugins: [platform()],
-  build: {
-    outDir: '../dist',
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        main: src('index.html'),
-        impressum: src('impressum/index.html'),
-        datenschutz: src('datenschutz/index.html'),
-      },
+export default defineConfig(({ mode }) => {
+  const input = {
+    main: src('index.html'),
+    impressum: src('impressum/index.html'),
+    datenschutz: src('datenschutz/index.html'),
+  };
+  if (accountsEnabled(mode)) {
+    for (const [name, path] of Object.entries(ACCOUNT_PAGES)) input[name] = src(path);
+  }
+
+  return {
+    root: 'src',
+    publicDir: '../public',
+    plugins: [platform()],
+    build: {
+      outDir: '../dist',
+      emptyOutDir: true,
+      rollupOptions: { input },
     },
-  },
+  };
 });
