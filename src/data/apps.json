@@ -1,0 +1,13 @@
+[
+  {
+    "id": "nova-bastion",
+    "name": "Nova Bastion",
+    "type": "game",
+    "description": "Tower-Defense mit Taktik-Auswertung am Ende jedes Levels.",
+    "icon": "/icons/nova-bastion.svg",
+    "status": "public",
+    "visibility": "all",
+    "version": "1.0.0",
+    "path": "/games/nova-bastion/"
+  }
+]
