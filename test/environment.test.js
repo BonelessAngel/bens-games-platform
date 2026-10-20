@@ -5,6 +5,7 @@ import { assertNoPlaceholders, environmentBanner, headTags, robotsTxt } from '..
 test('Staging wird nicht von Suchmaschinen erfasst', () => {
   assert.match(robotsTxt('staging'), /Disallow: \//);
   assert.match(headTags('staging'), /noindex/);
+  assert.match(headTags('staging'), /bg-accounts/);
   assert.match(environmentBanner('staging'), /Testumgebung/);
 });
 
