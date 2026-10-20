@@ -91,12 +91,19 @@ final class MemoryMailer implements Mailer
         $this->sent[] = ['to' => $to, 'subject' => $subject, 'text' => $text];
     }
 
-    public function lastLink(): string
+    /** Zufallswert aus dem Link der letzten E-Mail, z. B. für /konto/bestaetigen/ oder /konto/passwort-neu/. */
+    public function lastLink(string $page = 'bestaetigen'): string
     {
         $last = end($this->sent);
         check($last !== false, 'keine E-Mail versendet');
-        check((bool) preg_match('~/konto/bestaetigen/#([0-9a-f]{64})~', $last['text'], $m), 'kein Bestätigungslink in der E-Mail');
+        check((bool) preg_match('~/konto/' . preg_quote($page, '~') . '/#([0-9a-f]{64})~', $last['text'], $m), "kein Link auf /konto/$page/ in der letzten E-Mail");
         return $m[1];
+    }
+
+    public function lastSubject(): string
+    {
+        $last = end($this->sent);
+        return $last === false ? '' : $last['subject'];
     }
 }
 
@@ -136,14 +143,32 @@ final class TestApp
         return $this->api->handle(new Request('GET', $path, [], '', $cookies, '203.0.113.7'));
     }
 
-    /** Registriert, bestätigt und meldet an. @return array{cookies: array<string, string>, csrf: string} */
-    public function signedIn(string $email = 'ben@example.org', string $password = 'ein sicheres Passwort'): array
+    /** Registriert und bestätigt ein Konto. */
+    public function registered(string $email = 'ben@example.org', string $password = 'ein sicheres Passwort', string $name = 'Spieler'): void
     {
-        same(202, $this->post('auth/register', ['email' => $email, 'display_name' => 'Ben', 'password' => $password])->status);
-        same(200, $this->post('auth/verify', ['token' => $this->mailer->lastLink()])->status);
-        $login = $this->post('auth/login', ['email' => $email, 'password' => $password]);
+        same(202, $this->post('auth/register', ['email' => $email, 'display_name' => $name, 'password' => $password])->status, 'Registrierung');
+        same(200, $this->post('auth/verify', ['token' => $this->mailer->lastLink()])->status, 'Bestätigung');
+    }
+
+    /** Meldet ein bestehendes Konto an. @return array{cookies: array<string, string>, csrf: string, response: Response} */
+    public function login(string $email = 'ben@example.org', string $password = 'ein sicheres Passwort', bool $remember = false, string $agent = 'Testbrowser'): array
+    {
+        $login = $this->post('auth/login', ['email' => $email, 'password' => $password, 'remember' => $remember], ['user-agent' => $agent]);
         same(200, $login->status, 'Anmeldung');
-        return ['cookies' => [$login->cookies[0]['name'] => $login->cookies[0]['value']], 'csrf' => $login->body['csrf']];
+        return ['cookies' => [$login->cookies[0]['name'] => $login->cookies[0]['value']], 'csrf' => $login->body['csrf'], 'response' => $login];
+    }
+
+    /** Registriert, bestätigt und meldet an. @return array{cookies: array<string, string>, csrf: string, response: Response} */
+    public function signedIn(string $email = 'ben@example.org', string $password = 'ein sicheres Passwort', string $name = 'Spieler'): array
+    {
+        $this->registered($email, $password, $name);
+        return $this->login($email, $password);
+    }
+
+    /** Angemeldete POST-Anfrage mit Cookie und CSRF-Token. @param array{cookies: array<string, string>, csrf: string} $session */
+    public function postAs(array $session, string $path, array $json = []): Response
+    {
+        return $this->post($path, $json, ['x-csrf-token' => $session['csrf']], $session['cookies']);
     }
 }
 

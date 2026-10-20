@@ -7,7 +7,7 @@ use BensGames\Sessions;
 
 dbTest('Registrierung: Bestätigungs-Mail mit Link, Konto ohne Rechte', function (): void {
     $app = new TestApp();
-    $response = $app->post('auth/register', ['email' => 'Ben@Example.org', 'display_name' => 'Ben', 'password' => 'ein sicheres Passwort']);
+    $response = $app->post('auth/register', ['email' => 'Ben@Example.org', 'display_name' => 'Spieler', 'password' => 'ein sicheres Passwort']);
     same(202, $response->status);
     same(['status' => 'check_email'], $response->body);
     same(1, count($app->mailer->sent));
@@ -43,7 +43,7 @@ dbTest('doppelte Registrierung verrät nichts und legt kein zweites Konto an', f
 
 dbTest('Anmeldung erst nach Bestätigung der E-Mail', function (): void {
     $app = new TestApp();
-    $app->post('auth/register', ['email' => 'ben@example.org', 'display_name' => 'Ben', 'password' => 'ein sicheres Passwort']);
+    $app->post('auth/register', ['email' => 'ben@example.org', 'display_name' => 'Spieler', 'password' => 'ein sicheres Passwort']);
     $login = $app->post('auth/login', ['email' => 'ben@example.org', 'password' => 'ein sicheres Passwort']);
     same(403, $login->status);
     same('email_not_verified', $login->body['error']);
@@ -54,7 +54,7 @@ dbTest('Anmeldung erst nach Bestätigung der E-Mail', function (): void {
 
 dbTest('Bestätigungslink gilt nur einmal und nur 24 Stunden', function (): void {
     $app = new TestApp();
-    $app->post('auth/register', ['email' => 'ben@example.org', 'display_name' => 'Ben', 'password' => 'ein sicheres Passwort']);
+    $app->post('auth/register', ['email' => 'ben@example.org', 'display_name' => 'Spieler', 'password' => 'ein sicheres Passwort']);
     $token = $app->mailer->lastLink();
     same(200, $app->post('auth/verify', ['token' => $token])->status);
     same(400, $app->post('auth/verify', ['token' => $token])->status, 'zweite Verwendung');
@@ -77,7 +77,7 @@ dbTest('Anmeldung setzt ein sicheres Sitzungs-Cookie', function (): void {
 
     $me = $app->get('account/me', $session['cookies']);
     same(200, $me->status);
-    same('Ben', $me->body['user']['display_name']);
+    same('Spieler', $me->body['user']['display_name']);
     same(true, $me->body['user']['email_verified']);
     same($session['csrf'], $me->body['csrf']);
 });
@@ -112,7 +112,7 @@ dbTest('Abmelden braucht das CSRF-Token und beendet die Sitzung', function (): v
     same(403, $app->post('auth/logout', null, [], $session['cookies'])->status, 'ohne Token');
     same(403, $app->post('auth/logout', null, ['x-csrf-token' => str_repeat('f', 64)], $session['cookies'])->status, 'falsches Token');
 
-    $logout = $app->post('auth/logout', [], ['x-csrf-token' => $session['csrf']], $session['cookies']);
+    $logout = $app->postAs($session, 'auth/logout');
     same(200, $logout->status);
     same(-1, $logout->cookies[0]['expires'], 'Cookie wird gelöscht');
     same(401, $app->get('account/me', $session['cookies'])->status, 'Sitzung nach Abmeldung');
@@ -120,7 +120,7 @@ dbTest('Abmelden braucht das CSRF-Token und beendet die Sitzung', function (): v
 
 dbTest('Anfragen von fremden Seiten werden abgelehnt', function (): void {
     $app = new TestApp();
-    $credentials = ['email' => 'ben@example.org', 'display_name' => 'Ben', 'password' => 'ein sicheres Passwort'];
+    $credentials = ['email' => 'ben@example.org', 'display_name' => 'Spieler', 'password' => 'ein sicheres Passwort'];
     same(403, $app->post('auth/register', $credentials, ['origin' => 'https://boese.example'])->status);
     same(403, $app->post('auth/register', $credentials, ['origin' => ''])->status);
     same(415, $app->post('auth/register', $credentials, ['content-type' => 'text/plain'])->status);
@@ -144,7 +144,7 @@ dbTest('gesperrte Konten können sich nicht anmelden', function (): void {
 
 dbTest('Bestätigungslink erneut anfordern', function (): void {
     $app = new TestApp();
-    $app->post('auth/register', ['email' => 'ben@example.org', 'display_name' => 'Ben', 'password' => 'ein sicheres Passwort']);
+    $app->post('auth/register', ['email' => 'ben@example.org', 'display_name' => 'Spieler', 'password' => 'ein sicheres Passwort']);
     same(202, $app->post('auth/resend-verification', ['email' => 'ben@example.org'])->status);
     same(2, count($app->mailer->sent));
     same(202, $app->post('auth/resend-verification', ['email' => 'niemand@example.org'])->status, 'unbekannte Adresse');

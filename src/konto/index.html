@@ -23,18 +23,62 @@
     </div>
   </header>
 
-  <main class="container auth" data-page="konto">
+  <main class="container auth auth--wide" data-page="konto">
     <h1>Mein Konto</h1>
 
     <div data-details hidden>
-      <dl class="details">
-        <dt>Name</dt>
-        <dd data-name></dd>
-        <dt>E-Mail-Adresse</dt>
-        <dd data-email></dd>
-      </dl>
-      <p class="auth__lead">Weitere Einstellungen wie Passwort ändern, Geräte verwalten und Konto löschen folgen bald.</p>
-      <button class="button button--secondary" type="button" data-logout>Abmelden</button>
+      <section class="panel">
+        <dl class="details">
+          <dt>Name</dt>
+          <dd data-name></dd>
+          <dt>E-Mail-Adresse</dt>
+          <dd data-email></dd>
+        </dl>
+        <button class="button button--secondary" type="button" data-logout>Abmelden</button>
+      </section>
+
+      <section class="panel" aria-labelledby="titel-passwort">
+        <h2 id="titel-passwort">Passwort ändern</h2>
+        <p data-notice="password" hidden></p>
+        <form class="form" data-form="password" novalidate>
+          <div class="field">
+            <label for="current_password">Aktuelles Passwort</label>
+            <input id="current_password" name="current_password" type="password" autocomplete="current-password" required>
+          </div>
+          <div class="field">
+            <label for="new_password">Neues Passwort</label>
+            <input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="10" required>
+            <p class="field__hint">Mindestens 10 Zeichen. Andere Geräte werden danach abgemeldet.</p>
+            <p class="field__error" data-error-for="new_password" hidden></p>
+          </div>
+          <button class="button" type="submit">Passwort ändern</button>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="titel-geraete">
+        <h2 id="titel-geraete">Angemeldete Geräte</h2>
+        <p class="auth__lead">Hier bist du gerade angemeldet. Kennst du ein Gerät nicht, melde es ab und ändere dein Passwort.</p>
+        <ul class="sessions" data-sessions></ul>
+        <button class="button button--secondary" type="button" data-revoke-others>Alle anderen Geräte abmelden</button>
+      </section>
+
+      <section class="panel panel--danger" aria-labelledby="titel-loeschen">
+        <h2 id="titel-loeschen">Konto löschen</h2>
+        <p class="auth__lead">Dein Konto, dein Name und deine E-Mail-Adresse werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.</p>
+        <p data-notice="delete" hidden></p>
+        <form class="form" data-form="delete" novalidate>
+          <div class="field">
+            <label for="delete_password">Passwort zur Bestätigung</label>
+            <input id="delete_password" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <label class="checkbox">
+            <input type="checkbox" name="confirm" value="1">
+            <span>Ja, ich möchte mein Konto endgültig löschen.</span>
+          </label>
+          <p class="field__error" data-error-for="confirm" hidden></p>
+          <button class="button button--danger" type="submit">Konto löschen</button>
+        </form>
+      </section>
     </div>
   </main>
 
