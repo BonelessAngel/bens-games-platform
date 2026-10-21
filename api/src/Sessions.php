@@ -15,8 +15,10 @@ final class Sessions
     public const COOKIE = '__Host-bg_session';
     public const LIFETIME = 86400;              // ohne „Angemeldet bleiben“: 24 Stunden
     public const PERSISTENT_LIFETIME = 2592000; // mit „Angemeldet bleiben“: 30 Tage
+    public const ADMIN_LIFETIME = 28800;        // Zentrale: 8 Stunden, nie „Angemeldet bleiben“
 
-    public function __construct(private PDO $pdo, private Clock $clock)
+    /** @param string $scope „site“ (bens-games.de) oder „admin“ (Zentrale) – Sitzungen gelten nur in ihrem Bereich */
+    public function __construct(private PDO $pdo, private Clock $clock, private string $scope = 'site')
     {
     }
 
@@ -25,12 +27,14 @@ final class Sessions
     {
         $token = Security::randomToken();
         $csrf = Security::randomToken();
-        $lifetime = $persistent ? self::PERSISTENT_LIFETIME : self::LIFETIME;
+        $persistent = $persistent && $this->scope === 'site';
+        $lifetime = $this->scope === 'admin' ? self::ADMIN_LIFETIME : ($persistent ? self::PERSISTENT_LIFETIME : self::LIFETIME);
         $this->pdo->prepare(
-            'INSERT INTO sessions (user_id, token_hash, csrf_token, created_at, last_seen_at, expires_at, persistent, user_agent, ip_prefix)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO sessions (user_id, scope, token_hash, csrf_token, created_at, last_seen_at, expires_at, persistent, user_agent, ip_prefix)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         )->execute([
             $userId,
+            $this->scope,
             Security::hashToken($token),
             $csrf,
             $this->clock->datetime(),
@@ -54,9 +58,9 @@ final class Sessions
             "SELECT s.id AS session_id, s.csrf_token, u.id, u.email, u.display_name, u.email_verified_at, u.status, u.password_hash,
                     u.totp_secret, u.totp_enabled_at, u.totp_last_step
              FROM sessions s JOIN users u ON u.id = s.user_id
-             WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.status = 'active'"
+             WHERE s.token_hash = ? AND s.scope = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.status = 'active'"
         );
-        $statement->execute([Security::hashToken($token), $this->clock->datetime()]);
+        $statement->execute([Security::hashToken($token), $this->scope, $this->clock->datetime()]);
         $session = $statement->fetch();
         if (!$session) {
             return null;
@@ -69,7 +73,7 @@ final class Sessions
     public function active(int $userId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, created_at, last_seen_at, expires_at, persistent, user_agent, ip_prefix FROM sessions
+            'SELECT id, scope, created_at, last_seen_at, expires_at, persistent, user_agent, ip_prefix FROM sessions
              WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ? ORDER BY last_seen_at DESC'
         );
         $statement->execute([$userId, $this->clock->datetime()]);

@@ -127,6 +127,23 @@ dbTest('Anfragen von fremden Seiten werden abgelehnt', function (): void {
     same(0, (int) $app->pdo->query('SELECT COUNT(*) FROM users')->fetchColumn());
 });
 
+dbTest('viele erfolgreiche Anmeldungen vom selben Anschluss sperren nicht', function (): void {
+    $app = new TestApp();
+    $app->registered();
+    for ($i = 0; $i < 40; $i++) {
+        $app->login();
+    }
+});
+
+dbTest('Fehlversuche von einem Anschluss werden über alle Adressen gezählt', function (): void {
+    $app = new TestApp();
+    $app->registered();
+    for ($i = 0; $i < 30; $i++) {
+        same(401, $app->post('auth/login', ['email' => "unbekannt$i@example.org", 'password' => 'falsch'])->status);
+    }
+    same(429, $app->post('auth/login', ['email' => 'ben@example.org', 'password' => 'ein sicheres Passwort'])->status);
+});
+
 dbTest('Sitzungen laufen nach 24 Stunden ab', function (): void {
     $app = new TestApp();
     $session = $app->signedIn();

@@ -29,6 +29,22 @@ test('fehlende oder unvollständige Konfiguration wird abgelehnt', function (): 
     throws(fn () => Config::validate(validConfig(['mail' => ['from' => 'kein-absender']])), '/mail\.from/');
 });
 
+test('Konfiguration der Zentrale übernimmt die der Webseite und setzt nur die Rolle', function (): void {
+    $base = sys_get_temp_dir() . '/bgcfg-' . bin2hex(random_bytes(4));
+    mkdir("$base/bens-games-live-config", 0777, true);
+    mkdir("$base/bens-games-admin-config", 0777, true);
+    file_put_contents("$base/bens-games-live-config/config.php", '<?php return ' . var_export(validConfig(['environment' => 'production', 'base_url' => null]), true) . ';');
+    file_put_contents(
+        "$base/bens-games-admin-config/config.php",
+        "<?php\n\$config = require __DIR__ . '/../bens-games-live-config/config.php';\n\$config['role'] = 'admin';\nreturn \$config;\n"
+    );
+    $config = Config::load(Config::defaultPath("$base/bens-games-admin/api"));
+    same('admin', Config::role($config));
+    same('https://admin.bens-games.de', Config::baseUrl($config));
+    same('https://bens-games.de', Config::siteUrl($config));
+    same(validConfig()['app_secret'], $config['app_secret'], 'gleiche Schlüssel wie die Webseite');
+});
+
 test('die Vorlage selbst ist keine gültige Konfiguration', function (): void {
     throws(fn () => Config::load(__DIR__ . '/../config.example.php'), '/fehlt|muss/');
 });

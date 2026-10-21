@@ -7,12 +7,14 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const source = join(root, 'api');
-const target = join(root, 'dist', 'api');
+// Ziel: dist/ (Webseite) oder z. B. dist-admin/ (Zentrale) – als erstes Argument.
+const outDir = process.argv[2] ?? 'dist';
+const target = join(root, outDir, 'api');
 
 const EXCLUDED = new Set(['tests', 'config.example.php', 'config.php']);
 
-if (!existsSync(join(root, 'dist'))) {
-  console.error('dist/ fehlt – zuerst vite build ausführen.');
+if (!existsSync(join(root, outDir))) {
+  console.error(`${outDir}/ fehlt – zuerst vite build ausführen.`);
   process.exit(1);
 }
 
@@ -26,4 +28,4 @@ cpSync(source, target, {
 mkdirSync(join(target, 'data'), { recursive: true });
 cpSync(join(root, 'src', 'data', 'apps.json'), join(target, 'data', 'apps.json'));
 
-console.log('API nach dist/api/ kopiert.');
+console.log(`API nach ${outDir}/api/ kopiert.`);

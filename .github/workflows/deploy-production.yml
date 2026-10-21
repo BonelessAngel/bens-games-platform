@@ -64,6 +64,26 @@ jobs:
           LFTP_PASSWORD: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
         run: bash scripts/deploy-ftp.sh
 
+      # Zentrale admin.bens-games.de (eigener FTP-Benutzer nur für /bens-games-admin/). Ohne Secrets übersprungen.
+      - name: Zentrale bauen und hochladen
+        env:
+          FTP_SERVER: ${{ secrets.PRODUCTION_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.PRODUCTION_ADMIN_FTP_USERNAME }}
+          LFTP_PASSWORD: ${{ secrets.PRODUCTION_ADMIN_FTP_PASSWORD }}
+          LOCAL_DIR: dist-admin/
+        run: |
+          if [ -z "$FTP_USERNAME" ] || [ -z "$LFTP_PASSWORD" ]; then
+            echo "::notice::PRODUCTION_ADMIN_FTP_* fehlen – Zentrale übersprungen."
+            exit 0
+          fi
+          npm run build:admin
+          bash scripts/deploy-ftp.sh
+          status=$(curl -s -o /dev/null -w '%{http_code}' https://admin.bens-games.de/)
+          if [ "$status" != "401" ]; then
+            echo "::error::admin.bens-games.de antwortet mit $status statt 401 – Verzeichnisschutz prüfen!"
+            exit 1
+          fi
+
       - name: Datenbank-Migrationen und Statusabfrage
         env:
           MIGRATION_TOKEN: ${{ secrets.PRODUCTION_MIGRATION_TOKEN }}

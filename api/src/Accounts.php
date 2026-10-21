@@ -35,7 +35,26 @@ final class Accounts
         private string $baseUrl,
         private TwoFactor $twoFactor,
         private Reauth $reauth,
+        private ?Permissions $panelGate = null,
     ) {
+    }
+
+    /**
+     * Nur in der Zentrale: Anmeldung nur mit Rechten für die Zentrale und eingeschalteter Zwei-Faktor-Anmeldung.
+     * @param array<string, mixed> $user
+     */
+    private function assertPanelAccess(array $user, Request $request): void
+    {
+        if ($this->panelGate === null) {
+            return;
+        }
+        if (!$this->panelGate->canEnterPanel((int) $user['id'])) {
+            $this->audit->log('admin.login_denied', $request, targetType: 'user', targetId: (string) $user['id']);
+            throw new HttpError(403, 'no_panel_access');
+        }
+        if (!TwoFactor::enabled($user)) {
+            throw new HttpError(403, 'two_factor_setup_required');
+        }
     }
 
     // --- Registrierung und Bestätigung ---------------------------------------
@@ -136,9 +155,8 @@ final class Accounts
         $remember = ($input['remember'] ?? false) === true;
         $ip = self::ip($request);
 
-        $allowedIp = $this->limiter->hit('login:ip', $ip, 30, 900);
-        $allowedEmail = $this->limiter->hit('login:email', $normalized, 10, 900);
-        if (!$allowedIp || !$allowedEmail) {
+        // Gezählt werden nur Fehlversuche – erfolgreiche Anmeldungen (z. B. mehrere Geräte im selben WLAN) sperren nie.
+        if ($this->limiter->exceeded('login:ip', $ip, 30, 900) || $this->limiter->exceeded('login:email', $normalized, 10, 900)) {
             $this->audit->log('user.login_blocked', $request);
             throw new HttpError(429, 'too_many_attempts');
         }
@@ -148,6 +166,8 @@ final class Accounts
         $valid = password_verify($password, $user['password_hash'] ?? self::dummyHash()) && $user !== null;
 
         if (!$valid) {
+            $this->limiter->hit('login:ip', $ip, 30, 900);
+            $this->limiter->hit('login:email', $normalized, 10, 900);
             $this->audit->log('user.login_failed', $request, targetType: $user ? 'user' : null, targetId: $user ? (string) $user['id'] : null);
             throw new HttpError(401, 'invalid_credentials');
         }
@@ -159,6 +179,7 @@ final class Accounts
         }
 
         $userId = (int) $user['id'];
+        $this->assertPanelAccess($user, $request);
         if (Security::needsRehash($user['password_hash'])) {
             $this->pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([Security::hashPassword($password), $userId]);
         }
@@ -193,6 +214,7 @@ final class Accounts
             throw new HttpError(400, 'invalid_challenge');
         }
 
+        $this->assertPanelAccess($row, $request);
         $this->limit('2fa:challenge', $challenge, 5, self::CHALLENGE_LIFETIME);
         $this->limit('2fa:user', (string) $row['id'], 10, 900);
         if (!$this->twoFactor->verify($row, (string) ($input['code'] ?? ''))) {
@@ -308,6 +330,7 @@ final class Accounts
         $list = array_map(static fn (array $row): array => [
             'id' => (int) $row['id'],
             'current' => (int) $row['id'] === (int) $session['session_id'],
+            'admin' => $row['scope'] === 'admin',
             'created_at' => $row['created_at'],
             'last_seen_at' => $row['last_seen_at'],
             'persistent' => (bool) $row['persistent'],
