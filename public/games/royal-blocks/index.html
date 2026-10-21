@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="de" data-version="1.0.0" data-theme="neon" data-tiles="standard">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'">
+  <title>Royal Blocks</title>
+  <meta name="description" content="Block-Puzzle mit Pokerhänden: Reihen füllen, Hände bilden, Punkte abräumen.">
+  <meta name="theme-color" content="#0d0420">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Royal Blocks">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="best"><span class="label" id="best-label">Rekord</span><span id="best">0</span></div>
+      <div class="score-box">
+        <div id="score" class="score">0</div>
+        <div id="streak" class="streak"></div>
+      </div>
+      <button id="menu-btn" class="icon-btn" type="button" aria-label="Menü">
+        <span></span><span></span><span></span>
+      </button>
+    </header>
+
+    <div class="info">
+      <div id="req" class="req">
+        <span class="req-label">Mindesthand</span>
+        <span id="req-hand" class="req-hand">Paar</span>
+        <span id="req-next" class="req-next"></span>
+      </div>
+      <div id="mission" class="mission">
+        <span class="mission-label">Auftrag</span>
+        <span id="mission-text" class="mission-text"></span>
+        <span id="mission-reward" class="mission-reward"></span>
+      </div>
+    </div>
+
+    <div id="preview" class="preview" aria-live="polite"></div>
+
+    <main class="board-wrap">
+      <div id="board" class="board" aria-label="Spielfeld"></div>
+      <div id="banner" class="banner" aria-live="polite"></div>
+    </main>
+
+    <div class="powers">
+      <div class="wallet" title="Chips"><span class="chip-icon"></span><span id="chips">0</span></div>
+      <button class="power" data-power="fold" type="button"><span class="p-icon">⟳</span>Passen <b data-cost="fold"></b></button>
+      <button class="power" data-power="recolor" type="button"><span class="p-icon">◐</span>Farbe <b data-cost="recolor"></b></button>
+      <button class="power" data-power="blast" type="button"><span class="p-icon">✸</span>Sprengen <b data-cost="blast"></b></button>
+    </div>
+
+    <footer id="tray" class="tray" aria-label="Teile">
+      <div class="slot" data-slot="0"></div>
+      <div class="slot" data-slot="1"></div>
+      <div class="slot" data-slot="2"></div>
+    </footer>
+  </div>
+
+  <div id="drag" class="drag" aria-hidden="true"></div>
+  <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+
+  <div id="menu" class="overlay" hidden>
+    <div class="panel">
+      <h2>Pause</h2>
+      <button class="btn primary" data-action="resume" type="button">Weiterspielen</button>
+      <button class="btn gold" data-action="switch-mode" type="button" id="mode-btn">Tages-Challenge</button>
+      <button class="btn" data-action="shop" type="button">Designs</button>
+      <button class="btn" data-action="help" type="button">Pokerhände &amp; Regeln</button>
+      <div class="toggles">
+        <button class="btn small-btn" data-action="sound" type="button">Ton: <b id="sound-state">an</b></button>
+        <button class="btn small-btn" data-action="music" type="button">Musik: <b id="music-state">an</b></button>
+        <button class="btn small-btn" data-action="vibration" type="button">Vibration: <b id="vibration-state">an</b></button>
+      </div>
+      <button class="btn danger" data-action="new" type="button">Neues Spiel</button>
+      <p class="small">Royal Blocks <span id="version"></span> · Spielstand nur auf diesem Gerät</p>
+    </div>
+  </div>
+
+  <div id="confirm-new" class="overlay" hidden>
+    <div class="panel">
+      <h2>Neues Spiel?</h2>
+      <p>Die laufende Runde geht verloren.</p>
+      <button class="btn danger" data-action="new-confirm" type="button">Ja, neu starten</button>
+      <button class="btn" data-action="resume" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <div id="help" class="overlay" hidden>
+    <div class="panel scroll">
+      <h2>So geht's</h2>
+      <ol class="rules">
+        <li>Zieh die Teile von unten auf das Feld.</li>
+        <li>Ist eine Reihe oder Spalte voll, wird sie zur <b>Pokerhand</b>. Aus ihren 8 Karten zählen die besten 5.</li>
+        <li>Sie verschwindet nur, wenn sie mindestens die <b>Mindesthand</b> (oben) schafft. Sonst bleibt sie <b>gesperrt</b> liegen – bis eine Reihe quer durch sie abgeräumt wird.</li>
+        <li>Die Mindesthand steigt: Paar → Zwei Paare → Drilling.</li>
+        <li>Jedes Teil hat eine Farbe: 5 gleiche Farben in einer Reihe sind ein <b>Flush</b>. Der seltene <b>Joker ★</b> zählt als jede Karte.</li>
+        <li>Abgeräumte Reihen bringen <b>Chips</b> (so viele wie der Faktor), Aufträge noch mehr. Mit Chips kannst du <b>passen</b>, <b>Farben tauschen</b>, gesperrte Reihen <b>sprengen</b> – oder neue Designs freischalten.</li>
+        <li>Passt kein Teil mehr, ist die Runde vorbei.</li>
+      </ol>
+      <table class="hands" id="hand-table"></table>
+      <button class="btn primary" data-action="resume" type="button">Los geht's</button>
+    </div>
+  </div>
+
+  <div id="shop" class="overlay" hidden>
+    <div class="panel scroll">
+      <h2>Designs</h2>
+      <div class="wallet center"><span class="chip-icon"></span><span id="shop-chips">0</span></div>
+      <h3>Farbwelten</h3>
+      <div id="shop-themes" class="shop-grid"></div>
+      <h3>Kachel-Stile</h3>
+      <div id="shop-tiles" class="shop-grid"></div>
+      <button class="btn primary" data-action="back" type="button">Zurück</button>
+    </div>
+  </div>
+
+  <div id="suit-picker" class="overlay" hidden>
+    <div class="panel">
+      <h2>Neue Farbe</h2>
+      <div id="suit-buttons" class="suit-buttons"></div>
+      <button class="btn" data-action="cancel-power" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <div id="gameover" class="overlay" hidden>
+    <div class="panel">
+      <h2>Keine Züge mehr</h2>
+      <div id="new-record" class="new-record" hidden>Neuer Rekord!</div>
+      <div class="final-score" id="final-score">0</div>
+      <dl class="stats">
+        <dt id="final-best-label">Rekord</dt><dd id="final-best">0</dd>
+        <dt>Beste Hand</dt><dd id="final-hand">–</dd>
+        <dt>Reihen</dt><dd id="final-lines">0</dd>
+        <dt>Chips verdient</dt><dd id="final-chips">0</dd>
+      </dl>
+      <div id="rescue" class="rescue" hidden>
+        <p class="small">Retten?</p>
+        <div class="rescue-buttons">
+          <button class="btn gold" data-power="fold" type="button">⟳ Passen <b data-cost="fold"></b></button>
+          <button class="btn gold" data-power="blast" type="button">✸ Sprengen <b data-cost="blast"></b></button>
+        </div>
+      </div>
+      <button class="btn primary big" data-action="new-confirm" type="button">Nochmal spielen</button>
+    </div>
+  </div>
+</body>
+</html>

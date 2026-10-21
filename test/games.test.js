@@ -14,6 +14,12 @@ test('Cache-Zeitstempel wird beim Vergleich ignoriert', () => {
   assert.notEqual(normalizeServiceWorker(a), normalizeServiceWorker(`${b}\nself.y=2;`));
 });
 
+test('Royal Blocks wird für den Import reproduzierbar neu gebaut', () => {
+  assert.deepEqual(GAMES['royal-blocks'].buildCommand.slice(1), ['run', 'build']);
+  assert.equal(GAMES['royal-blocks'].libraryIcon, 'src/icon-512.png');
+  assert.equal(GAMES['royal-blocks'].serviceWorker, undefined);
+});
+
 for (const id of Object.keys(GAMES)) {
   const versionFile = new URL('VERSION.json', gameDir(id));
 

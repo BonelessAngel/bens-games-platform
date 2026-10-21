@@ -1,0 +1,18 @@
+{
+  "name": "Royal Blocks",
+  "short_name": "Royal Blocks",
+  "description": "Block-Puzzle mit Pokerhänden: Reihen füllen, Hände bilden, Punkte abräumen.",
+  "lang": "de",
+  "id": "/games/royal-blocks/",
+  "start_url": "/games/royal-blocks/",
+  "scope": "/games/royal-blocks/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0420",
+  "theme_color": "#0d0420",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

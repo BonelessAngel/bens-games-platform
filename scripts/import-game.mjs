@@ -2,9 +2,10 @@
 //
 // Aufruf:  npm run import-game -- nova-bastion "C:\Users\buche\Documents\Codex\nova-bastion-codex" v1.1.0
 //
-// Voraussetzungen im Spiel-Repo: HEAD steht genau auf dem Tag, und die Webseite wurde dort gebaut
-// (Webseite-bauen.ps1). Kopiert werden nur die bekannten Spieldateien; Version, Commit und Prüfsummen
-// landen in public/games/<id>/VERSION.json.
+// Voraussetzung im Spiel-Repo: HEAD steht genau auf dem Tag. Spiele mit buildCommand werden vor der
+// Übernahme reproduzierbar neu gebaut; bei älteren Spielen wird der vorhandene Build mit dem Tag verglichen.
+// Kopiert werden nur die bekannten Spieldateien; Version, Commit und Prüfsummen landen in
+// public/games/<id>/VERSION.json.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -48,10 +49,22 @@ const dirty = git(repo, 'status', '--porcelain')
   .filter((line) => line.slice(3) !== game.serviceWorker);
 if (dirty.length) fail(`Arbeitsbaum ist nicht sauber:\n${dirty.join('\n')}`);
 
-const builtSw = readFileSync(join(repo, game.serviceWorker), 'utf8');
-const taggedSw = git(repo, 'show', `${tag}:${game.serviceWorker}`);
-if (normalizeServiceWorker(builtSw) !== normalizeServiceWorker(taggedSw)) {
-  fail(`${game.serviceWorker} weicht vom Tag ab (mehr als nur der Cache-Zeitstempel).`);
+if (game.buildCommand) {
+  let [command, ...args] = game.buildCommand;
+  // Unter Windows lässt sich npm.cmd nicht mit execFileSync starten. Bei dem dokumentierten Aufruf
+  // über "npm run import-game" steht der plattformrichtige npm-Entrypoint bereits bereit.
+  if (command === 'npm' && process.env.npm_execpath) {
+    args = [process.env.npm_execpath, ...args];
+    command = process.execPath;
+  }
+  console.log(`${id} wird am Tag ${tag} neu gebaut ...`);
+  execFileSync(command, args, { cwd: repo, stdio: 'inherit' });
+} else {
+  const builtSw = readFileSync(join(repo, game.serviceWorker), 'utf8');
+  const taggedSw = git(repo, 'show', `${tag}:${game.serviceWorker}`);
+  if (normalizeServiceWorker(builtSw) !== normalizeServiceWorker(taggedSw)) {
+    fail(`${game.serviceWorker} weicht vom Tag ab (mehr als nur der Cache-Zeitstempel).`);
+  }
 }
 
 // 3. Gebaute Dateien prüfen und kopieren.
@@ -59,6 +72,8 @@ const source = join(repo, game.buildDir);
 for (const file of game.files) {
   if (!existsSync(join(source, file))) fail(`${file} fehlt in ${source}. Wurde das Spiel gebaut?`);
 }
+const iconSource = game.libraryIcon && join(repo, game.libraryIcon);
+if (iconSource && !existsSync(iconSource)) fail(`Bibliotheks-Symbol fehlt: ${iconSource}`);
 const forbidden = readFileSync(join(source, 'index.html'), 'utf8').match(FORBIDDEN_HOSTS);
 if (forbidden) fail(`index.html lädt Inhalte von ${forbidden[1]} – das gibt IP-Adressen an Dritte weiter. Bitte im Spiel-Repo selbst hosten.`);
 
@@ -70,6 +85,10 @@ const files = {};
 for (const file of game.files) {
   copyFileSync(join(source, file), join(target, file));
   files[file] = createHash('sha256').update(readFileSync(join(target, file))).digest('hex');
+}
+
+if (game.libraryIcon) {
+  copyFileSync(iconSource, join(root, 'public', 'app-icons', `${id}.png`));
 }
 
 const version = tag.slice(1);

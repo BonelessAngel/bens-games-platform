@@ -9,5 +9,16 @@
     "visibility": "all",
     "version": "1.2.0",
     "path": "/games/nova-bastion/"
+  },
+  {
+    "id": "royal-blocks",
+    "name": "Royal Blocks",
+    "type": "game",
+    "description": "Block-Puzzle mit Pokerhänden: Reihen füllen, Hände bilden, Punkte abräumen.",
+    "icon": "/app-icons/royal-blocks.png",
+    "status": "public",
+    "visibility": "all",
+    "version": "1.0.0",
+    "path": "/games/royal-blocks/"
   }
 ]
