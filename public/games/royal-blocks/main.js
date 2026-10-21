@@ -2,8 +2,9 @@
 
 import {
   POWER_COSTS, SIZE, STREAK_GRACE, blastAt, canPlace, createGame, findFullLines, fitsAnywhere, foldTray, hasLockedLines, idx,
-  missionText, placePiece, previewPlacement, recolorPiece, requirementFor, streakMultiplier, updateOver,
+  missionText, placePiece, previewPlacement, recolorPiece, requirementFor, streakMultiplier, updateOver, useFreeContinue,
 } from './game.js';
+import { GIFT_DAYS, chestReward, dailyGift, levelFromXp, levelReward, praiseFor, xpForRound } from './progress.js';
 import { HANDS, SUITS, rankLabel } from './poker.js';
 import {
   setMusicEnabled, setMusicIntensity, setSoundEnabled, setVibrationEnabled, sounds, startMusic, stopMusic, unlockAudio, vibrate,
@@ -18,6 +19,7 @@ const version = root.dataset.version;
 const els = {
   app: $('app'),
   board: $('board'),
+  tray: $('tray'),
   slots: [...document.querySelectorAll('.slot')],
   drag: $('drag'),
   score: $('score'),
@@ -39,15 +41,15 @@ const els = {
 // Designs: Farbwelten (CSS-Variablen) und Kachel-Stile; Preise in Chips.
 const THEMES = [
   { id: 'neon', name: 'Neon', price: 0, color: '#0d0420' },
-  { id: 'gold', name: 'Gold-Casino', price: 800, color: '#041a12' },
-  { id: 'ice', name: 'Eis', price: 1500, color: '#06182a' },
-  { id: 'retro', name: 'Retro-Arcade', price: 2500, color: '#000000' },
+  { id: 'gold', name: 'Gold-Casino', price: 1500, color: '#041a12' },
+  { id: 'ice', name: 'Eis', price: 3000, color: '#06182a' },
+  { id: 'retro', name: 'Retro-Arcade', price: 5000, color: '#000000' },
 ];
 const TILE_STYLES = [
   { id: 'standard', name: 'Standard', price: 0 },
-  { id: 'glass', name: 'Glas', price: 600 },
-  { id: 'pixel', name: 'Pixel', price: 1200 },
-  { id: 'chip', name: 'Chip', price: 2000 },
+  { id: 'glass', name: 'Glas', price: 1000 },
+  { id: 'pixel', name: 'Pixel', price: 2000 },
+  { id: 'chip', name: 'Chip', price: 4000 },
 ];
 
 // ---------- Gespeicherte Daten ----------
@@ -58,6 +60,7 @@ const settings = {
 };
 const saveSettings = () => save('settings', settings);
 let wallet = Math.max(0, Number(load('chips', 0)) || 0);
+let xp = Math.max(0, Number(load('xp', 0)) || 0);
 const owned = new Set(load('owned', ['neon', 'standard']));
 owned.add('neon').add('standard');
 
@@ -140,16 +143,37 @@ function spendChips(n) {
 let cell = 40;
 let gap = 3;
 
+// Handy und Tablet hochkant: alles untereinander. Breite Bildschirme quer (z. B. iPad): Feld links, Rest rechts.
 function layout() {
-  const w = Math.min(window.innerWidth, 560) - 24;
-  // Kopfzeile, Mindesthand + Auftrag, Vorschau, Spezialzüge, Abstände
-  const h = window.innerHeight - 60 - 50 - 26 - 42 - 8 - 30;
-  gap = window.innerWidth < 380 ? 2 : 3;
-  const byWidth = (w - 2 - 9 * gap) / 8;
-  const byHeight = (h - 2 - 9 * gap) / 11.2; // 8 Feld-Reihen + Ablage
-  cell = Math.max(22, Math.floor(Math.min(byWidth, byHeight, 60)));
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const wide = W >= 900 && W > H * 1.15;
+  const tablet = W >= 700;
+  els.app.classList.toggle('wide', wide);
+  root.classList.toggle('tablet', tablet);
+  gap = W < 380 ? 2 : tablet ? 4 : 3;
+  let pieceSize;
+  if (wide) {
+    const side = Math.round(Math.min(440, Math.max(340, W * 0.32)));
+    const byHeight = (H - 48 - 2 - 9 * gap) / 8;
+    const byWidth = (W - side - 80 - 2 - 9 * gap) / 8;
+    cell = Math.max(28, Math.floor(Math.min(byHeight, byWidth, 100)));
+    root.style.setProperty('--side', `${side}px`);
+    // Teile stehen rechts untereinander: jedes Teil (bis 5 Kästchen) muss in ein Drittel der Ablage passen
+    const trayHeight = els.tray.getBoundingClientRect().height || H / 2;
+    pieceSize = Math.floor(Math.min(cell * 0.6, (side - 24) / 5.3, (trayHeight / 3 - 10) / 5.3));
+  } else {
+    const w = Math.min(W, tablet ? 780 : 560) - 24;
+    // Kopfzeile, Mindesthand + Auftrag, Vorschau, Spezialzüge, Abstände
+    const h = H - (tablet ? 74 : 60) - (tablet ? 58 : 50) - 26 - (tablet ? 50 : 42) - 8 - 30;
+    const byWidth = (w - 2 - 9 * gap) / 8;
+    const byHeight = (h - 2 - 9 * gap) / 11.2; // 8 Feld-Reihen + Ablage
+    cell = Math.max(22, Math.floor(Math.min(byWidth, byHeight, tablet ? 92 : 60)));
+    pieceSize = Math.floor(cell * 0.56);
+  }
   root.style.setProperty('--cell', `${cell}px`);
   root.style.setProperty('--gap', `${gap}px`);
+  root.style.setProperty('--piece', `${pieceSize}px`);
 }
 
 // ---------- Darstellung ----------
@@ -282,9 +306,27 @@ function renderWallet() {
 
 // Volle Reihen, die liegen bleiben mussten, sind gesperrt.
 function renderLocked() {
-  for (const el of cellEls) el.classList.remove('locked');
-  for (const line of findFullLines(state.board)) for (const i of line.cells) cellEls[i].classList.add('locked');
+  for (const el of cellEls) {
+    el.classList.remove('locked', 'lock-head');
+    delete el.dataset.left;
+  }
+  for (const line of findFullLines(state.board)) {
+    for (const i of line.cells) cellEls[i].classList.add('locked');
+    // Zähler am Ende der Reihe: so viele Züge, bis sie zerbröselt
+    const left = state.locked?.[`${line.type}:${line.index}`];
+    if (left) {
+      const head = cellEls[line.cells[line.cells.length - 1]];
+      head.classList.add('lock-head');
+      head.dataset.left = String(left);
+    }
+  }
   renderNearFull();
+}
+
+function renderLevel() {
+  const { level, into, need } = levelFromXp(xp);
+  $('lvl').textContent = `Lv ${level}`;
+  $('lvl-fill').style.width = `${Math.round((100 * into) / need)}%`;
 }
 
 function renderAll() {
@@ -297,6 +339,7 @@ function renderAll() {
   renderReq();
   renderMission();
   renderWallet();
+  renderLevel();
 }
 
 // ---------- Ziehen ----------
@@ -397,7 +440,7 @@ function endDrag(e) {
   const pw = d.piece.w * cell;
   const ph = d.piece.h * cell;
   els.drag.classList.add('back');
-  els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(0.56)`;
+  els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(${(parseFloat(root.style.getPropertyValue('--piece')) || cell * 0.56) / cell})`;
   setTimeout(() => {
     els.drag.className = 'drag';
     els.slots[d.slot].classList.remove('dragging');
@@ -428,6 +471,10 @@ function place(slot, x, y) {
 
   const required = requirementFor(state.lines - res.lines.length).level;
   if (res.lines.length) clearEffects(res);
+  if (res.crumbled) {
+    flyOut(res.crumbled.removed, new Set(), 0.6);
+    setTimeout(() => sounds.invalid(), 150);
+  }
   renderBoard(res.placed.filter((i) => !res.removed.has(i)));
   renderLocked();
   if (res.blocked.length) blockedEffects(res, required);
@@ -541,7 +588,13 @@ function clearEffects(res) {
   if (res.near) extras.push(`Fast ein ${res.near.name}!`);
   bannerAt = 0;
   queueBanner(() =>
-    showBanner({ title: top.hand.name, tier, extra: extras.join(' · '), points: `+${fmt(res.points)}  ·  +${res.chips} Chips` }),
+    showBanner({
+      praise: praiseFor(level, res.combo),
+      title: top.hand.name,
+      tier,
+      extra: extras.join(' · '),
+      points: `+${fmt(res.points)}  ·  +${res.chips} Chips`,
+    }),
   );
 
   sounds.clear(level, res.streak, res.combo);
@@ -606,11 +659,18 @@ function levelUpEffects() {
   els.req.classList.add('level-up');
 }
 
-function showBanner({ title, tier, extra, points }) {
+function showBanner({ praise, title, tier, extra, points }) {
+  els.banner.replaceChildren();
+  if (praise) {
+    const pr = document.createElement('div');
+    pr.className = 'praise';
+    pr.textContent = praise;
+    els.banner.append(pr);
+  }
   const name = document.createElement('div');
   name.className = `hand-name tier${tier}`;
   name.textContent = title;
-  els.banner.replaceChildren(name);
+  els.banner.append(name);
   if (extra) {
     const ex = document.createElement('div');
     ex.className = 'extra';
@@ -843,11 +903,126 @@ function gameOver() {
   $('final-lines').textContent = fmt(state.lines);
   $('final-chips').textContent = fmt(state.chips);
   $('new-record').hidden = !(state.score > bestAtStart && state.score > 0);
+  const canFree = state.freeContinue !== false;
   const canFold = wallet >= POWER_COSTS.fold;
   const canBlast = wallet >= POWER_COSTS.blast && hasLockedLines(state);
-  $('rescue').hidden = !canFold && !canBlast;
+  $('free-continue').hidden = !canFree;
+  $('rescue').hidden = !canFree && !canFold && !canBlast;
+  $('go-decide').hidden = Boolean(state.rewarded);
+  $('go-reward').hidden = !state.rewarded;
+  if (state.rewarded) showLevel(xp, xp, []);
   renderWallet();
   openOverlay('gameover');
+}
+
+// Das nächste noch nicht freigeschaltete Design (günstigstes zuerst) – Geschenk für jedes 5. Level
+function nextLockedDesign() {
+  const all = [...THEMES.map((t) => ({ ...t, kind: 'theme' })), ...TILE_STYLES.map((t) => ({ ...t, kind: 'tiles' }))];
+  return all.filter((d) => !owned.has(d.id)).sort((a, b) => a.price - b.price)[0] ?? null;
+}
+
+// Runde beenden: Truhe öffnen, Erfahrung gutschreiben, Level-Belohnungen verteilen.
+function openChest() {
+  if (!state.over || state.rewarded) return;
+  state.rewarded = true;
+  const reward = chestReward(state, Math.random);
+  const before = xp;
+  xp += xpForRound(state);
+  save('xp', xp);
+  persist();
+
+  const messages = [];
+  const levelBefore = levelFromXp(before).level;
+  const levelAfter = levelFromXp(xp).level;
+  let levelChips = 0;
+  for (let level = levelBefore + 1; level <= levelAfter; level++) {
+    const lr = levelReward(level);
+    levelChips += lr.chips;
+    let text = `Level ${level}! +${lr.chips} Chips`;
+    const design = lr.design ? nextLockedDesign() : null;
+    if (design) {
+      owned.add(design.id);
+      save('owned', [...owned]);
+      text += ` · Neues Design: ${design.name}`;
+    } else if (lr.design) {
+      levelChips += 250;
+      text += ' · +250 Bonus-Chips';
+    }
+    messages.push(text);
+  }
+
+  $('go-decide').hidden = true;
+  $('go-reward').hidden = false;
+  const chest = $('chest');
+  chest.classList.remove('open');
+  $('chest-reward').textContent = '';
+  setTimeout(() => {
+    chest.classList.add('open');
+    sounds.mission();
+    vibrate([30, 40, 60]);
+    const box = chest.getBoundingClientRect();
+    chipBurst(box.left + box.width / 2, box.top + box.height / 3, reward.bonus ? 50 : 22);
+    $('chest-reward').textContent = reward.bonus ? `BONUS ×3! +${fmt(reward.chips)} Chips` : `+${fmt(reward.chips)} Chips`;
+    addChips(reward.chips + levelChips);
+    sounds.chips(reward.chips);
+  }, 450);
+  setTimeout(() => showLevel(before, xp, messages), 1100);
+}
+
+function showLevel(fromXp, toXp, messages) {
+  const from = levelFromXp(fromXp);
+  const to = levelFromXp(toXp);
+  $('go-level').textContent = String(to.level);
+  $('go-xp').textContent = toXp > fromXp ? `+${fmt(toXp - fromXp)} EP · ${fmt(to.into)} / ${fmt(to.need)}` : `${fmt(to.into)} / ${fmt(to.need)} EP`;
+  const fill = $('go-xp-fill');
+  fill.style.transition = 'none';
+  fill.style.width = `${to.level > from.level ? 0 : Math.round((100 * from.into) / from.need)}%`;
+  void fill.offsetWidth;
+  fill.style.transition = '';
+  fill.style.width = `${Math.round((100 * to.into) / to.need)}%`;
+  const box = $('level-up');
+  box.hidden = !messages.length;
+  box.replaceChildren(...messages.map((text) => Object.assign(document.createElement('div'), { textContent: text })));
+  if (messages.length) {
+    sounds.levelUp();
+    shake('shake');
+  }
+  renderLevel();
+}
+
+// Tagesgeschenk beim ersten Start des Tages
+let pendingGift = null;
+function checkGift() {
+  pendingGift = dailyGift(load('gift', null), today());
+  if (!pendingGift) return false;
+  const days = $('gift-days');
+  days.replaceChildren(
+    ...GIFT_DAYS.map((chips, k) => {
+      const el = document.createElement('div');
+      el.className = 'gift-day';
+      if (k < Math.min(pendingGift.streak, GIFT_DAYS.length)) el.classList.add('done');
+      if (k === Math.min(pendingGift.streak, GIFT_DAYS.length) - 1) el.classList.add('today');
+      el.textContent = `Tag ${k + 1}\n${chips}`;
+      return el;
+    }),
+  );
+  $('gift-text').textContent = pendingGift.streak > 1 ? `${pendingGift.streak} Tage in Folge – weiter so!` : 'Schön, dass du da bist!';
+  $('gift-chips').textContent = `+${fmt(pendingGift.chips)} Chips`;
+  openOverlay('gift');
+  return true;
+}
+
+function claimGift() {
+  if (!pendingGift) return;
+  save('gift', { day: pendingGift.day, streak: pendingGift.streak });
+  addChips(pendingGift.chips);
+  sounds.mission();
+  sounds.chips(pendingGift.chips);
+  vibrate([20, 30, 40]);
+  const box = $('gift-chips').getBoundingClientRect();
+  chipBurst(box.left + box.width / 2, box.top, 30);
+  pendingGift = null;
+  closeOverlays();
 }
 
 const actions = {
@@ -856,8 +1031,19 @@ const actions = {
     if (!settings.seenHelp) {
       settings.seenHelp = true;
       saveSettings();
+      checkGift();
     }
   },
+  'free-continue'() {
+    if (!useFreeContinue(state)) return;
+    sounds.power();
+    closeOverlays();
+    renderTray(true);
+    persist();
+    if (state.over) setTimeout(gameOver, 600);
+  },
+  'open-chest': openChest,
+  'claim-gift': claimGift,
   back: () => openOverlay('menu'),
   help: () => openOverlay('help'),
   shop() {
@@ -975,6 +1161,7 @@ document.addEventListener('visibilitychange', () => {
 
 if (state.over) gameOver();
 else if (!settings.seenHelp) openOverlay('help');
+else checkGift();
 
 // Offline-Betrieb (nur im gebauten Spiel; beim Entwickeln würde der Cache stören)
 if (version !== 'dev' && 'serviceWorker' in navigator) {
