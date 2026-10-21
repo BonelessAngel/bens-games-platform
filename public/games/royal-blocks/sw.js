@@ -1,8 +1,8 @@
 // Service Worker von Royal Blocks – gilt nur für den Ordner des Spiels (/games/royal-blocks/).
 // CACHE und FILES setzt scripts/build.mjs beim Bauen ein. Fremde Caches werden nie angefasst.
 
-const CACHE = 'royal-blocks-v1.1.0-1a8e2a81c8';
-const FILES = ["./","index.html","style.css","main.js","game.js","poker.js","pieces.js","audio.js","fx.js","storage.js","manifest.webmanifest","icon-180.png","icon-192.png","icon-512.png"];
+const CACHE = 'royal-blocks-v1.2.0-1e287ce9c8';
+const FILES = ["./","index.html","style.css","main.js","game.js","poker.js","pieces.js","audio.js","fx.js","storage.js","progress.js","manifest.webmanifest","icon-180.png","icon-192.png","icon-512.png"];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

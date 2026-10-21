@@ -134,6 +134,8 @@ function iosTick() {
 // pattern wie bei navigator.vibrate: Zahl oder [an, aus, an, …] in Millisekunden
 export function vibrate(pattern) {
   if (!vibrationEnabled) return;
+  // Browser erlauben Vibration erst nach der ersten echten Berührung
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
   if (navigator.vibrate) {
     try {
       navigator.vibrate(pattern);

@@ -16,8 +16,10 @@ const DEAL_ATTEMPTS = 25;
 export const REQUIREMENTS = [
   { lines: 0, level: 1 }, // Paar
   { lines: 10, level: 2 }, // Zwei Paare
-  { lines: 35, level: 3 }, // Drilling
 ];
+
+// Gesperrte Reihen zerbröseln nach so vielen Zügen von selbst (ohne Punkte) – ein Fehler ist nie tödlich.
+export const LOCK_MOVES = 5;
 
 // Spezialzüge kosten Chips (die Chips selbst verwaltet die Anzeige, sie gelten über alle Runden).
 // Eine Runde bringt laut Simulation etwa 250–350 Chips.
@@ -49,6 +51,9 @@ export function createGame(seed, mode = 'free', day = null) {
     chips: 0, // in dieser Runde verdient
     mission: null,
     missionsDone: 0,
+    locked: {}, // gesperrte Reihen: "row:3" -> verbleibende Züge
+    freeContinue: true, // einmal pro Runde gratis weiterspielen
+    rewarded: false, // Truhe am Rundenende schon geöffnet
     over: false,
   };
   state.tray = dealTray(state.board, rngOf(state));
@@ -286,6 +291,8 @@ export function placePiece(state, slot, x, y) {
   }
   state.chips += chips;
 
+  const crumbled = syncLocked(state, true);
+
   const levelUp = requirementFor(state.lines).level > required;
   // "Fast!" – nur zeigen, wenn die verpasste Hand stärker gewesen wäre als alles, was dieser Zug geschafft hat
   const bestLevel = Math.max(-1, ...lines.map((l) => l.hand.level));
@@ -300,8 +307,42 @@ export function placePiece(state, slot, x, y) {
 
   return {
     placed, lines, blocked, removed, combo, streak: state.streak, streakMult, tableClear, points, chips,
-    mission, near, levelUp, dealt, over: state.over,
+    mission, near, levelUp, crumbled, dealt, over: state.over,
   };
+}
+
+const lineKey = (line) => `${line.type}:${line.index}`;
+
+// Hält die Liste der gesperrten Reihen aktuell. tick = ein Zug ist vergangen: Zähler runter, bei 0 zerbröselt die Reihe.
+export function syncLocked(state, tick = false) {
+  state.locked ??= {};
+  const removed = new Map();
+  const lines = [];
+  const full = new Map(findFullLines(state.board).map((line) => [lineKey(line), line]));
+  for (const key of Object.keys(state.locked)) if (!full.has(key)) delete state.locked[key];
+  for (const [key, line] of full) {
+    if (!(key in state.locked)) {
+      state.locked[key] = LOCK_MOVES;
+    } else if (tick && --state.locked[key] <= 0) {
+      lines.push(line);
+      for (const i of line.cells) removed.set(i, state.board[i]);
+    }
+  }
+  for (const i of removed.keys()) state.board[i] = null;
+  if (removed.size) {
+    // Reihen, die durch das Zerbröseln nicht mehr voll sind, sind wieder frei
+    const still = new Set(findFullLines(state.board).map(lineKey));
+    for (const key of Object.keys(state.locked)) if (!still.has(key)) delete state.locked[key];
+  }
+  return removed.size ? { lines, removed } : null;
+}
+
+// Einmal pro Runde gratis drei neue Teile, wenn nichts mehr passt.
+export function useFreeContinue(state) {
+  if (state.freeContinue === false) return false;
+  state.freeContinue = false;
+  foldTray(state);
+  return true;
 }
 
 // Spezialzug "Passen": drei neue Teile.
@@ -318,6 +359,7 @@ export function blastAt(state, cell) {
   const removed = new Map();
   for (const line of lines) for (const i of line.cells) removed.set(i, state.board[i]);
   for (const i of removed.keys()) state.board[i] = null;
+  syncLocked(state);
   updateOver(state);
   return { lines, removed };
 }

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-version="1.1.0" data-theme="neon" data-tiles="standard">
+<html lang="de" data-version="1.2.0" data-theme="neon" data-tiles="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -20,7 +20,10 @@
 <body>
   <div id="app">
     <header class="top">
-      <div class="best"><span class="label" id="best-label">Rekord</span><span id="best">0</span></div>
+      <div class="best">
+        <span class="label" id="best-label">Rekord</span><span id="best">0</span>
+        <span class="lvl"><span id="lvl">Lv 1</span><span class="lvl-bar"><i id="lvl-fill"></i></span></span>
+      </div>
       <div class="score-box">
         <div id="score" class="score">0</div>
         <div id="streak" class="streak"></div>
@@ -99,8 +102,7 @@
       <ol class="rules">
         <li>Zieh die Teile von unten auf das Feld.</li>
         <li>Ist eine Reihe oder Spalte voll, wird sie zur <b>Pokerhand</b>. Aus ihren 8 Karten zählen die besten 5.</li>
-        <li>Sie verschwindet nur, wenn sie mindestens die <b>Mindesthand</b> (oben) schafft. Sonst bleibt sie <b>gesperrt</b> liegen – bis eine Reihe quer durch sie abgeräumt wird.</li>
-        <li>Die Mindesthand steigt: Paar → Zwei Paare → Drilling.</li>
+        <li>Sie verschwindet mit Punkten, wenn sie mindestens die <b>Mindesthand</b> (oben) schafft: erst ein Paar, später zwei Paare. Sonst bleibt sie kurz <b>gesperrt</b> und zerbröselt nach ein paar Zügen von selbst.</li>
         <li>Jedes Teil hat eine Farbe: 5 gleiche Farben in einer Reihe sind ein <b>Flush</b>. Der seltene <b>Joker ★</b> zählt als jede Karte.</li>
         <li>Abgeräumte Reihen bringen <b>Chips</b> (so viele wie der Faktor), Aufträge noch mehr. Mit Chips kannst du <b>passen</b>, <b>Farben tauschen</b>, gesperrte Reihen <b>sprengen</b> – oder neue Designs freischalten.</li>
         <li>Passt kein Teil mehr, ist die Runde vorbei.</li>
@@ -132,23 +134,46 @@
 
   <div id="gameover" class="overlay" hidden>
     <div class="panel">
-      <h2>Keine Züge mehr</h2>
-      <div id="new-record" class="new-record" hidden>Neuer Rekord!</div>
-      <div class="final-score" id="final-score">0</div>
-      <dl class="stats">
-        <dt id="final-best-label">Rekord</dt><dd id="final-best">0</dd>
-        <dt>Beste Hand</dt><dd id="final-hand">–</dd>
-        <dt>Reihen</dt><dd id="final-lines">0</dd>
-        <dt>Chips verdient</dt><dd id="final-chips">0</dd>
-      </dl>
-      <div id="rescue" class="rescue" hidden>
-        <p class="small">Retten?</p>
-        <div class="rescue-buttons">
-          <button class="btn gold" data-power="fold" type="button">⟳ Passen <b data-cost="fold"></b></button>
-          <button class="btn gold" data-power="blast" type="button">✸ Sprengen <b data-cost="blast"></b></button>
+      <div id="go-decide">
+        <h2>Keine Züge mehr</h2>
+        <div id="new-record" class="new-record" hidden>Neuer Rekord!</div>
+        <div class="final-score" id="final-score">0</div>
+        <dl class="stats">
+          <dt id="final-best-label">Rekord</dt><dd id="final-best">0</dd>
+          <dt>Beste Hand</dt><dd id="final-hand">–</dd>
+          <dt>Reihen</dt><dd id="final-lines">0</dd>
+          <dt>Chips verdient</dt><dd id="final-chips">0</dd>
+        </dl>
+        <div id="rescue" class="rescue" hidden>
+          <button class="btn gold big" data-action="free-continue" type="button" id="free-continue">Gratis weiterspielen</button>
+          <div class="rescue-buttons">
+            <button class="btn gold" data-power="fold" type="button">⟳ Passen <b data-cost="fold"></b></button>
+            <button class="btn gold" data-power="blast" type="button">✸ Sprengen <b data-cost="blast"></b></button>
+          </div>
         </div>
+        <button class="btn primary big" data-action="open-chest" type="button">Truhe öffnen</button>
       </div>
-      <button class="btn primary big" data-action="new-confirm" type="button">Nochmal spielen</button>
+      <div id="go-reward" hidden>
+        <h2>Deine Belohnung</h2>
+        <div class="chest" id="chest"><div class="chest-lid"></div><div class="chest-body"></div><div class="chest-glow"></div></div>
+        <div class="chest-reward" id="chest-reward"></div>
+        <div class="level-box">
+          <div class="level-row"><span>Level <b id="go-level">1</b></span><span id="go-xp" class="small"></span></div>
+          <div class="xp-bar"><i id="go-xp-fill"></i></div>
+          <div id="level-up" class="level-up" hidden></div>
+        </div>
+        <button class="btn primary big" data-action="new-confirm" type="button">Nochmal spielen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gift" class="overlay" hidden>
+    <div class="panel">
+      <h2>Tagesgeschenk</h2>
+      <p id="gift-text">Schön, dass du da bist!</p>
+      <div id="gift-days" class="gift-days"></div>
+      <div class="chest-reward" id="gift-chips"></div>
+      <button class="btn primary big" data-action="claim-gift" type="button">Abholen</button>
     </div>
   </div>
 </body>
