@@ -48,6 +48,7 @@ function throws(callable $fn, string $pattern): void
 }
 
 const TEST_ORIGIN = 'https://test.bens-games.local';
+const TEST_ADMIN_ORIGIN = 'https://admin.test.bens-games.local';
 const TEST_MIGRATION_TOKEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 /** @return array<string, mixed> */
@@ -164,6 +165,47 @@ final class TestApp
     {
         $this->registered($email, $password, $name);
         return $this->login($email, $password);
+    }
+
+    /** API der Zentrale (role = admin) mit derselben Datenbank, Uhr und E-Mail. */
+    public function admin(): Api
+    {
+        return $this->adminApi ??= new Api(
+            validConfig(['role' => 'admin', 'base_url' => TEST_ADMIN_ORIGIN]),
+            fn (): PDO => $this->pdo,
+            migrationsDir(),
+            $this->mailer,
+            new Clock(fn (): int => $this->time),
+        );
+    }
+
+    private ?Api $adminApi = null;
+
+    public function adminPost(string $path, array $json = [], array $session = []): Response
+    {
+        $headers = ['origin' => TEST_ADMIN_ORIGIN, 'content-type' => 'application/json', 'user-agent' => 'Testbrowser'];
+        if (isset($session['csrf'])) {
+            $headers['x-csrf-token'] = $session['csrf'];
+        }
+        return $this->admin()->handle(new Request('POST', $path, $headers, json_encode($json), $session['cookies'] ?? [], '203.0.113.7'));
+    }
+
+    public function adminGet(string $path, array $session = [], array $query = []): Response
+    {
+        return $this->admin()->handle(new Request('GET', $path, [], '', $session['cookies'] ?? [], '203.0.113.7', $query));
+    }
+
+    public function userId(string $email): int
+    {
+        $statement = $this->pdo->prepare('SELECT id FROM users WHERE email_normalized = ?');
+        $statement->execute([$email]);
+        return (int) $statement->fetchColumn();
+    }
+
+    public function grantRole(string $email, string $role): void
+    {
+        $this->pdo->prepare('INSERT INTO user_roles (user_id, role, granted_at) VALUES (?, ?, ?)')
+            ->execute([$this->userId($email), $role, gmdate('Y-m-d H:i:s', $this->time)]);
     }
 
     /** Angemeldete POST-Anfrage mit Cookie und CSRF-Token. @param array{cookies: array<string, string>, csrf: string} $session */

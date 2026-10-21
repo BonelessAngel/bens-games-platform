@@ -19,20 +19,46 @@ final class Config
     private const ENVIRONMENTS = ['staging', 'production', 'test'];
     private const MIN_SECRET_LENGTH = 32;
     private const BASE_URLS = [
-        'staging' => 'https://staging.bens-games.de',
-        'production' => 'https://bens-games.de',
-        'test' => 'http://localhost',
+        'site' => [
+            'staging' => 'https://staging.bens-games.de',
+            'production' => 'https://bens-games.de',
+            'test' => 'http://localhost',
+        ],
+        'admin' => [
+            'staging' => 'https://admin-staging.bens-games.de',
+            'production' => 'https://admin.bens-games.de',
+            'test' => 'http://admin.localhost',
+        ],
     ];
 
     /**
-     * Eigene Adresse für Links in E-Mails und für die Herkunftsprüfung.
-     * Bewusst aus der Konfiguration und nie aus dem Host-Header der Anfrage.
+     * Eigene Adresse für Herkunftsprüfung und Links. Bewusst aus der Konfiguration, nie aus dem Host-Header.
+     * Links in E-Mails zeigen immer auf die Webseite (siteUrl), auch wenn die Mail aus der Zentrale kommt.
      * @param array<string, mixed> $config
      */
     public static function baseUrl(array $config): string
     {
-        $url = $config['base_url'] ?? self::BASE_URLS[$config['environment'] ?? ''] ?? '';
+        $url = $config['base_url'] ?? self::BASE_URLS[self::role($config)][$config['environment'] ?? ''] ?? '';
         return rtrim((string) $url, '/');
+    }
+
+    /** @param array<string, mixed> $config */
+    public static function siteUrl(array $config): string
+    {
+        if (self::role($config) === 'site') {
+            return self::baseUrl($config);
+        }
+        $url = $config['site_url'] ?? self::BASE_URLS['site'][$config['environment'] ?? ''] ?? '';
+        return rtrim((string) $url, '/');
+    }
+
+    /**
+     * „site“ = bens-games.de (Konten, Spiele), „admin“ = Zentrale (admin.bens-games.de).
+     * @param array<string, mixed> $config
+     */
+    public static function role(array $config): string
+    {
+        return ($config['role'] ?? 'site') === 'admin' ? 'admin' : 'site';
     }
 
     public static function defaultPath(string $apiDir): string
@@ -81,6 +107,9 @@ final class Config
             }
         }
 
+        if (isset($config['role']) && !in_array($config['role'], ['site', 'admin'], true)) {
+            throw new RuntimeException('role muss site oder admin sein.');
+        }
         if (isset($config['maintenance_token']) && (!is_string($config['maintenance_token']) || strlen($config['maintenance_token']) < self::MIN_SECRET_LENGTH)) {
             throw new RuntimeException('maintenance_token muss mindestens ' . self::MIN_SECRET_LENGTH . ' Zeichen lang sein.');
         }

@@ -44,8 +44,8 @@ final class Api
             $path = 'games/{id}/' . $match[2];
         }
 
-        // [Methode, braucht Anmeldung, Handler]
-        $routes = [
+        // [Methode, braucht Anmeldung, Handler] – Routen der Webseite (bens-games.de)
+        $siteRoutes = [
             'games/{id}/save' => ['GET', true, fn (array $session): Response => $this->gameSaves()->get($session, $gameId)],
             'games/{id}/save/put' => ['POST', true, fn (array $session): Response => $this->gameSaves()->put($session, $gameId, $request->json())],
             'games/{id}/save/delete' => ['POST', true, fn (array $session): Response => $this->gameSaves()->delete($session, $gameId, $request)],
@@ -74,6 +74,23 @@ final class Api
             'account/delete' => ['POST', true, fn (array $session): Response => $this->accounts()->deleteAccount($session, $request->json(), $request)],
         ];
 
+        // Routen der Zentrale (admin.bens-games.de) – auf der Webseite gibt es sie nicht, und umgekehrt.
+        $adminRoutes = [
+            'health' => ['GET', false, fn (): Response => $this->health()],
+            'auth/login' => ['POST', false, fn (): Response => $this->accounts()->login($request->json(), $request)],
+            'auth/login/two-factor' => ['POST', false, fn (): Response => $this->accounts()->loginTwoFactor($request->json(), $request)],
+            'auth/logout' => ['POST', true, fn (array $session): Response => $this->accounts()->logout($session, $request)],
+            'admin/me' => ['GET', true, fn (array $session): Response => $this->admin()->me($session)],
+            'admin/overview' => ['GET', true, fn (array $session): Response => $this->admin()->overview($session)],
+            'admin/users' => ['GET', true, fn (array $session): Response => $this->admin()->users($session, $request->query)],
+            'admin/users/lock' => ['POST', true, fn (array $session): Response => $this->admin()->lock($session, $request->json(), $request)],
+            'admin/users/revoke-sessions' => ['POST', true, fn (array $session): Response => $this->admin()->revokeSessions($session, $request->json(), $request)],
+            'admin/rights' => ['GET', true, fn (array $session): Response => $this->admin()->rights($session, $request->query)],
+            'admin/rights/set' => ['POST', true, fn (array $session): Response => $this->admin()->setRights($session, $request->json(), $request)],
+            'admin/audit' => ['GET', true, fn (array $session): Response => $this->admin()->audit($session, $request->query)],
+        ];
+
+        $routes = $this->isAdmin() ? $adminRoutes : $siteRoutes;
         $route = $routes[$path] ?? null;
         if ($route === null) {
             return new Response(404, ['error' => 'not_found']);
@@ -96,9 +113,13 @@ final class Api
                 return $handler();
             }
 
-            $session = (new Sessions($this->pdo(), $this->clock))->current($request);
+            $session = $this->sessions()->current($request);
             if ($session === null) {
                 throw new HttpError(401, 'not_logged_in');
+            }
+            // Zentrale: Rechte bei jeder Anfrage neu prüfen (sie können inzwischen entzogen worden sein).
+            if ($this->isAdmin() && !(new Permissions($this->pdo()))->canEnterPanel((int) $session['id'])) {
+                throw new HttpError(403, 'no_panel_access');
             }
             if ($method === 'POST' && !hash_equals((string) $session['csrf_token'], $request->header('x-csrf-token'))) {
                 throw new HttpError(403, 'csrf');
@@ -123,6 +144,17 @@ final class Api
         }
     }
 
+    private function isAdmin(): bool
+    {
+        return Config::role($this->config ?? []) === 'admin';
+    }
+
+    /** Sitzungen dieses Bereichs: Webseite und Zentrale haben getrennte Anmeldungen. */
+    private function sessions(): Sessions
+    {
+        return new Sessions($this->pdo(), $this->clock, $this->isAdmin() ? 'admin' : 'site');
+    }
+
     private function accounts(): Accounts
     {
         $pdo = $this->pdo();
@@ -131,12 +163,19 @@ final class Api
             $this->clock,
             $this->mailer(),
             new RateLimiter($pdo, $this->clock),
-            new Sessions($pdo, $this->clock),
+            $this->sessions(),
             new AuditLog($pdo, $this->clock),
-            Config::baseUrl($this->config ?? []),
+            Config::siteUrl($this->config ?? []),
             $this->twoFactor(),
             new Reauth(new RateLimiter($pdo, $this->clock)),
+            $this->isAdmin() ? new Permissions($pdo) : null,
         );
+    }
+
+    private function admin(): Admin
+    {
+        $pdo = $this->pdo();
+        return new Admin($pdo, $this->clock, new Permissions($pdo), $this->sessions(), new AuditLog($pdo, $this->clock));
     }
 
     private function gameSaves(): GameSaves
