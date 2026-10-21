@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-version="1.2.0" data-theme="neon" data-tiles="standard">
+<html lang="de" data-version="1.3.0" data-theme="neon" data-tiles="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -28,9 +28,12 @@
         <div id="score" class="score">0</div>
         <div id="streak" class="streak"></div>
       </div>
+      <div class="top-right">
+        <div class="jackpot" title="Royal Flush gewinnt den Jackpot"><span>Jackpot</span><b id="jackpot">500</b></div>
       <button id="menu-btn" class="icon-btn" type="button" aria-label="Menü">
         <span></span><span></span><span></span>
       </button>
+      </div>
     </header>
 
     <div class="info">
@@ -74,6 +77,7 @@
     <div class="panel">
       <h2>Pause</h2>
       <button class="btn primary" data-action="resume" type="button">Weiterspielen</button>
+      <button class="btn" data-action="home" type="button">Hauptmenü</button>
       <button class="btn gold" data-action="switch-mode" type="button" id="mode-btn">Tages-Challenge</button>
       <button class="btn" data-action="shop" type="button">Designs</button>
       <button class="btn" data-action="help" type="button">Pokerhände &amp; Regeln</button>
@@ -104,6 +108,8 @@
         <li>Ist eine Reihe oder Spalte voll, wird sie zur <b>Pokerhand</b>. Aus ihren 8 Karten zählen die besten 5.</li>
         <li>Sie verschwindet mit Punkten, wenn sie mindestens die <b>Mindesthand</b> (oben) schafft: erst ein Paar, später zwei Paare. Sonst bleibt sie kurz <b>gesperrt</b> und zerbröselt nach ein paar Zügen von selbst.</li>
         <li>Jedes Teil hat eine Farbe: 5 gleiche Farben in einer Reihe sind ein <b>Flush</b>. Der seltene <b>Joker ★</b> zählt als jede Karte.</li>
+        <li><b>Goldene Karten</b> verdoppeln die Punkte ihrer Reihe. Ab einer <b>Serie von 5</b> kommt das <b>Fieber</b>: ein paar Züge lang zählt alles doppelt.</li>
+        <li>Ein <b>Royal Flush</b> gewinnt den <b>Jackpot</b> (oben rechts), ein Straight Flush ein Viertel davon.</li>
         <li>Abgeräumte Reihen bringen <b>Chips</b> (so viele wie der Faktor), Aufträge noch mehr. Mit Chips kannst du <b>passen</b>, <b>Farben tauschen</b>, gesperrte Reihen <b>sprengen</b> – oder neue Designs freischalten.</li>
         <li>Passt kein Teil mehr, ist die Runde vorbei.</li>
       </ol>
@@ -162,10 +168,63 @@
           <div class="xp-bar"><i id="go-xp-fill"></i></div>
           <div id="level-up" class="level-up" hidden></div>
         </div>
+        <button class="btn gold big" data-action="scratch" type="button" id="scratch-btn" hidden>Rubbellos freirubbeln!</button>
+        <div class="two-buttons">
+          <button class="btn" data-action="share" type="button">Teilen</button>
+          <button class="btn" data-action="home" type="button">Hauptmenü</button>
+        </div>
         <button class="btn primary big" data-action="new-confirm" type="button">Nochmal spielen</button>
       </div>
     </div>
   </div>
+
+  <div id="start" class="overlay start" hidden>
+    <div class="panel start-panel">
+      <img class="logo" src="icon-192.png" alt="" width="96" height="96">
+      <h1 class="title">Royal Blocks</h1>
+      <div class="start-level">
+        <span>Level <b id="start-level">1</b></span>
+        <span class="xp-bar"><i id="start-xp"></i></span>
+      </div>
+      <div class="start-stats">
+        <div><span class="chip-icon"></span><b id="start-chips">0</b><small>Chips</small></div>
+        <div><b id="start-jackpot">500</b><small>Jackpot</small></div>
+        <div><b id="start-best">0</b><small>Rekord</small></div>
+      </div>
+      <button class="btn primary big" data-action="play" type="button" id="start-play">Spielen</button>
+      <button class="btn gold" data-action="play-daily" type="button" id="start-daily">Tages-Challenge</button>
+      <div class="three-buttons">
+        <button class="btn small-btn" data-action="shop" type="button">Designs</button>
+        <button class="btn small-btn" data-action="stats" type="button">Statistik</button>
+        <button class="btn small-btn" data-action="help" type="button">Regeln</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="stats" class="overlay" hidden>
+    <div class="panel scroll">
+      <h2>Statistik</h2>
+      <dl class="stats" id="stats-list"></dl>
+      <h3>Deine Pokerhände</h3>
+      <table class="hands" id="stats-hands"></table>
+      <div class="two-buttons">
+        <button class="btn" data-action="share" type="button">Teilen</button>
+        <button class="btn primary" data-action="back" type="button">Zurück</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="scratch" class="overlay" hidden>
+    <div class="panel">
+      <h2>Rubbellos</h2>
+      <p class="small">3 gleiche Zeichen = großer Gewinn!</p>
+      <div id="scratch-area" class="scratch-area"></div>
+      <div class="chest-reward" id="scratch-reward"></div>
+      <button class="btn primary big" data-action="scratch-done" type="button" id="scratch-done" hidden>Einsammeln</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
 
   <div id="gift" class="overlay" hidden>
     <div class="panel">

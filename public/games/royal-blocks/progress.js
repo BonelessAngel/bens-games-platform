@@ -51,3 +51,59 @@ export function praiseFor(level, combo) {
   const step = Math.min(PRAISE.length - 1, level + (combo > 1 ? combo : 0));
   return PRAISE[step];
 }
+
+// ---------- Jackpot ----------
+// Wächst mit jeder beendeten Runde. Royal Flush gewinnt alles, Straight Flush ein Viertel.
+export const JACKPOT_START = 500;
+export const JACKPOT_GROWTH = 40;
+export function jackpotWin(level, pot) {
+  if (level >= 9) return pot;
+  if (level === 8) return Math.round(pot / 4);
+  return 0;
+}
+
+// ---------- Statistik ----------
+export const emptyStats = () => ({
+  games: 0, totalScore: 0, bestScore: 0, lines: 0, bestStreak: 0, hands: new Array(10).fill(0),
+  golden: 0, fevers: 0, jackpots: 0, missions: 0, chipsEarned: 0,
+});
+
+export function recordMove(stats, res, streak) {
+  for (const line of res.lines) stats.hands[line.hand.level]++;
+  stats.lines += res.lines.length;
+  stats.golden += res.golden || 0;
+  if (res.feverStart) stats.fevers++;
+  if (res.mission) stats.missions++;
+  stats.chipsEarned += res.chips || 0;
+  stats.bestStreak = Math.max(stats.bestStreak, streak);
+}
+
+export function recordRound(stats, state) {
+  stats.games++;
+  stats.totalScore += state.score;
+  stats.bestScore = Math.max(stats.bestScore, state.score);
+}
+
+// ---------- Rubbellos ----------
+// Jede 3. beendete Runde gibt es ein Los. Drei Felder; je mehr gleiche, desto mehr Chips.
+export const SCRATCH_EVERY = 3;
+const SYMBOLS = ['♠', '♥', '♦', '♣'];
+export function scratchPrize(rand) {
+  const roll = rand();
+  const pick = () => SYMBOLS[Math.floor(rand() * SYMBOLS.length)];
+  if (roll < 0.04) return { chips: 750, symbols: ['♛', '♛', '♛'], tier: 3 };
+  if (roll < 0.17) {
+    const s = pick();
+    return { chips: 250, symbols: [s, s, s], tier: 2 };
+  }
+  if (roll < 0.5) {
+    const s = pick();
+    const other = SYMBOLS.find((x) => x !== s);
+    const symbols = [s, s, other];
+    const k = Math.floor(rand() * 3);
+    [symbols[k], symbols[2]] = [symbols[2], symbols[k]];
+    return { chips: 100, symbols, tier: 1 };
+  }
+  const start = Math.floor(rand() * SYMBOLS.length);
+  return { chips: 40, symbols: [0, 1, 2].map((k) => SYMBOLS[(start + k) % SYMBOLS.length]), tier: 0 };
+}
