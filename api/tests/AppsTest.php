@@ -25,12 +25,20 @@ function appIds(TestApp $app, array $cookies = []): array
     return $ids;
 }
 
-dbTest('Deploy gleicht apps.json ab – Nova Bastion ist öffentlich sichtbar', function (): void {
+function catalogAppIds(): array
+{
+    $apps = json_decode(file_get_contents(__DIR__ . '/../../src/data/apps.json'), true, 512, JSON_THROW_ON_ERROR);
+    $ids = array_column($apps, 'id');
+    sort($ids);
+    return $ids;
+}
+
+dbTest('Deploy gleicht apps.json ab – öffentliche Apps sind sichtbar', function (): void {
     $app = new TestApp();
     $row = $app->pdo->query("SELECT * FROM apps WHERE id = 'nova-bastion'")->fetch();
     check($row !== false, 'Nova Bastion fehlt');
     same('/games/nova-bastion/', $row['path']);
-    same(['nova-bastion'], appIds($app));
+    same(catalogAppIds(), appIds($app));
 });
 
 dbTest('Abgleich ändert Code-Felder, aber nie Status und Sichtbarkeit aus der Datenbank', function (): void {
@@ -60,17 +68,17 @@ dbTest('Sichtbarkeit: Gäste, Angemeldete, Freigaben und private Apps', function
         demoApp(['id' => 'wartung', 'path' => '/apps/wartung/', 'status' => 'maintenance']),
     ]);
 
-    same(['offen', 'wartung'], array_values(array_diff(appIds($app), ['nova-bastion'])), 'Gast');
+    same(['offen', 'wartung'], array_values(array_diff(appIds($app), catalogAppIds())), 'Gast');
 
     $ben = $app->signedIn();
-    same(['konto', 'offen', 'wartung'], array_values(array_diff(appIds($app, $ben['cookies']), ['nova-bastion'])), 'angemeldet');
+    same(['konto', 'offen', 'wartung'], array_values(array_diff(appIds($app, $ben['cookies']), catalogAppIds())), 'angemeldet');
 
     $userId = (int) $app->pdo->query('SELECT id FROM users')->fetchColumn();
     $app->pdo->prepare('INSERT INTO app_access (user_id, app_id, created_at) VALUES (?, ?, ?)')->execute([$userId, 'auswahl', '2026-10-21 00:00:00']);
     $app->pdo->prepare('INSERT INTO app_access (user_id, app_id, created_at) VALUES (?, ?, ?)')->execute([$userId, 'geheim', '2026-10-21 00:00:00']);
-    same(['auswahl', 'geheim', 'konto', 'offen', 'wartung'], array_values(array_diff(appIds($app, $ben['cookies']), ['nova-bastion'])), 'mit Freigaben');
+    same(['auswahl', 'geheim', 'konto', 'offen', 'wartung'], array_values(array_diff(appIds($app, $ben['cookies']), catalogAppIds())), 'mit Freigaben');
 
-    same(['offen', 'wartung'], array_values(array_diff(appIds($app), ['nova-bastion'])), 'Gast sieht weiterhin nichts davon');
+    same(['offen', 'wartung'], array_values(array_diff(appIds($app), catalogAppIds())), 'Gast sieht weiterhin nichts davon');
 });
 
 dbTest('Konto löschen entfernt auch Freigaben', function (): void {
