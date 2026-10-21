@@ -404,20 +404,30 @@ function boardOrigin() {
   return { x: r.left + 1 + gap, y: r.top + 1 + gap };
 }
 
+const DRAG_LIFT = 0.5; // Abstand Teil–Finger in Kästchen
+const SNAP_RADIUS = 1.2; // so weit (in Kästchen) springt das Teil zur nächsten freien Stelle
+const SNAP_OFFSETS = [-1, 0, 1].flatMap((dx) => [-1, 0, 1].map((dy) => [dx, dy]));
+
 function moveDrag(e) {
   const { piece } = drag;
   const pw = piece.w * cell + (piece.w - 1) * gap;
   const ph = piece.h * cell + (piece.h - 1) * gap;
   const left = e.clientX - pw / 2;
-  // Mit dem Finger schwebt das Teil darüber, damit man sieht, wohin es kommt.
-  const top = drag.touch ? e.clientY - ph - cell * 1.1 : e.clientY - ph / 2;
+  // Mit dem Finger schwebt das Teil knapp darüber, damit man sieht, wohin es kommt –
+  // aber nah genug, dass auch die unterste Reihe bequem erreichbar ist.
+  const top = drag.touch ? e.clientY - ph - cell * DRAG_LIFT : e.clientY - ph / 2;
   els.drag.style.transform = `translate(${left}px, ${top}px)`;
 
   const o = boardOrigin();
   const pitch = cell + gap;
-  const x = Math.round((left - o.x) / pitch);
-  const y = Math.round((top - o.y) / pitch);
-  const valid = canPlace(state.board, piece, x, y);
+  const fx = (left - o.x) / pitch;
+  const fy = (top - o.y) / pitch;
+  // Einrasten: genaue Stelle, sonst die nächste freie Stelle in der Nähe (wie bei Block Blast)
+  const spot = SNAP_OFFSETS.map(([dx, dy]) => [Math.round(fx) + dx, Math.round(fy) + dy])
+    .filter(([cx, cy]) => Math.hypot(cx - fx, cy - fy) <= SNAP_RADIUS && canPlace(state.board, piece, cx, cy))
+    .sort((a, b) => Math.hypot(a[0] - fx, a[1] - fy) - Math.hypot(b[0] - fx, b[1] - fy))[0];
+  const [x, y] = spot ?? [Math.round(fx), Math.round(fy)];
+  const valid = Boolean(spot);
   if (valid && (drag.x !== x || drag.y !== y || !drag.valid)) showGhost(piece, x, y);
   if (!valid && drag.valid) clearGhost();
   Object.assign(drag, { x, y, valid });
@@ -459,17 +469,37 @@ function endDrag(e) {
     place(d.slot, d.x, d.y);
     return;
   }
-  // zurück in die Ablage
+  // Losgelassen über dem Feld, aber passt nicht: deutlich zeigen (rot + Schütteln + Vibration), auch ohne Ton
+  const box = els.board.getBoundingClientRect();
+  const overBoard =
+    e.type === 'pointerup' &&
+    e.clientX > box.left - cell && e.clientX < box.right + cell && e.clientY > box.top - cell && e.clientY < box.bottom + cell * 2;
   if (e.type === 'pointerup') sounds.invalid();
-  const r = els.slots[d.slot].getBoundingClientRect();
-  const pw = d.piece.w * cell;
-  const ph = d.piece.h * cell;
-  els.drag.classList.add('back');
-  els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(${(parseFloat(root.style.getPropertyValue('--piece')) || cell * 0.56) / cell})`;
+  if (overBoard) {
+    els.drag.classList.add('invalid');
+    els.board.classList.remove('board-invalid');
+    void els.board.offsetWidth;
+    els.board.classList.add('board-invalid');
+    setTimeout(() => els.board.classList.remove('board-invalid'), 500);
+    vibrate([30, 40, 30]);
+  }
+  // zurück in die Ablage
   setTimeout(() => {
-    els.drag.className = 'drag';
-    els.slots[d.slot].classList.remove('dragging');
-  }, 180);
+    // schon das nächste Teil in der Hand? Dann nicht dazwischenfunken
+    if (drag) {
+      els.slots[d.slot].classList.remove('dragging');
+      return;
+    }
+    const r = els.slots[d.slot].getBoundingClientRect();
+    const pw = d.piece.w * cell;
+    const ph = d.piece.h * cell;
+    els.drag.classList.add('back');
+    els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(${(parseFloat(root.style.getPropertyValue('--piece')) || cell * 0.56) / cell})`;
+    setTimeout(() => {
+      if (!drag) els.drag.className = 'drag';
+      els.slots[d.slot].classList.remove('dragging');
+    }, 180);
+  }, overBoard ? 320 : 0);
 }
 
 // ---------- Zug ausführen ----------
@@ -1132,6 +1162,16 @@ function claimGift() {
 
 // ---------- Startbildschirm, Statistik, Teilen, Rubbellos ----------
 
+// Regeln in zwei kurzen Schritten; die Knöpfe unten bleiben immer sichtbar
+let helpPage = 1;
+function showHelp(page) {
+  helpPage = page;
+  for (const el of document.querySelectorAll('.help-page')) el.hidden = Number(el.dataset.page) !== page;
+  $('help-toggle').textContent = page === 1 ? 'Pokerhände ›' : '‹ Zurück';
+  document.querySelectorAll('.help-dots i').forEach((dot, k) => dot.classList.toggle('on', k + 1 === page));
+  openOverlay('help');
+}
+
 function visibleOverlay() {
   return document.querySelector('.overlay:not([hidden])')?.id ?? null;
 }
@@ -1276,7 +1316,8 @@ const actions = {
     if (returnTo === 'start') renderStart();
     openOverlay(returnTo);
   },
-  help: () => openOverlay('help'),
+  help: () => showHelp(1),
+  'help-page': () => showHelp(helpPage === 1 ? 2 : 1),
   shop() {
     returnTo = visibleOverlay() ?? 'menu';
     renderShop();
@@ -1395,7 +1436,7 @@ document.addEventListener('visibilitychange', () => {
 for (const type of ['pointerdown', 'touchend', 'keydown']) document.addEventListener(type, unlockAudio, { capture: true, passive: true });
 
 if (state.over) gameOver();
-else if (!settings.seenHelp) openOverlay('help');
+else if (!settings.seenHelp) showHelp(1);
 else {
   showHome();
   checkGift('start');
