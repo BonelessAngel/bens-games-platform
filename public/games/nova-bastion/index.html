@@ -116,6 +116,10 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 #title .lvl{position:absolute;left:1em;bottom:1em;font-size:1.4em;color:var(--cy);text-align:left;line-height:1.1}
 #title .lvl b{font-weight:400;color:var(--grn)}
 #title .lvl em{font-style:normal;color:#8890aa}
+#title .lvl a{color:var(--cy);text-decoration:underline;text-underline-offset:.15em}
+.syncpick{display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0}
+.syncpick button{font-size:.75em;line-height:1.5;padding:1.2em}
+.syncpick button span{display:block;font-family:'VT323',monospace;font-size:1.7em;font-weight:400;margin-top:.5em;color:#dfe9ff}
 .big{font-family:'Press Start 2P',monospace;font-size:1em;padding:1em 1.6em;min-height:3.4em;background:var(--am);color:#1a1200;
   border:.2em solid #fff1c4;box-shadow:.3em .3em 0 #000}
 .big:active{transform:translate(.2em,.2em);box-shadow:.1em .1em 0 #000}
@@ -1033,11 +1037,22 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
     <button class="big" id="bPlay">KAMPAGNE</button>
     <button class="big dev" id="bPlayDev">DEV MODUS</button>
    </div>
-   <span class="lvl" id="tLv"></span>
+   <span class="lvl"><span id="tLv"></span><br><span id="tCloud"></span></span>
    <button class="small" id="bSndT" style="display:none">TON AN</button>
    <button class="small" id="bMusT" style="display:none">MUSIK AN</button>
    <button class="small" id="bOptT">⚙ EINSTELLUNGEN</button>
    <button class="small" id="bReset" style="right:auto;left:1em;bottom:auto;top:1em;color:#ff8a8a;border-color:#5a2a3a">KAMPAGNE ZURÜCKSETZEN</button>
+  </div>
+
+  <div id="syncScr" class="screen">
+   <div class="panel" style="max-width:42em">
+    <h3>WELCHER SPIELSTAND SOLL BLEIBEN?</h3>
+    <p>Auf diesem Gerät und im Konto liegen unterschiedliche Spielstände. Wähle einen aus – es wird nichts automatisch überschrieben.</p>
+    <div class="syncpick">
+     <button class="big alt" id="syncLocal">DIESES GERÄT<span id="syncLocalInfo"></span></button>
+     <button class="big" id="syncAccount">KONTO<span id="syncAccountInfo"></span></button>
+    </div>
+   </div>
   </div>
 
   <div id="resetScr" class="screen">
@@ -2420,11 +2435,14 @@ try{var s0=localStorage.getItem(KEY);if(s0){SAVE=JSON.parse(s0);}}catch(e){}
 SAVE=normSave(SAVE);
 var DEV=false,PR=SAVE.camp;
 function setMode(dev){DEV=dev;PR=dev?SAVE.dev:SAVE.camp;}
-var Cloud={doc:null,status:'local',timer:null,busy:false,again:false};
+var ACCOUNT_SYNC_KEY='novabastion.account-sync';
+var Cloud={doc:null,status:'checking',timer:null,busy:false,again:false,account:false,csrf:'',accountId:'',accountTimer:null,accountBusy:false,accountAgain:false,lastPut:0,conflictRemote:null};
+function storeLocalSave(){try{localStorage.setItem(KEY,JSON.stringify(SAVE));}catch(e){}}
 function persist(){
   SAVE.t=Date.now();
-  try{localStorage.setItem(KEY,JSON.stringify(SAVE));}catch(e){}
+  storeLocalSave();
   if(Cloud.doc)cloudPush();
+  if(Cloud.account)accountPush(false);
   if((Cloud.db&&Cloud.uid)||(typeof WEB!=='undefined'&&WEB.ok)){clearTimeout(Cloud.scT);Cloud.scT=setTimeout(function(){try{pushScore();}catch(e){}},4000);}
 }
 function cloudPush(){
@@ -2438,7 +2456,7 @@ function cloudPush(){
 }
 function applyRemote(r){
   SAVE=normSave(r);
-  try{localStorage.setItem(KEY,JSON.stringify(SAVE));}catch(e){}
+  storeLocalSave();
   setMode(DEV);Snd.on=SAVE.opt.sfx>0;applyOpt();
   if(scene==='map')refreshMapUI();
   if(scene==='title')refreshTitle();
@@ -2446,8 +2464,105 @@ function applyRemote(r){
   if(scene==='hero')renderHero();
   if(scene==='ach')renderAch();
 }
+function accountAchievements(s){
+  var a=obj(s&&s.camp&&s.camp.ach),out=[];
+  Object.keys(a).forEach(function(k){if(a[k]&&/^[A-Za-z0-9_.-]{1,64}$/.test(k))out.push(k);});
+  return out;
+}
+function mergeAccountAchievements(s,ids){
+  if(!Array.isArray(ids))return;
+  var a=s.camp.ach;
+  ids.forEach(function(k){if(typeof k==='string'&&/^[A-Za-z0-9_.-]{1,64}$/.test(k)&&!a[k])a[k]=1;});
+}
+function accountHasProgress(s){
+  var p=s&&s.camp;if(!p)return false;
+  return (p.stars||[]).some(function(v){return v>0;})||(p.heroic||[]).some(function(v){return v>0;})||(p.endless||[]).some(function(v){return v>0;})||
+    (p.xp||0)>0||(p.crystals||0)>0||Object.keys(obj(p.skills)).length>0||Object.keys(obj(p.ach)).length>0||Object.keys(obj(p.story)).length>0||
+    ((p.st&&((p.st.plays||0)+(p.st.wins||0)+(p.st.losses||0)+(p.st.kills||0)))||0)>0;
+}
+function accountSame(a,b){
+  try{a=JSON.parse(JSON.stringify(a));b=JSON.parse(JSON.stringify(b));delete a.t;delete b.t;return JSON.stringify(a)===JSON.stringify(b);}catch(e){return false;}
+}
+function accountMarked(){
+  try{return localStorage.getItem(ACCOUNT_SYNC_KEY)===String(Cloud.accountId);}catch(e){return false;}
+}
+function markAccount(){try{localStorage.setItem(ACCOUNT_SYNC_KEY,String(Cloud.accountId));}catch(e){}}
+function syncSummary(s){
+  var stars=0;(s.camp.stars||[]).forEach(function(v){stars+=v;});
+  var when=s.t?new Date(s.t).toLocaleString('de-DE'):'noch nie gespeichert';
+  return stars+' Sterne · '+when;
+}
+function showAccountConflict(remote){
+  Cloud.conflictRemote=remote;Cloud.status='conflict';
+  $('syncLocalInfo').textContent=syncSummary(SAVE);$('syncAccountInfo').textContent=syncSummary(remote);
+  if(scene==='title'){disp('syncScr',true);refreshTitle();}
+}
+function chooseAccountSave(useRemote){
+  var chosen=useRemote?Cloud.conflictRemote:SAVE;if(!chosen)return;
+  try{chosen=JSON.parse(JSON.stringify(chosen));}catch(e){return;}
+  chosen.t=Date.now();Cloud.conflictRemote=null;disp('syncScr',false);applyRemote(chosen);Cloud.status='syncing';accountPush(true);
+}
+function accountPush(now){
+  if(!Cloud.account||!Cloud.csrf||Cloud.status==='conflict')return;
+  clearTimeout(Cloud.accountTimer);Cloud.status='syncing';if(scene==='title')refreshTitle();
+  var wait=now?0:Math.max(0,5000-(Date.now()-Cloud.lastPut));
+  Cloud.accountTimer=setTimeout(accountSend,wait);
+}
+function accountSend(){
+  if(Cloud.accountBusy){Cloud.accountAgain=true;return;}
+  Cloud.accountBusy=true;Cloud.lastPut=Date.now();
+  var sentT=SAVE.t,payload={data:JSON.stringify(SAVE),t:SAVE.t,achievements:accountAchievements(SAVE)};
+  fetch('/api/games/nova-bastion/save/put',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':Cloud.csrf},body:JSON.stringify(payload),keepalive:document.hidden}).then(function(r){
+    return r.json().catch(function(){return {};}).then(function(body){
+      if(r.status===401){Cloud.account=false;Cloud.status='local';return;}
+      if(r.status===409&&body.save&&typeof body.save.data==='string'){
+        var remote;try{remote=normSave(JSON.parse(body.save.data));}catch(e){throw new Error('bad remote save');}
+        if(typeof body.save.t==='number')remote.t=body.save.t;
+        if((remote.t||0)>=(SAVE.t||0)){applyRemote(remote);Cloud.status='cloud';markAccount();Cloud.accountAgain=false;}
+        else Cloud.accountAgain=true;
+        return;
+      }
+      if(!r.ok)throw new Error('save failed');
+      if(SAVE.t===sentT){Cloud.status='cloud';markAccount();}else Cloud.accountAgain=true;
+    });
+  },function(){Cloud.status='error';}).catch(function(){Cloud.status='error';}).then(function(){
+    Cloud.accountBusy=false;
+    if(Cloud.accountAgain){Cloud.accountAgain=false;accountPush(false);}
+    if(scene==='title')refreshTitle();
+  });
+}
+function reconcileAccount(body){
+  if(!body.save){SAVE.t=Date.now();storeLocalSave();Cloud.status='syncing';accountPush(true);return;}
+  var remote;try{remote=normSave(JSON.parse(body.save.data));}catch(e){throw new Error('bad remote save');}
+  if(typeof body.save.t==='number')remote.t=body.save.t;
+  mergeAccountAchievements(remote,body.achievements);
+  if(accountSame(SAVE,remote)){
+    if((SAVE.t||0)>(remote.t||0)){Cloud.status='syncing';accountPush(true);}else{applyRemote(remote);Cloud.status='cloud';markAccount();}
+    return;
+  }
+  if(!accountHasProgress(SAVE)){applyRemote(remote);Cloud.status='cloud';markAccount();return;}
+  if(!accountMarked()){showAccountConflict(remote);return;}
+  if((remote.t||0)>(SAVE.t||0)){applyRemote(remote);Cloud.status='cloud';markAccount();}
+  else{Cloud.status='syncing';accountPush(true);}
+}
+function accountInit(){
+  Cloud.status='checking';if(scene==='title')refreshTitle();
+  fetch('/api/account/me',{credentials:'same-origin'}).then(function(r){
+    if(r.status===401||r.status===503){Cloud.status='local';return null;}
+    if(!r.ok)throw new Error('account unavailable');return r.json();
+  }).then(function(me){
+    if(!me)return null;
+    if(!me.user||me.user.id==null||typeof me.csrf!=='string'||!me.csrf)throw new Error('bad account response');
+    Cloud.account=true;Cloud.accountId=String(me.user.id);Cloud.csrf=me.csrf;Cloud.status='syncing';if(scene==='title')refreshTitle();
+    return fetch('/api/games/nova-bastion/save',{credentials:'same-origin'});
+  }).then(function(r){
+    if(!r)return null;
+    if(r.status===401){Cloud.account=false;Cloud.status='local';return null;}
+    if(!r.ok)throw new Error('save unavailable');return r.json();
+  }).then(function(body){if(body)reconcileAccount(body);if(scene==='title')refreshTitle();}).catch(function(){Cloud.status='error';if(scene==='title')refreshTitle();});
+}
 function cloudInit(){
-  if(!window.claude||typeof window.claude.use!=='function')return;
+  if(!window.claude||typeof window.claude.use!=='function'){accountInit();return;}
   Owner.local=false;
   Promise.all([window.claude.use('user'),window.claude.use('db')]).then(function(a){
     var user=a[0],db=a[1];
@@ -9205,6 +9320,8 @@ function enter(dev){Snd.init();Snd.play('tick');setMode(dev);
 function storyGate(fn){var id=PR.storyPend;if(id&&STORY[id]){PR.storyPend=null;persist();if(G&&!G.over)flushStats();G=null;storyPlay(id,fn);}else fn();}
 window.addEventListener('pointerdown',function(e){if(scene!=='story'||!SY.on)return;if(e.target.closest&&e.target.closest('button,#syBox'))return;storyNext();});
 $('bPlay').addEventListener('click',function(){enter(false);});
+$('syncLocal').addEventListener('click',function(){Snd.play('tick');chooseAccountSave(false);});
+$('syncAccount').addEventListener('click',function(){Snd.play('tick');chooseAccountSave(true);});
 /* Dev-Zugang: im Claude-Artifact nur für den Besitzer, lokal immer, auf einer eigenen Webseite nur mit Passwort (7x aufs Logo tippen).
    Das Passwort prüft allein der Server, im Spiel steht kein Prüfwert. Alles, was für andere Spieler zählt
    (Level speichern, Community-Level löschen), verlangt auf dem Server ohnehin jedes Mal das Passwort. */
@@ -9417,7 +9534,10 @@ $('dSkip').addEventListener('click',function(){if(!G)return;for(var i=0;i<5;i++)
 $('dWin').addEventListener('click',function(){if(!G)return;closeDev();G.nextWave=Math.max(G.nextWave,G.waves.length);G.spawners=[];G.enemies=[];endGame(true);});
 $('dClose').addEventListener('click',closeDev);
 
-document.addEventListener('visibilitychange',function(){if(document.hidden&&scene==='play'&&G&&!G.over&&!G.paused)setPaused(true);});
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden&&scene==='play'&&G&&!G.over&&!G.paused)setPaused(true);
+  if(document.hidden&&Cloud.account)accountPush(true);
+});
 document.addEventListener('gesturestart',function(e){e.preventDefault();});
 /* Doppeltipp-Zoom und -Verschieben auf dem iPad abfangen: der zweite Tipp wird selbst als Klick weitergegeben */
 var lastTapEnd=0;
@@ -9445,8 +9565,14 @@ document.addEventListener('touchmove',function(e){if(e.target&&e.target.closest&
 function refreshTitle(){
   setMode(false);
   disp('bPlayDev',devOK(),'inline-block');
-  var pi=plInfo(),cs=Cloud.status==='cloud'?'<b>CLOUD-SPEICHER AKTIV</b> · auf allen Geräten gleich':Cloud.status==='error'?'<em>CLOUD NICHT ERREICHBAR · lokal gespeichert</em>':'<em>NUR AUF DIESEM GERÄT GESPEICHERT</em>';
-  $('tLv').innerHTML='KAMPAGNE: LV '+pi.lv+'  ·  ★ '+starSum()+'/'+(LEVELS.length*3)+'  ·  ◆ '+PR.crystals+'<br>'+cs;
+  var pi=plInfo(),e=$('tCloud');
+  $('tLv').textContent='KAMPAGNE: LV '+pi.lv+'  ·  ★ '+starSum()+'/'+(LEVELS.length*3)+'  ·  ◆ '+PR.crystals;
+  if(Cloud.status==='cloud')e.innerHTML='<b>IM KONTO GESICHERT</b> · auf allen Geräten gleich';
+  else if(Cloud.status==='checking'||Cloud.status==='syncing')e.innerHTML='<em>KONTO-SICHERUNG WIRD GEPRÜFT ...</em>';
+  else if(Cloud.status==='conflict')e.innerHTML='<em>SPIELSTAND-AUSWAHL ERFORDERLICH</em>';
+  else if(Cloud.status==='error')e.innerHTML='<em>KONTO NICHT ERREICHBAR · lokal gespeichert</em>';
+  else e.innerHTML='<em>NUR AUF DIESEM GERÄT GESPEICHERT</em> · <a href="/konto/anmelden/?zurueck=/games/nova-bastion/">Mit Konto sichern</a>';
+  if(Cloud.status==='conflict'&&Cloud.conflictRemote)disp('syncScr',true);
 }
 
 function fit(){
