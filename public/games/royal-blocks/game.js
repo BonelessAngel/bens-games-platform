@@ -68,14 +68,70 @@ export function fitsAnywhere(board, piece) {
   return false;
 }
 
-// Drei neue Teile; mindestens eins davon soll passen (wenn das in einigen Versuchen gelingt).
-export function dealTray(board, rng) {
-  let tray;
-  for (let attempt = 0; attempt < DEAL_ATTEMPTS; attempt++) {
-    tray = [randomPiece(rng), randomPiece(rng), randomPiece(rng)];
-    if (tray.some((piece) => fitsAnywhere(board, piece))) break;
+// Hilfreiches Austeilen (wie bei Block Blast): Oft werden mehrere Sätze Teile ausprobiert und der genommen,
+// mit dem sich die meisten Reihen abräumen lassen. Werte per Simulation eingestellt.
+export const HELP = { chance: 0.6, candidates: 5 };
+
+// Werte und Farben aus Reihen, denen nur noch wenige Kästchen fehlen
+export function lineHints(board) {
+  const ranks = [];
+  const suits = [];
+  const lines = [];
+  for (let k = 0; k < SIZE; k++) {
+    lines.push(Array.from({ length: SIZE }, (_, x) => idx(x, k)));
+    lines.push(Array.from({ length: SIZE }, (_, y) => idx(k, y)));
   }
-  return tray;
+  for (const cells of lines) {
+    const cards = cells.map((i) => board[i]).filter(Boolean);
+    if (cards.length < SIZE - 3 || cards.length === SIZE) continue;
+    for (const c of cards) {
+      if (c.j) continue;
+      ranks.push(c.r);
+      suits.push(c.s);
+    }
+  }
+  return { ranks, suits };
+}
+
+// Wie viele Reihen könnte dieses Teil bestenfalls abräumen?
+function clearPotential(board, piece, requiredLevel) {
+  let best = 0;
+  for (let y = 0; y <= SIZE - piece.h; y++) {
+    for (let x = 0; x <= SIZE - piece.w; x++) {
+      if (!canPlace(board, piece, x, y)) continue;
+      const next = board.slice();
+      const cells = piece.cells.map(([dx, dy], k) => {
+        const i = idx(x + dx, y + dy);
+        next[i] = piece.cards[k];
+        return i;
+      });
+      const ok = linesThrough(next, cells, requiredLevel).filter((l) => l.ok).length;
+      if (ok > best) best = ok;
+    }
+  }
+  return best;
+}
+
+// Drei neue Teile; mindestens eins davon soll passen (wenn das in einigen Versuchen gelingt).
+export function dealTray(board, rng, requiredLevel = 0) {
+  const hints = lineHints(board);
+  const randomTray = () => {
+    let tray;
+    for (let attempt = 0; attempt < DEAL_ATTEMPTS; attempt++) {
+      tray = [randomPiece(rng, hints), randomPiece(rng, hints), randomPiece(rng, hints)];
+      if (tray.some((piece) => fitsAnywhere(board, piece))) break;
+    }
+    return tray;
+  };
+  if (rng() >= HELP.chance || board.every((c) => c === null)) return randomTray();
+
+  let best = null;
+  for (let k = 0; k < HELP.candidates; k++) {
+    const tray = randomTray();
+    const score = tray.reduce((sum, piece) => sum + clearPotential(board, piece, requiredLevel), 0);
+    if (!best || score > best.score) best = { tray, score };
+  }
+  return best.tray;
 }
 
 export function updateOver(state) {
@@ -237,7 +293,7 @@ export function placePiece(state, slot, x, y) {
 
   let dealt = false;
   if (state.tray.every((p) => p === null)) {
-    state.tray = dealTray(state.board, rngOf(state));
+    state.tray = dealTray(state.board, rngOf(state), requirementFor(state.lines).level);
     dealt = true;
   }
   updateOver(state);
@@ -250,7 +306,7 @@ export function placePiece(state, slot, x, y) {
 
 // Spezialzug "Passen": drei neue Teile.
 export function foldTray(state) {
-  state.tray = dealTray(state.board, rngOf(state));
+  state.tray = dealTray(state.board, rngOf(state), requirementFor(state.lines).level);
   updateOver(state);
   return true;
 }

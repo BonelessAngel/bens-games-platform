@@ -74,10 +74,18 @@ export const JOKER_CHANCE = 1 / 25; // so viele Teile haben ein Joker-Kästchen
 
 // Ein Teil hat immer eine Farbe (wie ein Block bei Block Blast) – so sieht man Flushs kommen.
 // Selten ist ein Kästchen ein Joker ({ j: 1 }), der als beliebige Karte zählt.
-export function randomPiece(rng) {
+// hints (optional): Werte und Farben aus fast vollen Reihen. Neue Karten passen dann öfter dazu,
+// damit Paare, Drillinge und Flushs leichter entstehen.
+export const HINTS = { suit: 0.35, rank: 0.3 };
+const pick = (rng, list) => list[Math.floor(rng() * list.length)];
+
+export function randomPiece(rng, hints = null) {
   const shape = randomShape(rng);
-  const s = Math.floor(rng() * 4);
-  const cards = shape.cells.map(() => ({ r: randomRank(rng), s }));
+  const s = hints?.suits.length && rng() < HINTS.suit ? pick(rng, hints.suits) : Math.floor(rng() * 4);
+  const cards = shape.cells.map(() => ({
+    r: hints?.ranks.length && rng() < HINTS.rank ? pick(rng, hints.ranks) : randomRank(rng),
+    s,
+  }));
   if (rng() < JOKER_CHANCE) cards[Math.floor(rng() * cards.length)] = { j: 1 };
   return { shape: shape.id, w: shape.w, h: shape.h, s, cells: shape.cells, cards };
 }
