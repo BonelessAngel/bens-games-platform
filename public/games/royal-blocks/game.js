@@ -2,13 +2,16 @@
 // Der Zustand ist reines JSON (auch der Zufall) und kann direkt gespeichert werden.
 
 import { HANDS, SUITS, evaluateHand, flushSuit, nearMiss } from './poker.js';
-import { nextRandom, randomPiece, rngOf } from './pieces.js';
+import { SHAPES, nextRandom, randomPiece, rngOf } from './pieces.js';
 
 export const SIZE = 8;
 export const CELL_POINTS = 10; // Punkte pro Kästchen einer abgeräumten Reihe, mal Faktor der Pokerhand
 export const STREAK_GRACE = 3; // so viele Züge ohne Abräumen beendet die Serie
 export const TABLE_CLEAR_BONUS = 2000; // Feld komplett leer
 export const TABLE_CLEAR_CHIPS = 25;
+export const GOLD_CHIPS = 15; // Extra-Chips pro goldener Karte
+export const FEVER_STREAK = 5; // Fieber bei Serie 5, 10, 15 …
+export const FEVER_MOVES = 6; // so viele Züge zählt alles doppelt
 const DEAL_ATTEMPTS = 25;
 
 // Mindesthand: Eine volle Reihe verschwindet nur, wenn ihre Pokerhand mindestens so stark ist.
@@ -20,6 +23,9 @@ export const REQUIREMENTS = [
 
 // Gesperrte Reihen zerbröseln nach so vielen Zügen von selbst (ohne Punkte) – ein Fehler ist nie tödlich.
 export const LOCK_MOVES = 5;
+
+// Schalter für Regeln (u. a. für Simulationen)
+export const RULES = { comboCarry: true };
 
 // Spezialzüge kosten Chips (die Chips selbst verwaltet die Anzeige, sie gelten über alle Runden).
 // Eine Runde bringt laut Simulation etwa 250–350 Chips.
@@ -54,6 +60,7 @@ export function createGame(seed, mode = 'free', day = null) {
     locked: {}, // gesperrte Reihen: "row:3" -> verbleibende Züge
     freeContinue: true, // einmal pro Runde gratis weiterspielen
     rewarded: false, // Truhe am Rundenende schon geöffnet
+    fever: 0, // verbleibende Fieber-Züge
     over: false,
   };
   state.tray = dealTray(state.board, rngOf(state));
@@ -75,7 +82,8 @@ export function fitsAnywhere(board, piece) {
 
 // Hilfreiches Austeilen (wie bei Block Blast): Oft werden mehrere Sätze Teile ausprobiert und der genommen,
 // mit dem sich die meisten Reihen abräumen lassen. Werte per Simulation eingestellt.
-export const HELP = { chance: 0.6, candidates: 5 };
+// combo: so stark werden Teile bevorzugt, die mehrere Reihen auf einmal schließen (Potenz der möglichen Reihen)
+export const HELP = { chance: 0.3, candidates: 6, combo: 2, comboPiece: 0.9 };
 
 // Werte und Farben aus Reihen, denen nur noch wenige Kästchen fehlen
 export function lineHints(board) {
@@ -110,8 +118,30 @@ function clearPotential(board, piece, requiredLevel) {
         next[i] = piece.cards[k];
         return i;
       });
-      const ok = linesThrough(next, cells, requiredLevel).filter((l) => l.ok).length;
+      const ok = clearedCount(linesThrough(next, cells, requiredLevel));
       if (ok > best) best = ok;
+    }
+  }
+  return best;
+}
+
+// Kombo-Teil (der Block-Blast-Trick): Welche Form schließt an einer Stelle die meisten Reihen auf einmal?
+// Nur die Form zählt, nicht die Karten. Gibt { shape, lines } zurück oder null.
+export function comboShape(board) {
+  let best = null;
+  for (const shape of SHAPES) {
+    for (let y = 0; y <= SIZE - shape.h; y++) {
+      for (let x = 0; x <= SIZE - shape.w; x++) {
+        if (!canPlace(board, shape, x, y)) continue;
+        const filled = new Set(shape.cells.map(([dx, dy]) => idx(x + dx, y + dy)));
+        const has = (i) => board[i] !== null || filled.has(i);
+        let lines = 0;
+        for (let k = 0; k < SIZE; k++) {
+          if (y <= k && k < y + shape.h && Array.from({ length: SIZE }, (_, c) => idx(c, k)).every(has)) lines++;
+          if (x <= k && k < x + shape.w && Array.from({ length: SIZE }, (_, r) => idx(k, r)).every(has)) lines++;
+        }
+        if (lines >= 2 && (!best || lines > best.lines)) best = { shape, lines };
+      }
     }
   }
   return best;
@@ -119,6 +149,17 @@ function clearPotential(board, piece, requiredLevel) {
 
 // Drei neue Teile; mindestens eins davon soll passen (wenn das in einigen Versuchen gelingt).
 export function dealTray(board, rng, requiredLevel = 0) {
+  const combo = rng() < HELP.comboPiece ? comboShape(board) : null;
+  if (combo) {
+    const tray = dealTrayRandomOrHelpful(board, rng, requiredLevel);
+    const hints = lineHints(board);
+    tray[Math.floor(rng() * 3)] = randomPiece(rng, hints, combo.shape);
+    return tray;
+  }
+  return dealTrayRandomOrHelpful(board, rng, requiredLevel);
+}
+
+function dealTrayRandomOrHelpful(board, rng, requiredLevel) {
   const hints = lineHints(board);
   const randomTray = () => {
     let tray;
@@ -133,7 +174,7 @@ export function dealTray(board, rng, requiredLevel = 0) {
   let best = null;
   for (let k = 0; k < HELP.candidates; k++) {
     const tray = randomTray();
-    const score = tray.reduce((sum, piece) => sum + clearPotential(board, piece, requiredLevel), 0);
+    const score = tray.reduce((sum, piece) => sum + clearPotential(board, piece, requiredLevel) ** HELP.combo, 0);
     if (!best || score > best.score) best = { tray, score };
   }
   return best.tray;
@@ -232,7 +273,15 @@ export function previewPlacement(state, piece, x, y) {
     next[i] = piece.cards[k];
     return i;
   });
-  return linesThrough(next, cells, requirementFor(state.lines).level);
+  const lines = linesThrough(next, cells, requirementFor(state.lines).level);
+  if (RULES.comboCarry && lines.some((l) => l.ok)) for (const l of lines) l.ok = true;
+  return lines;
+}
+
+// Wie viele Reihen verschwinden bei diesen vollen Reihen (mit Kombo-Regel)?
+function clearedCount(lines) {
+  const ok = lines.filter((l) => l.ok).length;
+  return RULES.comboCarry && ok ? lines.length : ok;
 }
 
 export function placePiece(state, slot, x, y) {
@@ -249,8 +298,10 @@ export function placePiece(state, slot, x, y) {
 
   const required = requirementFor(state.lines).level;
   const full = linesThrough(state.board, placed, required);
-  const lines = full.filter((line) => line.ok);
-  const blocked = full.filter((line) => !line.ok);
+  // Kombo-Regel: Schafft mindestens eine der neuen Reihen die Mindesthand, verschwinden alle (große Kombos bleiben ganz)
+  const anyOk = full.some((line) => line.ok);
+  const lines = anyOk && RULES.comboCarry ? full : full.filter((line) => line.ok);
+  const blocked = full.filter((line) => !lines.includes(line));
 
   const removed = new Map(); // Index -> Karte, damit die Anzeige die verschwindenden Karten zeigen kann
   for (const line of lines) for (const i of line.cells) removed.set(i, state.board[i]);
@@ -258,10 +309,14 @@ export function placePiece(state, slot, x, y) {
 
   let linePoints = 0;
   let chips = 0;
+  let golden = 0;
   for (const line of lines) {
-    line.points = CELL_POINTS * SIZE * line.hand.mult;
+    // Goldene Karte in der Reihe: doppelte Punkte und Extra-Chips
+    line.golden = line.cells.filter((i) => removed.get(i)?.g).length;
+    line.points = CELL_POINTS * SIZE * line.hand.mult * (line.golden ? 2 : 1);
     linePoints += line.points;
-    chips += line.hand.mult;
+    chips += line.hand.mult + line.golden * GOLD_CHIPS;
+    golden += line.golden;
     state.bestHand = Math.max(state.bestHand, line.hand.level);
   }
 
@@ -274,13 +329,24 @@ export function placePiece(state, slot, x, y) {
     if (state.grace <= 0) state.streak = 0;
   }
 
+  // Fieber: Bei jeder 5. Serie zählt für einige Züge alles doppelt (auch der auslösende Zug)
+  const feverBefore = (state.fever ?? 0) > 0;
+  if (feverBefore) state.fever--;
+  const feverStart = lines.length > 0 && state.streak % FEVER_STREAK === 0;
+  if (feverStart) state.fever = FEVER_MOVES;
+  const feverMult = feverBefore || feverStart ? 2 : 1;
+  const feverEnd = feverBefore && !feverStart && state.fever === 0;
+
   const combo = lines.length;
   const streakMult = lines.length ? streakMultiplier(state.streak) : 1;
   const tableClear = lines.length > 0 && state.board.every((c) => c === null);
   const points =
-    placed.length + Math.round(linePoints * combo * streakMult) + (tableClear ? Math.round(TABLE_CLEAR_BONUS * streakMult) : 0);
+    placed.length +
+    Math.round(linePoints * combo * streakMult * feverMult) +
+    (tableClear ? Math.round(TABLE_CLEAR_BONUS * streakMult) : 0);
   state.score += points;
   if (tableClear) chips += TABLE_CLEAR_CHIPS;
+  chips *= feverMult;
 
   let mission = null;
   if (missionDone(state, lines)) {
@@ -307,7 +373,7 @@ export function placePiece(state, slot, x, y) {
 
   return {
     placed, lines, blocked, removed, combo, streak: state.streak, streakMult, tableClear, points, chips,
-    mission, near, levelUp, crumbled, dealt, over: state.over,
+    mission, near, levelUp, crumbled, golden, feverStart, feverEnd, feverMult, dealt, over: state.over,
   };
 }
 
@@ -369,7 +435,7 @@ export function recolorPiece(state, slot, suit) {
   const piece = state.tray[slot];
   if (!piece || piece.s === suit) return false;
   piece.s = suit;
-  piece.cards = piece.cards.map((c) => (c.j ? c : { r: c.r, s: suit }));
+  piece.cards = piece.cards.map((c) => (c.j ? c : { ...c, s: suit }));
   updateOver(state);
   return true;
 }

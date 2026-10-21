@@ -95,6 +95,13 @@ export const sounds = {
     [0, 2, 4, 5, 7].forEach((s, k) => tone(note(5 + s), { start: k * 0.09, dur: 0.3, type: 'square', vol: 0.12 }));
     tone(note(15), { start: 0.5, dur: 0.6, type: 'triangle', vol: 0.35 });
   },
+  // Mega-Kombo: tiefer Schlag und aufsteigender Akkord-Lauf
+  mega(lines) {
+    tone(70, { dur: 0.5, type: 'sine', vol: 0.8, slide: 0.5 });
+    const steps = 6 + lines * 2;
+    for (let k = 0; k < steps; k++) tone(note(5 + k), { start: 0.08 + k * 0.045, dur: 0.25, type: 'square', vol: 0.09 });
+    [0, 2, 4].forEach((s) => tone(note(10 + steps + s), { start: 0.1 + steps * 0.045, dur: 0.9, type: 'triangle', vol: 0.28 }));
+  },
   tableClear() {
     for (let k = 0; k < 10; k++) tone(note(8 + k), { start: k * 0.06, dur: 0.3, type: 'triangle', vol: 0.3 });
   },

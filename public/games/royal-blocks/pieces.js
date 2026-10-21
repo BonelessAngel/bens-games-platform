@@ -54,10 +54,9 @@ function parse(rows) {
 }
 
 export const SHAPES = SHAPE_DEFS.map((def, id) => ({ id, weight: def.weight, ...parse(def.rows) }));
-const TOTAL_WEIGHT = SHAPES.reduce((sum, s) => sum + s.weight, 0);
 
 export function randomShape(rng) {
-  let pick = rng() * TOTAL_WEIGHT;
+  let pick = rng() * SHAPES.reduce((sum, s) => sum + s.weight, 0);
   for (const shape of SHAPES) {
     pick -= shape.weight;
     if (pick < 0) return shape;
@@ -71,6 +70,7 @@ export function randomRank(rng) {
 }
 
 export const JOKER_CHANCE = 1 / 25; // so viele Teile haben ein Joker-Kästchen
+export const GOLD_CHANCE = 1 / 10; // so viele Teile haben eine goldene Karte (doppelte Belohnung)
 
 // Ein Teil hat immer eine Farbe (wie ein Block bei Block Blast) – so sieht man Flushs kommen.
 // Selten ist ein Kästchen ein Joker ({ j: 1 }), der als beliebige Karte zählt.
@@ -79,14 +79,16 @@ export const JOKER_CHANCE = 1 / 25; // so viele Teile haben ein Joker-Kästchen
 export const HINTS = { suit: 0.35, rank: 0.3 };
 const pick = (rng, list) => list[Math.floor(rng() * list.length)];
 
-export function randomPiece(rng, hints = null) {
-  const shape = randomShape(rng);
+// fixedShape (optional): diese Form statt einer zufälligen (für das Kombo-Teil)
+export function randomPiece(rng, hints = null, fixedShape = null) {
+  const shape = fixedShape ?? randomShape(rng);
   const s = hints?.suits.length && rng() < HINTS.suit ? pick(rng, hints.suits) : Math.floor(rng() * 4);
   const cards = shape.cells.map(() => ({
     r: hints?.ranks.length && rng() < HINTS.rank ? pick(rng, hints.ranks) : randomRank(rng),
     s,
   }));
   if (rng() < JOKER_CHANCE) cards[Math.floor(rng() * cards.length)] = { j: 1 };
+  else if (rng() < GOLD_CHANCE) cards[Math.floor(rng() * cards.length)].g = 1;
   return { shape: shape.id, w: shape.w, h: shape.h, s, cells: shape.cells, cards };
 }
 

@@ -4,7 +4,11 @@ import {
   POWER_COSTS, SIZE, STREAK_GRACE, blastAt, canPlace, createGame, findFullLines, fitsAnywhere, foldTray, hasLockedLines, idx,
   missionText, placePiece, previewPlacement, recolorPiece, requirementFor, streakMultiplier, updateOver, useFreeContinue,
 } from './game.js';
-import { GIFT_DAYS, chestReward, dailyGift, levelFromXp, levelReward, praiseFor, xpForRound } from './progress.js';
+import {
+  GIFT_DAYS, JACKPOT_GROWTH, JACKPOT_START, SCRATCH_EVERY, chestReward, dailyGift, emptyStats, jackpotWin, levelFromXp, levelReward,
+  praiseFor, recordMove, recordRound, scratchPrize, xpForRound,
+} from './progress.js';
+import { createScratchCard } from './scratch.js';
 import { HANDS, SUITS, rankLabel } from './poker.js';
 import {
   setMusicEnabled, setMusicIntensity, setSoundEnabled, setVibrationEnabled, sounds, startMusic, stopMusic, unlockAudio, vibrate,
@@ -61,6 +65,10 @@ const settings = {
 const saveSettings = () => save('settings', settings);
 let wallet = Math.max(0, Number(load('chips', 0)) || 0);
 let xp = Math.max(0, Number(load('xp', 0)) || 0);
+let jackpot = Math.max(JACKPOT_START, Number(load('jackpot', JACKPOT_START)) || JACKPOT_START);
+const stats = { ...emptyStats(), ...load('stats', {}) };
+let scratchReady = Boolean(load('scratch-ready', false));
+let returnTo = 'menu'; // wohin "Zurück" aus Designs/Statistik führt
 const owned = new Set(load('owned', ['neon', 'standard']));
 owned.add('neon').add('standard');
 
@@ -180,7 +188,7 @@ function layout() {
 
 function tile(card, style = settings.tiles) {
   const el = document.createElement('div');
-  el.className = card.j ? `tile joker t-${style}` : `tile s${card.s} t-${style}`;
+  el.className = card.j ? `tile joker t-${style}` : `tile s${card.s} t-${style}${card.g ? ' golden' : ''}`;
   const r = document.createElement('span');
   r.className = 'r';
   r.textContent = card.j ? '★' : rankLabel(card.r);
@@ -202,7 +210,7 @@ function buildBoard() {
   }
 }
 
-const cardKey = (card) => (card ? (card.j ? 'j' : `${card.r}${card.s}`) + settings.tiles : '');
+const cardKey = (card) => (card ? (card.j ? 'j' : `${card.r}${card.s}${card.g ? 'g' : ''}`) + settings.tiles : '');
 
 function renderBoard(popCells = []) {
   state.board.forEach((card, i) => {
@@ -340,6 +348,23 @@ function renderAll() {
   renderMission();
   renderWallet();
   renderLevel();
+  renderJackpot();
+  renderFever();
+}
+
+function renderJackpot() {
+  $('jackpot').textContent = fmt(jackpot);
+  $('start-jackpot').textContent = fmt(jackpot);
+}
+
+// Fieber: Feld glüht, Musik auf voller Stärke
+function renderFever() {
+  const on = (state.fever ?? 0) > 0;
+  els.app.classList.toggle('fever', on);
+  if (on) {
+    els.streak.textContent = `FIEBER ×2 · noch ${state.fever} ${state.fever === 1 ? 'Zug' : 'Züge'}`;
+    setMusicIntensity(99);
+  }
 }
 
 // ---------- Ziehen ----------
@@ -486,10 +511,26 @@ function place(slot, x, y) {
     addChips(res.chips);
     sounds.chips(res.chips);
   }
+  if (res.golden) goldEffects(res);
+  if (res.feverStart) queueBanner(feverEffects);
+  renderFever();
+  for (const line of res.lines) {
+    const win = jackpotWin(line.hand.level, jackpot);
+    if (!win) continue;
+    const full = line.hand.level >= 9;
+    jackpot = full ? JACKPOT_START : jackpot - win;
+    save('jackpot', jackpot);
+    addChips(win);
+    stats.jackpots++;
+    renderJackpot();
+    queueBanner(() => jackpotEffects(win, full));
+  }
   if (res.mission) queueBanner(() => missionEffects(res.mission));
   renderMission();
   if (res.levelUp) queueBanner(levelUpEffects, 300);
   renderWallet();
+  recordMove(stats, res, state.streak);
+  save('stats', stats);
 
   if (state.score > best) {
     if (best > 0 && bestAtStart === best) sounds.record();
@@ -582,16 +623,21 @@ function clearEffects(res) {
   const tier = level >= 7 ? 3 : level >= 4 ? 2 : level >= 2 ? 1 : 0;
   const extras = [];
   if ([...res.removed.values()].some((c) => c.j)) extras.push('Joker!');
+  if (res.golden) extras.push('Gold ×2!');
+  if (res.feverMult > 1) extras.push('Fieber ×2');
   if (res.lines.length > 1) extras.push(`Kombo ×${res.combo}`);
   if (res.streak > 1) extras.push(`Serie ×${res.streakMult}`);
   if (res.tableClear) extras.push('Tisch leer!');
   if (res.near) extras.push(`Fast ein ${res.near.name}!`);
   bannerAt = 0;
+  // Kombos groß feiern: 2 Reihen "Doppel!", ab 3 "MEGA-KOMBO" mit Blitz über den ganzen Bildschirm
+  const mega = res.combo >= 3;
+  if (mega) megaComboEffects(res);
   queueBanner(() =>
     showBanner({
-      praise: praiseFor(level, res.combo),
-      title: top.hand.name,
-      tier,
+      praise: mega ? `Mega-Kombo ×${res.combo}!` : res.combo === 2 ? 'Doppel!' : praiseFor(level, res.combo),
+      title: mega ? res.lines.map((l) => l.hand.name).join(' + ') : top.hand.name,
+      tier: mega ? 3 : res.combo === 2 ? Math.max(tier, 2) : tier,
       extra: extras.join(' · '),
       points: `+${fmt(res.points)}  ·  +${res.chips} Chips`,
     }),
@@ -636,6 +682,50 @@ function blockedEffects(res, required) {
       }),
     );
   }
+}
+
+// Drei oder mehr Reihen auf einmal: Blitz, Chips-Regen, großes Beben
+function megaComboEffects(res) {
+  const flash = document.createElement('div');
+  flash.className = 'flash';
+  document.body.append(flash);
+  setTimeout(() => flash.remove(), 700);
+  sounds.mega(res.combo);
+  vibrate([40, 30, 60, 30, 90]);
+  const box = els.board.getBoundingClientRect();
+  for (let k = 0; k < res.combo; k++) {
+    setTimeout(() => chipBurst(box.left + box.width * (0.25 + 0.25 * (k % 3)), box.top + box.height / 2, 18), 200 + k * 150);
+  }
+}
+
+// Goldene Karte abgeräumt: Gold-Regen
+function goldEffects(res) {
+  const gold = [...res.removed].filter(([, c]) => c.g).map(([i]) => cellCenter(i));
+  setTimeout(() => {
+    for (const { x, y } of gold) {
+      chipBurst(x, y, 10);
+      burst(x, y, suitColor(-1), 2.5);
+    }
+    sounds.chips(30);
+  }, 400);
+  vibrate([15, 30, 15, 30, 15]);
+}
+
+function feverEffects() {
+  sounds.levelUp();
+  vibrate([30, 20, 30, 20, 30, 20, 60]);
+  showBanner({ title: 'Fieber!', tier: 3, extra: 'Alles zählt doppelt', points: '' });
+  shake('shake-big');
+}
+
+function jackpotEffects(win, full) {
+  sounds.record();
+  setTimeout(() => sounds.tableClear(), 300);
+  vibrate([50, 40, 50, 40, 120]);
+  const box = els.board.getBoundingClientRect();
+  for (let k = 0; k < 4; k++) setTimeout(() => chipBurst(box.left + box.width / 2, box.top + box.height / 2, 30), k * 250);
+  showBanner({ title: full ? 'JACKPOT!' : 'Teil-Jackpot!', tier: 3, extra: full ? 'Royal Flush räumt alles ab' : 'Straight Flush: ein Viertel', points: `+${fmt(win)} Chips` });
+  shake('shake-big');
 }
 
 function missionEffects(mission) {
@@ -911,6 +1001,7 @@ function gameOver() {
   $('go-decide').hidden = Boolean(state.rewarded);
   $('go-reward').hidden = !state.rewarded;
   if (state.rewarded) showLevel(xp, xp, []);
+  $('scratch-btn').hidden = !scratchReady;
   renderWallet();
   openOverlay('gameover');
 }
@@ -930,6 +1021,17 @@ function openChest() {
   xp += xpForRound(state);
   save('xp', xp);
   persist();
+  // Runde zählt für Statistik, Jackpot wächst, jede 3. Runde gibt es ein Rubbellos
+  recordRound(stats, state);
+  save('stats', stats);
+  jackpot += JACKPOT_GROWTH;
+  save('jackpot', jackpot);
+  renderJackpot();
+  if (stats.games % SCRATCH_EVERY === 0) {
+    scratchReady = true;
+    save('scratch-ready', true);
+  }
+  $('scratch-btn').hidden = !scratchReady;
 
   const messages = [];
   const levelBefore = levelFromXp(before).level;
@@ -992,7 +1094,9 @@ function showLevel(fromXp, toXp, messages) {
 
 // Tagesgeschenk beim ersten Start des Tages
 let pendingGift = null;
-function checkGift() {
+let giftReturn = null; // Fenster, das nach dem Abholen wieder erscheint
+function checkGift(returnTo = null) {
+  giftReturn = returnTo;
   pendingGift = dailyGift(load('gift', null), today());
   if (!pendingGift) return false;
   const days = $('gift-days');
@@ -1022,7 +1126,116 @@ function claimGift() {
   const box = $('gift-chips').getBoundingClientRect();
   chipBurst(box.left + box.width / 2, box.top, 30);
   pendingGift = null;
-  closeOverlays();
+  if (giftReturn) openOverlay(giftReturn);
+  else closeOverlays();
+}
+
+// ---------- Startbildschirm, Statistik, Teilen, Rubbellos ----------
+
+function visibleOverlay() {
+  return document.querySelector('.overlay:not([hidden])')?.id ?? null;
+}
+
+function renderStart() {
+  const { level, into, need } = levelFromXp(xp);
+  $('start-level').textContent = String(level);
+  $('start-xp').style.width = `${Math.round((100 * into) / need)}%`;
+  $('start-chips').textContent = fmt(wallet);
+  $('start-best').textContent = fmt(getBest('free'));
+  renderJackpot();
+  const freeGame = mode === 'free' ? state : loadGame('free');
+  $('start-play').textContent = freeGame && freeGame.moves > 0 && !freeGame.over ? 'Weiterspielen' : 'Spielen';
+  const dailyBest = getBest('daily');
+  $('start-daily').textContent = `Tages-Challenge ${dayLabel(today())}${dailyBest ? ` · Rekord ${fmt(dailyBest)}` : ''}`;
+}
+
+function showHome() {
+  setPowerMode(null);
+  renderStart();
+  openOverlay('start');
+}
+
+function renderStats() {
+  const level = levelFromXp(xp).level;
+  const rows = [
+    ['Runden gespielt', fmt(stats.games)],
+    ['Rekord', fmt(Math.max(stats.bestScore, getBest('free')))],
+    ['Ø Punkte pro Runde', fmt(stats.games ? Math.round(stats.totalScore / stats.games) : 0)],
+    ['Reihen abgeräumt', fmt(stats.lines)],
+    ['Beste Serie', fmt(stats.bestStreak)],
+    ['Goldkarten', fmt(stats.golden)],
+    ['Fieber ausgelöst', fmt(stats.fevers)],
+    ['Jackpots', fmt(stats.jackpots)],
+    ['Aufträge erfüllt', fmt(stats.missions)],
+    ['Chips verdient', fmt(stats.chipsEarned)],
+    ['Level', fmt(level)],
+  ];
+  $('stats-list').replaceChildren(
+    ...rows.flatMap(([label, value]) => [
+      Object.assign(document.createElement('dt'), { textContent: label }),
+      Object.assign(document.createElement('dd'), { textContent: value }),
+    ]),
+  );
+  const table = $('stats-hands');
+  table.replaceChildren();
+  for (const hand of [...HANDS].reverse()) {
+    const tr = document.createElement('tr');
+    const count = stats.hands[hand.level] || 0;
+    if (!count) tr.classList.add('none');
+    tr.append(
+      Object.assign(document.createElement('td'), { textContent: hand.name }),
+      Object.assign(document.createElement('td'), { textContent: `${fmt(count)}×` }),
+    );
+    table.append(tr);
+  }
+}
+
+function toast(text) {
+  const el = $('toast');
+  el.textContent = text;
+  el.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (el.hidden = true), 2200);
+}
+
+// Teilen über das Teilen-Menü des Geräts (WhatsApp, Nachrichten …); sonst Text in die Zwischenablage.
+async function shareScore() {
+  const score = state.over ? state.score : Math.max(stats.bestScore, best);
+  const hand = state.bestHand >= 0 ? ` mit ${HANDS[state.bestHand].name}` : '';
+  const url = new URL('./', location.href).href;
+  const text = `Ich habe ${fmt(score)} Punkte bei Royal Blocks geschafft${hand}! Schaffst du mehr?`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'Royal Blocks', text, url });
+      return;
+    }
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    toast('Text kopiert – jetzt einfach einfügen!');
+  } catch {
+    // abgebrochen oder nicht erlaubt – nichts tun
+  }
+}
+
+function openScratch() {
+  if (!scratchReady) return;
+  const prize = scratchPrize(Math.random);
+  $('scratch-reward').textContent = '';
+  $('scratch-done').hidden = true;
+  openOverlay('scratch');
+  createScratchCard($('scratch-area'), prize, (card) => {
+    scratchReady = false;
+    save('scratch-ready', false);
+    $('scratch-btn').hidden = true;
+    addChips(prize.chips);
+    $('scratch-reward').textContent = `+${fmt(prize.chips)} Chips${prize.tier >= 2 ? ' – Volltreffer!' : ''}`;
+    $('scratch-done').hidden = false;
+    const box = card.getBoundingClientRect();
+    chipBurst(box.left + box.width / 2, box.top + box.height / 2, 12 + prize.tier * 12);
+    if (prize.tier >= 2) sounds.record();
+    else sounds.mission();
+    sounds.chips(prize.chips);
+    vibrate(prize.tier >= 2 ? [40, 30, 40, 30, 80] : [20, 30, 20]);
+  });
 }
 
 const actions = {
@@ -1044,9 +1257,28 @@ const actions = {
   },
   'open-chest': openChest,
   'claim-gift': claimGift,
-  back: () => openOverlay('menu'),
+  home: showHome,
+  play() {
+    if (mode !== 'free') startGame('free', false);
+    closeOverlays();
+    if (state.over) gameOver();
+  },
+  'play-daily': () => startGame('daily', false),
+  stats() {
+    returnTo = visibleOverlay() ?? 'menu';
+    renderStats();
+    openOverlay('stats');
+  },
+  share: shareScore,
+  scratch: openScratch,
+  'scratch-done': () => openOverlay('gameover'),
+  back: () => {
+    if (returnTo === 'start') renderStart();
+    openOverlay(returnTo);
+  },
   help: () => openOverlay('help'),
   shop() {
+    returnTo = visibleOverlay() ?? 'menu';
     renderShop();
     openOverlay('shop');
   },
@@ -1159,9 +1391,15 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// iPhone/iPad: Ton erst nach einer echten Berührung freischalten – bei jeder Art von Eingabe versuchen
+for (const type of ['pointerdown', 'touchend', 'keydown']) document.addEventListener(type, unlockAudio, { capture: true, passive: true });
+
 if (state.over) gameOver();
 else if (!settings.seenHelp) openOverlay('help');
-else checkGift();
+else {
+  showHome();
+  checkGift('start');
+}
 
 // Offline-Betrieb (nur im gebauten Spiel; beim Entwickeln würde der Cache stören)
 if (version !== 'dev' && 'serviceWorker' in navigator) {
