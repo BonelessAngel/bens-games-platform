@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zentrale – Bens Games</title>
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23f08a5d'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3EZ%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../src/styles/main.css">
+  <link rel="stylesheet" href="./admin.css">
+</head>
+<body>
+  <!-- ENV_BANNER -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <span class="brand">
+        <span class="admin-badge">Z</span>
+        <span>Bens Games · Zentrale</span>
+      </span>
+      <nav aria-label="Bereiche" data-nav hidden>
+        <a href="#uebersicht" data-tab="uebersicht" data-needs="stats.view">Übersicht</a>
+        <a href="#konten" data-tab="konten" data-needs="users.view">Konten</a>
+        <a href="#protokoll" data-tab="protokoll" data-needs="audit.view">Protokoll</a>
+        <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container admin">
+    <p data-notice hidden></p>
+
+    <section class="auth" data-view="login" hidden>
+      <h1>Zentrale</h1>
+      <p class="auth__lead">Nur für Konten mit Rechten. Die Zwei-Faktor-Anmeldung ist Pflicht.</p>
+      <form class="form" data-form="login" novalidate>
+        <div class="field">
+          <label for="email">E-Mail-Adresse</label>
+          <input id="email" name="email" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="password">Passwort</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="button" type="submit">Weiter</button>
+      </form>
+      <form class="form" data-form="code" novalidate hidden>
+        <div class="field">
+          <label for="code">Code aus deiner Authenticator-App</label>
+          <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="11" required>
+        </div>
+        <button class="button" type="submit">Anmelden</button>
+      </form>
+    </section>
+
+    <section data-view="uebersicht" hidden>
+      <h1>Übersicht</h1>
+      <div class="stats" data-stats></div>
+      <h2>Gesicherte Spielstände</h2>
+      <table class="table"><thead><tr><th>Spiel</th><th>Spielstände</th></tr></thead><tbody data-saves></tbody></table>
+    </section>
+
+    <section data-view="konten" hidden>
+      <h1>Konten</h1>
+      <form class="admin-search" data-form="search">
+        <input name="q" type="search" placeholder="Name suchen …" aria-label="Konten suchen">
+        <button class="button button--secondary" type="submit">Suchen</button>
+      </form>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Name</th><th data-email-col>E-Mail</th><th>Status</th><th>Registriert</th><th>Zuletzt angemeldet</th><th>2FA</th><th>Rollen</th><th></th></tr></thead>
+          <tbody data-users></tbody>
+        </table>
+      </div>
+      <div class="pager" data-pager="users"></div>
+
+      <div class="panel" data-rights hidden>
+        <h2>Rechte für <span data-rights-name></span></h2>
+        <form class="form" data-form="rights">
+          <fieldset><legend>Rollen</legend><div class="checks" data-rights-roles></div></fieldset>
+          <fieldset><legend>Einzelne Rechte</legend><div class="checks" data-rights-permissions></div></fieldset>
+          <fieldset><legend>Apps</legend><div class="checks" data-rights-apps></div></fieldset>
+          <div class="button-row">
+            <button class="button" type="submit">Speichern</button>
+            <button class="button button--secondary" type="button" data-rights-close>Schließen</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section data-view="protokoll" hidden>
+      <h1>Protokoll</h1>
+      <div class="admin-search">
+        <select data-audit-filter aria-label="Filter">
+          <option value="">Alles</option>
+          <option value="admin">Aktionen in der Zentrale</option>
+          <option value="user.login_failed">Fehlgeschlagene Anmeldungen</option>
+          <option value="user">Konto-Vorgänge</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Zeit</th><th>Vorgang</th><th>Wer</th><th>Betrifft</th><th>IP (gekürzt)</th><th>Details</th></tr></thead>
+          <tbody data-audit></tbody>
+        </table>
+      </div>
+      <div class="pager" data-pager="audit"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./admin.js"></script>
+</body>
+</html>

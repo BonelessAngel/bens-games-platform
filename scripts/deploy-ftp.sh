@@ -11,6 +11,8 @@ set -euo pipefail
 : "${FTP_SERVER:?FTP_SERVER fehlt}"
 : "${FTP_USERNAME:?FTP_USERNAME fehlt}"
 : "${LFTP_PASSWORD:?LFTP_PASSWORD fehlt}"
+# Was hochgeladen wird: dist/ (Webseite) oder dist-admin/ (Zentrale)
+LOCAL_DIR="${LOCAL_DIR:-dist/}"
 
 lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" -e "
   set ftp:ssl-force true;
@@ -20,6 +22,6 @@ lftp --env-password -u "$FTP_USERNAME" "$FTP_SERVER" -e "
   set ftp:passive-mode true;
   set net:timeout 30;
   set net:max-retries 3;
-  mirror --reverse --delete --verbose --exclude '^\.[^/]*$' dist/ ./;
+  mirror --reverse --delete --verbose --exclude '^\.[^/]*$' $LOCAL_DIR ./;
   bye
 "

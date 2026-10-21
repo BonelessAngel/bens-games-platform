@@ -6,6 +6,8 @@
     "dev": "vite",
     "build": "vite build && node scripts/build-api.mjs",
     "build:staging": "vite build --mode staging && node scripts/build-api.mjs",
+    "build:admin": "vite build -c vite.admin.config.js && node scripts/build-api.mjs dist-admin",
+    "build:admin-staging": "vite build -c vite.admin.config.js --mode staging && node scripts/build-api.mjs dist-admin",
     "preview": "vite preview",
     "test": "node --test",
     "import-game": "node scripts/import-game.mjs"

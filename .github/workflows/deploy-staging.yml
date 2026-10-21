@@ -25,6 +25,7 @@ jobs:
     env:
       HAS_FTP_SECRETS: ${{ secrets.STAGING_FTP_SERVER != '' && secrets.STAGING_FTP_USERNAME != '' && secrets.STAGING_FTP_PASSWORD != '' }}
       HAS_API_SECRETS: ${{ secrets.STAGING_MIGRATION_TOKEN != '' && secrets.STAGING_HTTP_USER != '' && secrets.STAGING_HTTP_PASSWORD != '' }}
+      HAS_ADMIN_SECRETS: ${{ secrets.STAGING_FTP_SERVER != '' && secrets.STAGING_ADMIN_FTP_USERNAME != '' && secrets.STAGING_ADMIN_FTP_PASSWORD != '' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -78,6 +79,29 @@ jobs:
           echo
           curl -fsS --user "$HTTP_USER:$HTTP_PASSWORD" https://staging.bens-games.de/api/health
           echo
+
+      # Test-Zentrale admin-staging.bens-games.de (eigener FTP-Benutzer nur für /bens-games-staging-admin/).
+      - name: Test-Zentrale bauen
+        if: env.HAS_ADMIN_SECRETS == 'true'
+        run: npm run build:admin-staging
+
+      - name: Test-Zentrale hochladen
+        if: env.HAS_ADMIN_SECRETS == 'true'
+        env:
+          FTP_SERVER: ${{ secrets.STAGING_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.STAGING_ADMIN_FTP_USERNAME }}
+          LFTP_PASSWORD: ${{ secrets.STAGING_ADMIN_FTP_PASSWORD }}
+          LOCAL_DIR: dist-admin/
+        run: bash scripts/deploy-ftp.sh
+
+      - name: Test-Zentrale geschützt?
+        if: env.HAS_ADMIN_SECRETS == 'true'
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' https://admin-staging.bens-games.de/)
+          if [ "$status" != "401" ]; then
+            echo "::error::admin-staging.bens-games.de antwortet mit $status statt 401 – Verzeichnisschutz prüfen!"
+            exit 1
+          fi
 
       - name: Hinweis bei fehlenden API-Zugangsdaten
         if: env.HAS_FTP_SECRETS == 'true' && env.HAS_API_SECRETS != 'true'
