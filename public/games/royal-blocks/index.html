@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-version="1.3.1" data-theme="neon" data-tiles="standard">
+<html lang="de" data-version="1.3.2" data-theme="neon" data-tiles="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -101,20 +101,35 @@
   </div>
 
   <div id="help" class="overlay" hidden>
-    <div class="panel scroll">
-      <h2>So geht's</h2>
-      <ol class="rules">
-        <li>Zieh die Teile von unten auf das Feld.</li>
-        <li>Ist eine Reihe oder Spalte voll, wird sie zur <b>Pokerhand</b>. Aus ihren 8 Karten zählen die besten 5.</li>
-        <li>Sie verschwindet mit Punkten, wenn sie mindestens die <b>Mindesthand</b> (oben) schafft: erst ein Paar, später zwei Paare. Sonst bleibt sie kurz <b>gesperrt</b> und zerbröselt nach ein paar Zügen von selbst.</li>
-        <li>Jedes Teil hat eine Farbe: 5 gleiche Farben in einer Reihe sind ein <b>Flush</b>. Der seltene <b>Joker ★</b> zählt als jede Karte.</li>
-        <li><b>Goldene Karten</b> verdoppeln die Punkte ihrer Reihe. Ab einer <b>Serie von 5</b> kommt das <b>Fieber</b>: ein paar Züge lang zählt alles doppelt.</li>
-        <li>Ein <b>Royal Flush</b> gewinnt den <b>Jackpot</b> (oben rechts), ein Straight Flush ein Viertel davon.</li>
-        <li>Abgeräumte Reihen bringen <b>Chips</b> (so viele wie der Faktor), Aufträge noch mehr. Mit Chips kannst du <b>passen</b>, <b>Farben tauschen</b>, gesperrte Reihen <b>sprengen</b> – oder neue Designs freischalten.</li>
-        <li>Passt kein Teil mehr, ist die Runde vorbei.</li>
-      </ol>
-      <table class="hands" id="hand-table"></table>
-      <button class="btn primary" data-action="resume" type="button">Los geht's</button>
+    <div class="panel help-panel">
+      <div class="help-body">
+        <div class="help-page" data-page="1">
+          <h2>So geht's</h2>
+          <ol class="rules short">
+            <li><b>Zieh</b> die Teile auf das Feld.</li>
+            <li>Volle Reihe = <b>Pokerhand</b>. Die besten 5 von 8 Karten zählen.</li>
+            <li>Ab der <b>Mindesthand</b> (oben) verschwindet sie mit Punkten. Sonst zerbröselt sie nach ein paar Zügen.</li>
+            <li>Mehrere Reihen auf einmal = <b>Kombo</b>. Passt nichts mehr, ist die Runde vorbei.</li>
+          </ol>
+          <p class="small">Tipp: Jedes Teil hat eine Farbe – 5 gleiche Farben in einer Reihe sind ein Flush.</p>
+        </div>
+        <div class="help-page" data-page="2" hidden>
+          <h2>Pokerhände</h2>
+          <table class="hands compact" id="hand-table"></table>
+          <ul class="extras">
+            <li><b>★ Joker</b> zählt als jede Karte.</li>
+            <li><b>Goldkarte</b>: doppelte Punkte für ihre Reihe.</li>
+            <li><b>Fieber</b> ab Serie 5: ein paar Züge alles ×2.</li>
+            <li><b>Royal Flush</b> gewinnt den Jackpot.</li>
+            <li><b>Chips</b>: passen, Farbe tauschen, sprengen, Designs.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="help-footer">
+        <button class="btn small-btn" data-action="help-page" type="button" id="help-toggle">Pokerhände ›</button>
+        <span class="help-dots"><i class="on"></i><i></i></span>
+        <button class="btn primary small-btn" data-action="resume" type="button">Los geht's</button>
+      </div>
     </div>
   </div>
 

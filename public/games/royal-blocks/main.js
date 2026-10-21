@@ -469,17 +469,37 @@ function endDrag(e) {
     place(d.slot, d.x, d.y);
     return;
   }
-  // zurück in die Ablage
+  // Losgelassen über dem Feld, aber passt nicht: deutlich zeigen (rot + Schütteln + Vibration), auch ohne Ton
+  const box = els.board.getBoundingClientRect();
+  const overBoard =
+    e.type === 'pointerup' &&
+    e.clientX > box.left - cell && e.clientX < box.right + cell && e.clientY > box.top - cell && e.clientY < box.bottom + cell * 2;
   if (e.type === 'pointerup') sounds.invalid();
-  const r = els.slots[d.slot].getBoundingClientRect();
-  const pw = d.piece.w * cell;
-  const ph = d.piece.h * cell;
-  els.drag.classList.add('back');
-  els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(${(parseFloat(root.style.getPropertyValue('--piece')) || cell * 0.56) / cell})`;
+  if (overBoard) {
+    els.drag.classList.add('invalid');
+    els.board.classList.remove('board-invalid');
+    void els.board.offsetWidth;
+    els.board.classList.add('board-invalid');
+    setTimeout(() => els.board.classList.remove('board-invalid'), 500);
+    vibrate([30, 40, 30]);
+  }
+  // zurück in die Ablage
   setTimeout(() => {
-    els.drag.className = 'drag';
-    els.slots[d.slot].classList.remove('dragging');
-  }, 180);
+    // schon das nächste Teil in der Hand? Dann nicht dazwischenfunken
+    if (drag) {
+      els.slots[d.slot].classList.remove('dragging');
+      return;
+    }
+    const r = els.slots[d.slot].getBoundingClientRect();
+    const pw = d.piece.w * cell;
+    const ph = d.piece.h * cell;
+    els.drag.classList.add('back');
+    els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(${(parseFloat(root.style.getPropertyValue('--piece')) || cell * 0.56) / cell})`;
+    setTimeout(() => {
+      if (!drag) els.drag.className = 'drag';
+      els.slots[d.slot].classList.remove('dragging');
+    }, 180);
+  }, overBoard ? 320 : 0);
 }
 
 // ---------- Zug ausführen ----------
@@ -1142,6 +1162,16 @@ function claimGift() {
 
 // ---------- Startbildschirm, Statistik, Teilen, Rubbellos ----------
 
+// Regeln in zwei kurzen Schritten; die Knöpfe unten bleiben immer sichtbar
+let helpPage = 1;
+function showHelp(page) {
+  helpPage = page;
+  for (const el of document.querySelectorAll('.help-page')) el.hidden = Number(el.dataset.page) !== page;
+  $('help-toggle').textContent = page === 1 ? 'Pokerhände ›' : '‹ Zurück';
+  document.querySelectorAll('.help-dots i').forEach((dot, k) => dot.classList.toggle('on', k + 1 === page));
+  openOverlay('help');
+}
+
 function visibleOverlay() {
   return document.querySelector('.overlay:not([hidden])')?.id ?? null;
 }
@@ -1286,7 +1316,8 @@ const actions = {
     if (returnTo === 'start') renderStart();
     openOverlay(returnTo);
   },
-  help: () => openOverlay('help'),
+  help: () => showHelp(1),
+  'help-page': () => showHelp(helpPage === 1 ? 2 : 1),
   shop() {
     returnTo = visibleOverlay() ?? 'menu';
     renderShop();
@@ -1405,7 +1436,7 @@ document.addEventListener('visibilitychange', () => {
 for (const type of ['pointerdown', 'touchend', 'keydown']) document.addEventListener(type, unlockAudio, { capture: true, passive: true });
 
 if (state.over) gameOver();
-else if (!settings.seenHelp) openOverlay('help');
+else if (!settings.seenHelp) showHelp(1);
 else {
   showHome();
   checkGift('start');
