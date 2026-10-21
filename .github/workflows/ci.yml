@@ -58,3 +58,6 @@ jobs:
 
       - name: Staging-Build
         run: npm run build:staging
+
+      - name: Build der Zentrale
+        run: npm run build:admin-staging
