@@ -136,9 +136,8 @@ final class Accounts
         $remember = ($input['remember'] ?? false) === true;
         $ip = self::ip($request);
 
-        $allowedIp = $this->limiter->hit('login:ip', $ip, 30, 900);
-        $allowedEmail = $this->limiter->hit('login:email', $normalized, 10, 900);
-        if (!$allowedIp || !$allowedEmail) {
+        // Gezählt werden nur Fehlversuche – erfolgreiche Anmeldungen (z. B. mehrere Geräte im selben WLAN) sperren nie.
+        if ($this->limiter->exceeded('login:ip', $ip, 30, 900) || $this->limiter->exceeded('login:email', $normalized, 10, 900)) {
             $this->audit->log('user.login_blocked', $request);
             throw new HttpError(429, 'too_many_attempts');
         }
@@ -148,6 +147,8 @@ final class Accounts
         $valid = password_verify($password, $user['password_hash'] ?? self::dummyHash()) && $user !== null;
 
         if (!$valid) {
+            $this->limiter->hit('login:ip', $ip, 30, 900);
+            $this->limiter->hit('login:email', $normalized, 10, 900);
             $this->audit->log('user.login_failed', $request, targetType: $user ? 'user' : null, targetId: $user ? (string) $user['id'] : null);
             throw new HttpError(401, 'invalid_credentials');
         }

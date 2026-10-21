@@ -37,6 +37,14 @@ final class RateLimiter
         return (int) $statement->fetchColumn() <= $limit;
     }
 
+    /** Prüft, ob die Grenze schon erreicht ist, ohne einen Versuch zu zählen. */
+    public function exceeded(string $kind, string $value, int $limit, int $windowSeconds): bool
+    {
+        $statement = $this->pdo->prepare('SELECT hits FROM rate_limits WHERE bucket = ? AND window_start >= ?');
+        $statement->execute([hash('sha256', $kind . "\0" . $value), $this->clock->datetime(-$windowSeconds)]);
+        return (int) $statement->fetchColumn() >= $limit;
+    }
+
     public function clear(string $kind, string $value): void
     {
         $this->pdo->prepare('DELETE FROM rate_limits WHERE bucket = ?')->execute([hash('sha256', $kind . "\0" . $value)]);
