@@ -404,20 +404,30 @@ function boardOrigin() {
   return { x: r.left + 1 + gap, y: r.top + 1 + gap };
 }
 
+const DRAG_LIFT = 0.5; // Abstand Teil–Finger in Kästchen
+const SNAP_RADIUS = 1.2; // so weit (in Kästchen) springt das Teil zur nächsten freien Stelle
+const SNAP_OFFSETS = [-1, 0, 1].flatMap((dx) => [-1, 0, 1].map((dy) => [dx, dy]));
+
 function moveDrag(e) {
   const { piece } = drag;
   const pw = piece.w * cell + (piece.w - 1) * gap;
   const ph = piece.h * cell + (piece.h - 1) * gap;
   const left = e.clientX - pw / 2;
-  // Mit dem Finger schwebt das Teil darüber, damit man sieht, wohin es kommt.
-  const top = drag.touch ? e.clientY - ph - cell * 1.1 : e.clientY - ph / 2;
+  // Mit dem Finger schwebt das Teil knapp darüber, damit man sieht, wohin es kommt –
+  // aber nah genug, dass auch die unterste Reihe bequem erreichbar ist.
+  const top = drag.touch ? e.clientY - ph - cell * DRAG_LIFT : e.clientY - ph / 2;
   els.drag.style.transform = `translate(${left}px, ${top}px)`;
 
   const o = boardOrigin();
   const pitch = cell + gap;
-  const x = Math.round((left - o.x) / pitch);
-  const y = Math.round((top - o.y) / pitch);
-  const valid = canPlace(state.board, piece, x, y);
+  const fx = (left - o.x) / pitch;
+  const fy = (top - o.y) / pitch;
+  // Einrasten: genaue Stelle, sonst die nächste freie Stelle in der Nähe (wie bei Block Blast)
+  const spot = SNAP_OFFSETS.map(([dx, dy]) => [Math.round(fx) + dx, Math.round(fy) + dy])
+    .filter(([cx, cy]) => Math.hypot(cx - fx, cy - fy) <= SNAP_RADIUS && canPlace(state.board, piece, cx, cy))
+    .sort((a, b) => Math.hypot(a[0] - fx, a[1] - fy) - Math.hypot(b[0] - fx, b[1] - fy))[0];
+  const [x, y] = spot ?? [Math.round(fx), Math.round(fy)];
+  const valid = Boolean(spot);
   if (valid && (drag.x !== x || drag.y !== y || !drag.valid)) showGhost(piece, x, y);
   if (!valid && drag.valid) clearGhost();
   Object.assign(drag, { x, y, valid });
