@@ -761,3 +761,37 @@ button { font: inherit; color: inherit; }
 @keyframes target-pulse { from { opacity: 0.4; } to { opacity: 1; box-shadow: inset 0 0 0 2px var(--gold), 0 0 12px var(--gold); } }
 @keyframes target-wiggle { from { transform: rotate(-3deg) scale(1.05); } to { transform: rotate(3deg) scale(1.05); } }
 @keyframes joker-shine { to { filter: hue-rotate(360deg); } }
+
+/* ---------- Mehr Erfolgserlebnisse (v1.1) ---------- */
+/* leere Kästchen in fast vollen Reihen */
+.cell.near {
+  background: rgba(255, 211, 77, 0.13);
+  box-shadow: inset 0 0 0 2px rgba(255, 211, 77, 0.6), inset 0 0 14px rgba(255, 211, 77, 0.35), 0 0 10px rgba(255, 211, 77, 0.25);
+  animation: near-glow 1.6s ease-in-out infinite alternate;
+}
+
+/* Punkte, die zur Anzeige fliegen */
+.fly-points {
+  position: fixed;
+  z-index: 45;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 10px var(--gold), 0 0 22px var(--pink), 0 2px 0 rgba(0, 0, 0, 0.5);
+  animation: points-pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
+  white-space: nowrap;
+}
+.fly-points.go { transition: transform 0.6s cubic-bezier(0.55, 0, 0.8, 0.4), opacity 0.6s ease-in; opacity: 0.4; }
+.score.hit { animation: score-hit 0.35s ease-out; }
+
+/* versteckter Schalter für die iPhone-Haptik */
+.haptic { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+
+@keyframes near-glow { from { box-shadow: inset 0 0 0 1px rgba(255, 211, 77, 0.3), inset 0 0 6px rgba(255, 211, 77, 0.15); background: rgba(255, 211, 77, 0.06); } }
+@keyframes points-pop { from { transform: translate(-50%, -50%) scale(0.3); opacity: 0; } }
+@keyframes score-hit {
+  40% { transform: scale(1.22); filter: brightness(1.6); text-shadow: 0 0 18px var(--gold), 0 0 40px var(--gold); }
+}
+@media (prefers-reduced-motion: reduce) { .cell.near { animation: none; } }

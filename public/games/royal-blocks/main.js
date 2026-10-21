@@ -284,6 +284,7 @@ function renderWallet() {
 function renderLocked() {
   for (const el of cellEls) el.classList.remove('locked');
   for (const line of findFullLines(state.board)) for (const i of line.cells) cellEls[i].classList.add('locked');
+  renderNearFull();
 }
 
 function renderAll() {
@@ -454,7 +455,8 @@ function place(slot, x, y) {
   if (res.over) setTimeout(gameOver, Math.max(700, bannerAt - performance.now()));
 }
 
-function flyOut(removed, handCells, power) {
+function flyOut(removed, handCells, power, popLevel = null) {
+  const popTimes = [];
   for (const [i, card] of removed) {
     const { x, y, r } = cellCenter(i);
     const el = tile(card);
@@ -470,7 +472,50 @@ function flyOut(removed, handCells, power) {
     el.style.animationDelay = `${delay}ms`;
     document.body.append(el);
     setTimeout(() => el.remove(), 900 + delay);
-    setTimeout(() => burst(x, y, suitColor(card.j ? -1 : card.s), power), (handCells.has(i) ? 450 : 200) + delay);
+    const popAt = (handCells.has(i) ? 450 : 200) + delay;
+    popTimes.push(popAt);
+    setTimeout(() => burst(x, y, suitColor(card.j ? -1 : card.s), power), popAt);
+  }
+  // Plopp-Kette: jedes Kästchen ein Ton, immer etwas höher (gleichzeitige zusammengefasst)
+  if (popLevel === null) return;
+  [...new Set(popTimes)].sort((a, b) => a - b).slice(0, 18).forEach((at, k) => setTimeout(() => sounds.pop(k, popLevel), at));
+}
+
+// Punkte fliegen von der Reihe zur Punktanzeige
+function flyPoints(line) {
+  const boxes = line.cells.map((i) => cellEls[i].getBoundingClientRect());
+  const x = boxes.reduce((s, b) => s + b.left + b.width / 2, 0) / boxes.length;
+  const y = boxes.reduce((s, b) => s + b.top + b.height / 2, 0) / boxes.length;
+  const target = els.score.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'fly-points';
+  el.textContent = `+${fmt(line.points)}`;
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  document.body.append(el);
+  setTimeout(() => {
+    el.classList.add('go');
+    el.style.transform = `translate(-50%, -50%) translate(${target.left + target.width / 2 - x}px, ${target.top + target.height / 2 - y}px) scale(0.5)`;
+  }, 650);
+  setTimeout(() => {
+    el.remove();
+    els.score.classList.remove('hit');
+    void els.score.offsetWidth;
+    els.score.classList.add('hit');
+  }, 1300);
+}
+
+// Leere Kästchen in Reihen, denen nur noch 1–2 fehlen, leuchten leicht
+function renderNearFull() {
+  for (const el of cellEls) el.classList.remove('near');
+  for (let k = 0; k < SIZE; k++) {
+    for (const cells of [
+      Array.from({ length: SIZE }, (_, x) => idx(x, k)),
+      Array.from({ length: SIZE }, (_, y) => idx(k, y)),
+    ]) {
+      const empty = cells.filter((i) => !state.board[i]);
+      if (empty.length >= 1 && empty.length <= 2) for (const i of empty) cellEls[i].classList.add('near');
+    }
   }
 }
 
@@ -478,7 +523,8 @@ function clearEffects(res) {
   const handCells = new Set(res.lines.flatMap((l) => l.handCells));
   const top = res.lines.reduce((a, b) => (b.hand.level > a.hand.level ? b : a));
   const level = top.hand.level;
-  flyOut(res.removed, handCells, 1 + level * 0.25);
+  flyOut(res.removed, handCells, 1 + level * 0.25, level);
+  for (const line of res.lines) flyPoints(line);
 
   const box = els.board.getBoundingClientRect();
   const cx = box.left + box.width / 2;

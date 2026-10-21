@@ -55,6 +55,11 @@ export const sounds = {
     tone(140, { dur: 0.14, type: 'sawtooth', vol: 0.12, slide: 0.8 });
   },
   // level = Stärke der Pokerhand (0..9), streak = laufende Serie
+  // Plopp-Kette: jedes verschwindende Kästchen ein Ton, immer etwas höher
+  pop(k, level) {
+    tone(note(7 + Math.min(k, 14)), { dur: 0.09, type: 'sine', vol: 0.32 });
+    tone(note(12 + Math.min(k, 14)) * (1 + level * 0.01), { dur: 0.04, type: 'triangle', vol: 0.08 });
+  },
   clear(level, streak, combo) {
     const base = 5 + Math.min(streak, 6);
     const count = 3 + Math.min(level, 5);
@@ -105,14 +110,46 @@ let vibrationEnabled = true;
 export function setVibrationEnabled(on) {
   vibrationEnabled = on;
 }
+// Android: Vibrations-Schnittstelle. iPhone (Safari ab iOS 18): Das Umschalten eines versteckten
+// Schalters (<input type=checkbox switch>) löst ein kurzes haptisches Tippen aus – mehr erlaubt Apple Webseiten nicht.
+let iosLabel = null;
+function iosTick() {
+  if (!iosLabel) {
+    const box = document.createElement('div');
+    box.className = 'haptic';
+    box.setAttribute('aria-hidden', 'true');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = 'rb-haptic';
+    input.tabIndex = -1;
+    input.setAttribute('switch', '');
+    iosLabel = document.createElement('label');
+    iosLabel.htmlFor = 'rb-haptic';
+    box.append(input, iosLabel);
+    document.body.append(box);
+  }
+  iosLabel.click();
+}
+
+// pattern wie bei navigator.vibrate: Zahl oder [an, aus, an, …] in Millisekunden
 export function vibrate(pattern) {
-  if (vibrationEnabled && navigator.vibrate) {
+  if (!vibrationEnabled) return;
+  if (navigator.vibrate) {
     try {
       navigator.vibrate(pattern);
     } catch {
       // manche Browser verbieten Vibration – egal
     }
+    return;
   }
+  const steps = Array.isArray(pattern) ? pattern : [pattern];
+  let at = 0;
+  steps.forEach((ms, k) => {
+    // das erste Tippen sofort, solange die Berührung noch "frisch" ist
+    if (k % 2 === 0 && at === 0) iosTick();
+    else if (k % 2 === 0) setTimeout(iosTick, at);
+    at += ms;
+  });
 }
 
 // ---------- Musik ----------
