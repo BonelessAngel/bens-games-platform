@@ -1,12 +1,13 @@
 /* Nova Bastion: Offline-Start. Die Seite wird bevorzugt frisch geladen (damit Updates sofort ankommen),
    ohne Internet kommt sie aus dem Zwischenspeicher. Schriften und Symbole werden beim ersten Laden mitgespeichert. */
-var CACHE='nova-bastion-202610222258';
+var CACHE='nova-bastion-202610230115';
 var CACHE_PREFIX='nova-bastion-';
 var APP_PATH='/games/nova-bastion/';
 var CORE=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-180.png','PressStart2P-Regular-latin.woff2','VT323-Regular-latin.woff2'];
 self.addEventListener('install',function(e){
-  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(CORE);}).then(function(){return self.skipWaiting();}));
+  e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(CORE);}));
 });
+self.addEventListener('message',function(e){if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('activate',function(e){
   var own=function(k){return k.indexOf(CACHE_PREFIX)===0;};
   if(new URL(self.registration.scope).pathname!==APP_PATH){
