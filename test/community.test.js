@@ -37,7 +37,7 @@ test('Spielerprofil-Seite existiert und wird gebaut', () => {
 
 test('Datenschutzerklärung nennt Profile, Farbschema und Ankündigungen', () => {
   const html = readFileSync(new URL('../src/datenschutz/index.html', import.meta.url), 'utf8');
-  for (const needle of ['Spielerprofil', 'bg-theme', 'bg-dismissed', 'bg-return', 'Erfolge']) {
+  for (const needle of ['Spielerprofil', 'bg-theme', 'bg-dismissed', 'bg-return', 'Erfolge', 'Community-Level']) {
     assert.ok(html.includes(needle), `fehlt: ${needle}`);
   }
 });
