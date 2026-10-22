@@ -76,6 +76,7 @@ dbTest('Übersicht in „Mein Konto“ und Spielstand löschen', function (): vo
     same(200, $overview->status);
     same('nova-bastion', $overview->body['games'][0]['id']);
     same(2, $overview->body['games'][0]['achievements']);
+    same(['eins', 'zwei'], $overview->body['games'][0]['achievement_ids']);
 
     same(200, $app->postAs($session, 'games/nova-bastion/save/delete')->status);
     same(null, saveOf($app, $session)->body['save']);

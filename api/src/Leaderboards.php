@@ -191,10 +191,10 @@ final class Leaderboards
         ] : null;
     }
 
-    private const VISIBLE = "l.hidden_at IS NULL AND u.status = 'active' AND u.leaderboard_opt_out = 0";
+    public const VISIBLE = "l.hidden_at IS NULL AND u.status = 'active' AND u.leaderboard_opt_out = 0";
 
     /** @return array{rank: int|null, score: int|null} */
-    private function rankOf(string $appId, string $board, string $period, int $userId): array
+    public function rankOf(string $appId, string $board, string $period, int $userId): array
     {
         $own = $this->pdo->prepare(
             'SELECT l.score, l.achieved_at, l.id FROM leaderboard_entries l JOIN users u ON u.id = l.user_id

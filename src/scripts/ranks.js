@@ -3,9 +3,10 @@
 import { avatarSvg } from '../../lib/avatars.js';
 import { boardLabel } from '../../lib/boards.js';
 import { userReady } from './nav.js';
+import { shareButton } from './share.js';
 
 const $ = (selector) => document.querySelector(selector);
-const state = { game: '', board: '', period: 'week' };
+const state = { game: '', board: new URLSearchParams(window.location.search).get('liste') ?? '', period: 'week' };
 
 async function getJson(path) {
   try {
@@ -47,6 +48,22 @@ function el(tag, className, text) {
   return node;
 }
 
+// Namen führen zum öffentlichen Spielerprofil.
+function nameLink(entry, className) {
+  const link = el('a', className, entry.display_name + (entry.me ? ' (du)' : ''));
+  link.href = `/spieler/?name=${encodeURIComponent(entry.display_name)}`;
+  return link;
+}
+
+function setUrl(params) {
+  const url = new URL(window.location.href);
+  for (const [key, value] of Object.entries(params)) {
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+  }
+  history.replaceState(null, '', url);
+}
+
 function avatarNode(entry, size) {
   const span = el('span', 'ranks__avatar');
   span.innerHTML = avatarSvg({ avatar: entry.avatar, color: entry.avatar_color, name: entry.display_name }, size);
@@ -78,7 +95,7 @@ function renderPodium(top) {
     if (entry) {
       place.append(
         avatarNode(entry, rank === 1 ? 72 : 56),
-        el('span', 'podium__name', entry.display_name + (entry.me ? ' (du)' : '')),
+        nameLink(entry, 'podium__name'),
         el('span', 'podium__score', points(entry.score)),
       );
     }
@@ -92,7 +109,7 @@ function row(entry) {
   item.append(
     el('span', 'ranks__rank', String(entry.rank)),
     avatarNode(entry, 32),
-    el('span', 'ranks__name', entry.display_name + (entry.me ? ' (du)' : '')),
+    nameLink(entry, 'ranks__name'),
     el('span', 'ranks__score', points(entry.score)),
   );
   return item;
@@ -104,9 +121,7 @@ function renderGames() {
   renderChoices($('[data-rank-games]'), games.map((g) => ({ id: g.id, label: g.name, icon: g.icon })), state.game, 'game-tab', (id) => {
     state.game = id;
     state.board = '';
-    const url = new URL(window.location.href);
-    url.searchParams.set('spiel', id);
-    history.replaceState(null, '', url);
+    setUrl({ spiel: id, liste: '' });
     renderGames();
     load();
   });
@@ -141,6 +156,7 @@ async function load() {
   state.board = data.board;
   renderChoices($('[data-rank-boards]'), data.boards.map((b) => ({ id: b, label: boardLabel(b) })), data.board, 'chip', (id) => {
     state.board = id;
+    setUrl({ liste: id });
     load();
   });
 
@@ -170,5 +186,17 @@ for (const button of document.querySelectorAll('[data-rank-period]')) {
     load();
   });
 }
+
+$('[data-rank-share]').append(shareButton(() => {
+  const game = games.find((g) => g.id === state.game);
+  const url = new URL('/ranglisten/', window.location.origin);
+  if (state.game) url.searchParams.set('spiel', state.game);
+  if (state.board) url.searchParams.set('liste', state.board);
+  return {
+    title: 'Ranglisten – Bens Games',
+    text: game ? `Wer schafft mehr? Rangliste ${game.name} – ${boardLabel(state.board)}:` : 'Die Ranglisten von Bens Games:',
+    url: url.toString(),
+  };
+}));
 
 loadGames().then(load);

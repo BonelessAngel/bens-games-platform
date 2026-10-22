@@ -63,6 +63,13 @@ final class Api
             // Ranglisten: lesen öffentlich (mit Anmeldung zusätzlich der eigene Platz), melden nur angemeldet mit CSRF-Token.
             'games/{id}/leaderboard' => ['GET', false, fn (): Response => $this->leaderboards()->show($gameId, $request->query, $this->sessions()->current($request))],
             'games/{id}/scores' => ['POST', true, fn (array $session): Response => $this->leaderboards()->submit($session, $gameId, $request->json())],
+            // Community (Phase 6): Ankündigungen, Weiterspielen, öffentliche Spielerprofile.
+            'announcements' => ['GET', false, fn (): Response => $this->announcements()->active(
+                preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', (string) ($request->query['app'] ?? '')) === 1 ? (string) $request->query['app'] : null,
+                $this->sessions()->current($request),
+            )],
+            'account/recent' => ['GET', true, fn (array $session): Response => $this->community()->recent($session, new AppCatalog($this->pdo(), $this->clock))],
+            'players/profile' => ['GET', false, fn (): Response => $this->community()->profile($request->query, $this->sessions()->current($request))],
             'health' => ['GET', false, fn (): Response => $this->health()],
             'apps' => ['GET', false, fn (): Response => $this->apps($request)],
             'admin/migrate' => ['POST', false, fn (): Response => $this->migrate($request)],
@@ -109,6 +116,9 @@ final class Api
             'admin/apps' => ['GET', true, fn (array $session): Response => $this->admin()->apps($session)],
             'admin/apps/update' => ['POST', true, fn (array $session): Response => $this->admin()->updateApp($session, $request->json(), $request)],
             'admin/apps/access' => ['POST', true, fn (array $session): Response => $this->admin()->setAppAccess($session, $request->json(), $request)],
+            'admin/announcements' => ['GET', true, fn (array $session): Response => $this->announcementsFor($session)->all()],
+            'admin/announcements/save' => ['POST', true, fn (array $session): Response => $this->announcementsFor($session)->save($session, $request->json(), $request)],
+            'admin/announcements/delete' => ['POST', true, fn (array $session): Response => $this->announcementsFor($session)->delete($session, $request->json(), $request)],
         ];
 
         $routes = $this->isAdmin() ? $adminRoutes : $siteRoutes;
@@ -197,6 +207,26 @@ final class Api
     {
         $pdo = $this->pdo();
         return new Admin($pdo, $this->clock, new Permissions($pdo), $this->sessions(), new AuditLog($pdo, $this->clock), $this->gameStats());
+    }
+
+    private function announcements(): Announcements
+    {
+        $pdo = $this->pdo();
+        return new Announcements($pdo, $this->clock, new AuditLog($pdo, $this->clock));
+    }
+
+    /** Ankündigungen verwalten nur mit dem Recht announcements.manage (Besitzer haben es immer). @param array<string, mixed> $session */
+    private function announcementsFor(array $session): Announcements
+    {
+        if (!(new Permissions($this->pdo()))->has((int) $session['id'], 'announcements.manage')) {
+            throw new HttpError(403, 'missing_permission', ['permission' => 'announcements.manage']);
+        }
+        return $this->announcements();
+    }
+
+    private function community(): Community
+    {
+        return new Community($this->pdo(), $this->leaderboards());
     }
 
     private function gameStats(): GameStats

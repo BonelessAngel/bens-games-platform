@@ -2,6 +2,7 @@
 // Spricht mit der API unter /api/ auf derselben Adresse; das Sitzungs-Cookie setzt und liest nur der Server.
 import { safeReturnPath } from '../../lib/return-path.js';
 import { avatarSvg, AVATARS, AVATAR_COLORS } from '../../lib/avatars.js';
+import { badgeList } from './badges.js';
 import { renderNavUser } from './nav.js';
 
 const MESSAGES = {
@@ -353,6 +354,7 @@ async function loadGames(root, csrf) {
     const achievements = game.achievements === 1 ? '1 Erfolg' : `${game.achievements} Erfolge`;
     meta.textContent = `Gesichert: ${formatDate(game.updated_at)} · ${achievements}`;
     text.append(title, meta);
+    if (game.achievement_ids?.length) text.append(await badgeList(game.id, game.achievement_ids));
 
     const button = document.createElement('button');
     button.type = 'button';
@@ -397,6 +399,8 @@ function setupProfile(root, user, csrf) {
     root.querySelector('[data-name]').textContent = current.display_name;
     const badges = [current.email_verified ? 'E-Mail bestätigt' : 'E-Mail unbestätigt', current.two_factor ? 'Zwei-Faktor an' : 'Zwei-Faktor aus'];
     root.querySelector('[data-badges]').replaceChildren(...badges.map((text) => Object.assign(document.createElement('span'), { className: 'pill', textContent: text })));
+    // Sichtbar nur, solange das Konto in Ranglisten erscheint (setzt loadStats).
+    root.querySelector('[data-profile-link]').href = `/spieler/?name=${encodeURIComponent(current.display_name)}`;
     renderNavUser(current);
   };
 
@@ -481,11 +485,14 @@ async function loadStats(root, csrf) {
     return item;
   }));
   const ranks = root.querySelector('[data-leaderboard-optin]');
+  const profileLink = root.querySelector('[data-profile-link]');
   ranks.checked = !data.leaderboard_opt_out;
+  profileLink.hidden = !ranks.checked;
   ranks.onchange = async () => {
     ranks.disabled = true;
     await api('account/leaderboard/settings', { method: 'POST', body: { opt_out: !ranks.checked }, csrf });
     ranks.disabled = false;
+    profileLink.hidden = !ranks.checked;
   };
   toggle.onchange = async () => {
     if (!toggle.checked && !window.confirm('Statistik nicht mehr deinem Konto zuordnen? Auch die bisherige wird vom Konto getrennt und zählt nur noch anonym.')) {

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spielerprofil – Bens Games</title>
+  <meta name="description" content="Bestwerte, Plätze und Erfolge einer Spielerin oder eines Spielers bei Bens Games.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex">
+  <!-- HEAD -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+  <!-- ENV_BANNER -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="/">
+        <img class="brand__logo" src="/favicon.svg" alt="" width="28" height="28">
+        <span>Bens Games</span>
+      </a>
+      <nav aria-label="Hauptnavigation">
+        <a href="/">Bibliothek</a>
+        <a href="/ranglisten/">Ranglisten</a>
+        <!-- ACCOUNT_NAV -->
+      </nav>
+    </div>
+  </header>
+
+  <main class="container konto player" data-player>
+    <p class="auth__lead" data-player-loading>Profil wird geladen …</p>
+
+    <div data-player-missing hidden>
+      <h1>Profil nicht gefunden</h1>
+      <p class="auth__lead">
+        Dieses Profil gibt es nicht oder es ist nicht öffentlich. Profile sind nur sichtbar,
+        solange jemand in den Ranglisten erscheint.
+      </p>
+      <p><a class="button" href="/ranglisten/">Zu den Ranglisten</a></p>
+    </div>
+
+    <div data-player-details hidden>
+      <section class="profile-card">
+        <span class="profile-card__avatar" data-player-avatar></span>
+        <div class="profile-card__text">
+          <h1 data-player-name></h1>
+          <p data-player-since></p>
+        </div>
+        <span data-player-share></span>
+      </section>
+
+      <p class="notice" data-player-own hidden>
+        Das ist dein öffentliches Profil. Profilbild und Namen änderst du unter <a href="/konto/">Mein Konto</a>,
+        dort kannst du dich auch aus den Ranglisten herausnehmen.
+      </p>
+
+      <div data-player-games></div>
+      <p class="empty" data-player-empty hidden>Noch keine Ergebnisse in den Ranglisten.</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <span>© <!-- YEAR --> Bens Games</span>
+      <nav aria-label="Rechtliches">
+        <a href="/impressum/">Impressum</a>
+        <a href="/datenschutz/">Datenschutz</a>
+      </nav>
+    </div>
+  </footer>
+  <script type="module" src="../scripts/player.js"></script>
+</body>
+</html>

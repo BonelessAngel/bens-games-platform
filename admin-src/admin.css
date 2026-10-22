@@ -189,3 +189,22 @@ legend {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
   gap: 8px 16px;
 }
+
+/* Ankündigungen */
+.field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.admin-search label {
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
