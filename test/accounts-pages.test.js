@@ -17,7 +17,7 @@ test('alle Kontoseiten existieren', () => {
 
 test('Datenschutzerklärung beschreibt Konten, Cookie und Fristen', () => {
   const html = readFileSync(new URL('../src/datenschutz/index.html', import.meta.url), 'utf8');
-  for (const needle of ['__Host-bg_session', '90 Tage', '7 Tage', 'Zwei-Faktor', 'Konto löschen', 'Art. 6 Abs. 1 lit. b', 'Spielstände']) {
+  for (const needle of ['__Host-bg_session', '90 Tage', '7 Tage', 'Zwei-Faktor', 'Konto löschen', 'Art. 6 Abs. 1 lit. b', 'Spielstände', 'Spielstatistik', 'Ranglisten', '8 Wochen']) {
     assert.ok(html.includes(needle), `fehlt: ${needle}`);
   }
 });

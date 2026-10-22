@@ -23,6 +23,8 @@
         <a href="#uebersicht" data-tab="uebersicht" data-needs="stats.view">Übersicht</a>
         <a href="#spiele" data-tab="spiele" data-needs="stats.view">Spiele</a>
         <a href="#konten" data-tab="konten" data-needs="users.view">Konten</a>
+        <a href="#moderation" data-tab="moderation" data-needs="moderation">Moderation</a>
+        <a href="#apps" data-tab="apps" data-needs="app.*.manage">Apps</a>
         <a href="#protokoll" data-tab="protokoll" data-needs="audit.view">Protokoll</a>
         <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
       </nav>
@@ -125,6 +127,31 @@
           </div>
         </form>
       </div>
+    </section>
+
+    <section data-view="moderation" hidden>
+      <h1>Moderation: Ranglisten</h1>
+      <p class="hint">Verdächtige Einträge (z. B. unmögliche Punktzahlen) ausblenden. Ausgeblendete Einträge erscheinen in keiner Rangliste; jede Änderung landet im Protokoll.</p>
+      <div class="admin-search">
+        <select data-mod-game aria-label="Spiel"></select>
+        <select data-mod-board aria-label="Rangliste"></select>
+        <select data-mod-period aria-label="Zeitraum">
+          <option value="week">Diese Woche</option>
+          <option value="all">Gesamt</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Platz</th><th>Name</th><th>Punkte</th><th>Erreicht</th><th>Status</th><th></th></tr></thead>
+          <tbody data-mod-entries></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section data-view="apps" hidden>
+      <h1>Apps</h1>
+      <p class="hint">Status und Sichtbarkeit gelten sofort. „Wartung“ zeigt die App in der Bibliothek ausgegraut und ohne Link. Freigaben gelten für „ausgewählte Nutzer“ und private Apps.</p>
+      <div data-apps></div>
     </section>
 
     <section data-view="protokoll" hidden>

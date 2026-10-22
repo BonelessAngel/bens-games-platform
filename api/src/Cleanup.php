@@ -32,6 +32,11 @@ final class Cleanup
         return [
             'audit_log' => $this->delete('DELETE FROM audit_log WHERE created_at < ?', [$days(self::AUDIT_DAYS)]),
             'game_events' => $this->delete('DELETE FROM game_events WHERE created_at < ?', [$days(self::GAME_EVENT_DAYS)]),
+            // Wochenranglisten nach 8 Wochen; die Bestwerte „gesamt“ bleiben bis zur Löschung des Kontos.
+            'leaderboard_weeks' => $this->delete(
+                "DELETE FROM leaderboard_entries WHERE period <> 'all' AND period < ?",
+                [gmdate('o-\WW', $this->clock->now() - Leaderboards::WEEKS_KEPT * 7 * 86400)]
+            ),
             'users_unverified' => $this->delete('DELETE FROM users WHERE email_verified_at IS NULL AND created_at < ?', [$days(self::UNVERIFIED_DAYS)]),
             'sessions' => $this->delete(
                 'DELETE FROM sessions WHERE expires_at < ? OR revoked_at < ?',

@@ -391,6 +391,13 @@ async function loadStats(root, csrf) {
     item.append(text);
     return item;
   }));
+  const ranks = root.querySelector('[data-leaderboard-optin]');
+  ranks.checked = !data.leaderboard_opt_out;
+  ranks.onchange = async () => {
+    ranks.disabled = true;
+    await api('account/leaderboard/settings', { method: 'POST', body: { opt_out: !ranks.checked }, csrf });
+    ranks.disabled = false;
+  };
   toggle.onchange = async () => {
     if (!toggle.checked && !window.confirm('Statistik nicht mehr deinem Konto zuordnen? Auch die bisherige wird vom Konto getrennt und zählt nur noch anonym.')) {
       toggle.checked = true;

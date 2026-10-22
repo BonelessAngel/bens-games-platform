@@ -91,6 +91,12 @@ final class Permissions
                 return true;
             }
         }
+        // Wer eine App verwalten darf, braucht ebenfalls Zugang zur Zentrale.
+        foreach ($this->effective($userId) as $permission) {
+            if (str_ends_with($permission, '.manage') && str_starts_with($permission, 'app.')) {
+                return true;
+            }
+        }
         return false;
     }
 

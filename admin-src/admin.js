@@ -40,6 +40,13 @@ const ACTIONS = {
   'admin.user_unlocked': 'Zentrale: Konto entsperrt',
   'admin.sessions_revoked': 'Zentrale: Sitzungen beendet',
   'admin.rights_changed': 'Zentrale: Rechte geändert',
+  'admin.score_hidden': 'Zentrale: Ranglisten-Eintrag ausgeblendet',
+  'admin.score_shown': 'Zentrale: Ranglisten-Eintrag eingeblendet',
+  'admin.app_updated': 'Zentrale: App geändert',
+  'admin.app_access_granted': 'Zentrale: App freigeschaltet',
+  'admin.app_access_revoked': 'Zentrale: App-Freigabe entfernt',
+  'user.leaderboard_opt_out': 'Aus Ranglisten herausgenommen',
+  'user.leaderboard_opt_in': 'In Ranglisten aufgenommen',
   'user.stats_opt_out': 'Statistik-Zuordnung abgeschaltet',
   'user.stats_opt_in': 'Statistik-Zuordnung eingeschaltet',
 };
@@ -73,7 +80,11 @@ function notify(text, kind = 'error') {
   notice.hidden = !text;
 }
 
-const can = (permission) => me?.permissions.includes('*') || me?.permissions.includes(permission);
+const can = (permission) => {
+  if (me?.permissions.includes('*')) return true;
+  if (permission === 'app.*.manage') return me?.permissions.some((p) => /^app\..+\.manage$/.test(p)) ?? false;
+  return me?.permissions.includes(permission) ?? false;
+};
 
 function formatDate(utc) {
   if (!utc) return '–';
@@ -163,7 +174,14 @@ function showTab(name) {
     else tabLink.removeAttribute('aria-current');
   }
   notify('');
-  ({ uebersicht: loadOverview, spiele: loadGames, konten: () => loadUsers(1), protokoll: () => loadAudit(1) })[tab]?.();
+  ({
+    uebersicht: loadOverview,
+    spiele: loadGames,
+    konten: () => loadUsers(1),
+    moderation: loadModeration,
+    apps: loadApps,
+    protokoll: () => loadAudit(1),
+  })[tab]?.();
 }
 
 window.addEventListener('hashchange', () => me && showTab(window.location.hash.slice(1)));
@@ -411,6 +429,105 @@ $('[data-form="rights"]').addEventListener('submit', async (event) => {
   notify(`Rechte für ${rightsUser.display_name} gespeichert.`, 'success');
   loadUsers(1);
 });
+
+// --- Moderation ------------------------------------------------------------
+
+for (const selector of ['[data-mod-game]', '[data-mod-board]', '[data-mod-period]']) {
+  $(selector).addEventListener('change', (event) => {
+    if (selector === '[data-mod-game]') $('[data-mod-board]').replaceChildren();
+    loadModeration();
+  });
+}
+
+async function loadModeration() {
+  const { ok, data } = await api('admin/leaderboard', {
+    query: { app: $('[data-mod-game]').value, board: $('[data-mod-board]').value, period: $('[data-mod-period]').value },
+  });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-mod-game]').replaceChildren(...data.apps.map((app) => new Option(app.name, app.id)));
+  $('[data-mod-game]').value = data.app;
+  $('[data-mod-board]').replaceChildren(...data.boards.map((board) => new Option(/^\d+$/.test(board) ? `Level ${board}` : board, board)));
+  $('[data-mod-board]').value = data.board;
+
+  let rank = 0;
+  $('[data-mod-entries]').replaceChildren(...data.entries.map((entry) => {
+    const hidden = entry.hidden_at !== null;
+    if (!hidden && entry.status === 'active') rank += 1;
+    const row = document.createElement('tr');
+    const status = hidden ? `ausgeblendet${entry.hidden_reason ? ` (${entry.hidden_reason})` : ''}` : entry.status === 'locked' ? 'Konto gesperrt' : 'sichtbar';
+    row.append(cell(hidden || entry.status !== 'active' ? '–' : String(rank)), cell(entry.display_name), cell(number(entry.score)), cell(formatDate(entry.achieved_at)), cell(status));
+    const actions = Object.assign(document.createElement('td'), { className: 'actions' });
+    actions.append(button(hidden ? 'Einblenden' : 'Ausblenden', async () => {
+      const reason = hidden ? '' : window.prompt('Grund (optional, z. B. „unmögliche Punktzahl“):', '') ?? null;
+      if (reason === null) return;
+      const result = await api('admin/leaderboard/hide', { method: 'POST', body: { id: Number(entry.id), hidden: !hidden, reason } });
+      if (!result.ok) return notify(MESSAGES[result.data.error] ?? FALLBACK);
+      loadModeration();
+    }, hidden ? 'secondary' : 'danger'));
+    row.append(actions);
+    return row;
+  }));
+  if (!data.entries.length) {
+    const row = document.createElement('tr');
+    const empty = cell('Noch keine Einträge.');
+    empty.colSpan = 6;
+    row.append(empty);
+    $('[data-mod-entries]').replaceChildren(row);
+  }
+}
+
+// --- Apps ------------------------------------------------------------------
+
+const STATUS_LABELS = { public: 'öffentlich', beta: 'Beta', private: 'privat', maintenance: 'Wartung' };
+const VISIBILITY_LABELS = { all: 'alle', signed_in: 'nur angemeldete Nutzer', selected: 'ausgewählte Nutzer' };
+
+async function loadApps() {
+  const { ok, data } = await api('admin/apps');
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-apps]').replaceChildren(...data.apps.map((app) => {
+    const panel = Object.assign(document.createElement('div'), { className: 'panel' });
+    panel.append(Object.assign(document.createElement('h2'), { textContent: `${app.name} · Version ${app.version}` }));
+
+    const form = Object.assign(document.createElement('form'), { className: 'admin-search' });
+    const status = document.createElement('select');
+    status.append(...data.statuses.map((value) => new Option(STATUS_LABELS[value], value, false, value === app.status)));
+    status.setAttribute('aria-label', 'Status');
+    const visibility = document.createElement('select');
+    visibility.append(...data.visibilities.map((value) => new Option(VISIBILITY_LABELS[value], value, false, value === app.visibility)));
+    visibility.setAttribute('aria-label', 'Sichtbarkeit');
+    const save = Object.assign(document.createElement('button'), { type: 'submit', className: 'button', textContent: 'Speichern' });
+    form.append(status, visibility, save);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const result = await api('admin/apps/update', { method: 'POST', body: { id: app.id, status: status.value, visibility: visibility.value } });
+      notify(result.ok ? `${app.name}: gespeichert.` : MESSAGES[result.data.error] ?? FALLBACK, result.ok ? 'success' : 'error');
+    });
+
+    const access = Object.assign(document.createElement('ul'), { className: 'sessions' });
+    access.append(...app.access.map((user) => {
+      const item = Object.assign(document.createElement('li'), { className: 'sessions__item' });
+      item.append(Object.assign(document.createElement('span'), { textContent: user.display_name }), button('Entfernen', async () => {
+        await api('admin/apps/access', { method: 'POST', body: { app_id: app.id, display_name: user.display_name, grant: false } });
+        loadApps();
+      }));
+      return item;
+    }));
+
+    const grant = Object.assign(document.createElement('form'), { className: 'admin-search' });
+    const name = Object.assign(document.createElement('input'), { type: 'text', placeholder: 'Name des Kontos freischalten …' });
+    name.setAttribute('aria-label', 'Name des Kontos');
+    grant.append(name, Object.assign(document.createElement('button'), { type: 'submit', className: 'button button--secondary', textContent: 'Freischalten' }));
+    grant.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const result = await api('admin/apps/access', { method: 'POST', body: { app_id: app.id, display_name: name.value, grant: true } });
+      if (!result.ok) return notify(result.data.error === 'unknown_user' ? 'Kein Konto mit diesem Namen.' : MESSAGES[result.data.error] ?? FALLBACK);
+      loadApps();
+    });
+
+    panel.append(form, Object.assign(document.createElement('h3'), { textContent: 'Freigaben' }), access, grant);
+    return panel;
+  }));
+}
 
 // --- Protokoll -------------------------------------------------------------
 

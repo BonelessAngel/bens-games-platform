@@ -55,6 +55,7 @@ export default defineConfig(({ mode }) => {
     main: src('index.html'),
     impressum: src('impressum/index.html'),
     datenschutz: src('datenschutz/index.html'),
+    ranglisten: src('ranglisten/index.html'),
   };
   if (accountsEnabled(mode)) {
     for (const [name, path] of Object.entries(ACCOUNT_PAGES)) input[name] = src(path);

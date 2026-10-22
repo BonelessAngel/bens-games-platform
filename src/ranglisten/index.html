@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ranglisten – Bens Games</title>
+  <meta name="description" content="Die besten Spielerinnen und Spieler von Bens Games – diese Woche und insgesamt.">
+  <meta name="color-scheme" content="dark light">
+  <!-- HEAD -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+  <!-- ENV_BANNER -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="/">
+        <img class="brand__logo" src="/favicon.svg" alt="" width="28" height="28">
+        <span>Bens Games</span>
+      </a>
+      <nav aria-label="Hauptnavigation">
+        <a href="/">Bibliothek</a>
+        <a href="/ranglisten/" aria-current="page">Ranglisten</a>
+        <!-- ACCOUNT_NAV -->
+      </nav>
+    </div>
+  </header>
+
+  <main class="container ranks" data-ranks>
+    <h1>Ranglisten</h1>
+    <p class="auth__lead">Die besten Ergebnisse – diese Woche und insgesamt. Mit Konto erscheinst du hier automatisch.</p>
+
+    <div class="ranks__controls">
+      <label>Spiel <select data-rank-game></select></label>
+      <label>Rangliste <select data-rank-board></select></label>
+      <div class="segmented" role="group" aria-label="Zeitraum">
+        <button type="button" data-rank-period="week" aria-pressed="true">Diese Woche</button>
+        <button type="button" data-rank-period="all" aria-pressed="false">Gesamt</button>
+      </div>
+    </div>
+
+    <p class="notice notice--info" data-rank-me hidden></p>
+
+    <ol class="ranks__list" data-rank-list></ol>
+    <p class="empty" data-rank-empty hidden>Noch keine Einträge. Spiel eine Runde und sei die oder der Erste!</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <span>© <!-- YEAR --> Bens Games</span>
+      <nav aria-label="Rechtliches">
+        <a href="/impressum/">Impressum</a>
+        <a href="/datenschutz/">Datenschutz</a>
+      </nav>
+    </div>
+  </footer>
+  <script type="module" src="../scripts/ranks.js"></script>
+</body>
+</html>
