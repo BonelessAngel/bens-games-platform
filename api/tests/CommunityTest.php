@@ -109,3 +109,39 @@ dbTest('Spielerprofil: öffentlich nur mit Ranglisten-Teilnahme, ohne private Da
     $app->pdo->exec("UPDATE users SET status = 'locked' WHERE display_name = 'Max'");
     same(404, siteGet($app, 'players/profile', ['name' => 'Max'])->status);
 });
+
+dbTest('Startbildschirm: alles für das Spiel in einer Anfrage', function (): void {
+    $app = new TestApp();
+    same(404, siteGet($app, 'games/gibt-es-nicht/hub')->status);
+    $guest = siteGet($app, 'games/nova-bastion/hub');
+    same(200, $guest->status);
+    same(null, $guest->body['user']);
+    same([], $guest->body['best']);
+    same('/konto/anmelden/?zurueck=%2Fgames%2Fnova-bastion%2F', $guest->body['links']['login']);
+    same('/ranglisten/?spiel=nova-bastion', $guest->body['links']['rankings']);
+
+    $anna = $app->signedIn('anna@example.org', 'ein sicheres Passwort', 'Anna');
+    $max = $app->signedIn('max@example.org', 'ein sicheres Passwort', 'Max');
+    $app->postAs($max, 'games/nova-bastion/scores', ['board' => '1', 'score' => 900]);
+    foreach ([['1', 500], ['2', 300], ['3', 200], ['4', 100]] as [$board, $score]) {
+        $app->postAs($anna, 'games/nova-bastion/scores', ['board' => $board, 'score' => $score]);
+    }
+    $app->postAs($anna, 'games/royal-blocks/scores', ['board' => 'klassisch', 'score' => 99999]);
+    same(200, $app->postAs($anna, 'account/profile', ['avatar' => 'fox', 'avatar_color' => 'amber'])->status);
+
+    $hub = siteGet($app, 'games/nova-bastion/hub', [], $anna['cookies'])->body;
+    same('Anna', $hub['user']['display_name']);
+    same('A', $hub['user']['initial']);
+    same('/avatars/fox-amber.svg', $hub['user']['avatar_url']);
+    same('/spieler/?name=Anna', $hub['user']['profile_url']);
+    same(3, count($hub['best']), 'höchstens drei');
+    same([1, 1, 1], array_column($hub['best'], 'rank'));
+    same(['2', '3', '4'], array_column($hub['best'], 'board'), 'Platz 1 zuerst, Level 1 ist nur Platz 2');
+    check(!str_contains(json_encode($hub), 'example.org'), 'keine E-Mail im Startbildschirm');
+
+    same(200, $app->postAs($anna, 'account/leaderboard/settings', ['opt_out' => true])->status);
+    $hidden = siteGet($app, 'games/nova-bastion/hub', [], $anna['cookies'])->body;
+    same(null, $hidden['user']['profile_url']);
+    same(false, $hidden['user']['listed']);
+    same([null, null, null], array_column($hidden['best'], 'rank'));
+});

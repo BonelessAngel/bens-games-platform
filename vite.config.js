@@ -12,6 +12,7 @@ import {
   robotsTxt,
 } from './lib/environment.js';
 import { fillImpressum } from './lib/impressum.js';
+import { avatarFiles } from './lib/avatars.js';
 
 const src = (path) => fileURLToPath(new URL(`./src/${path}`, import.meta.url));
 
@@ -46,6 +47,8 @@ function platform() {
     },
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(mode) });
+      // Profilbilder für die Startbildschirme der Spiele (docs/spiele-anbindung.md)
+      for (const file of avatarFiles()) this.emitFile({ type: 'asset', ...file });
     },
   };
 }
