@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-version="1.4.0" data-theme="neon" data-tiles="standard">
+<html lang="de" data-version="1.5.0" data-theme="neon" data-tiles="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -185,7 +185,7 @@
         </div>
         <div id="leaderboard-result" class="leaderboard-result" aria-live="polite" hidden>
           <strong id="leaderboard-rank"></strong>
-          <a href="/ranglisten/?spiel=royal-blocks">Alle Ranglisten</a>
+          <a id="leaderboard-link" href="/ranglisten/?spiel=royal-blocks">Rangliste ansehen</a>
         </div>
         <button class="btn gold big" data-action="scratch" type="button" id="scratch-btn" hidden>Rubbellos freirubbeln!</button>
         <div class="two-buttons">
@@ -199,6 +199,13 @@
 
   <div id="start" class="overlay start" hidden>
     <div class="panel start-panel">
+      <a id="platform-home" class="platform-home" href="/" hidden>← Bens Games</a>
+      <aside id="platform-announcement" class="platform-announcement" hidden>
+        <button id="announcement-dismiss" class="announcement-dismiss" type="button" aria-label="Ankündigung schließen">×</button>
+        <strong id="announcement-title"></strong>
+        <span id="announcement-body"></span>
+        <a id="announcement-link" hidden>Mehr erfahren</a>
+      </aside>
       <img class="logo" src="icon-192.png" alt="" width="96" height="96">
       <h1 class="title">Royal Blocks</h1>
       <div class="start-level">
@@ -217,6 +224,7 @@
         <button class="btn small-btn" data-action="stats" type="button">Statistik</button>
         <button class="btn small-btn" data-action="help" type="button">Regeln</button>
       </div>
+      <section id="platform-account" class="platform-account" aria-live="polite" hidden></section>
     </div>
   </div>
 
@@ -244,6 +252,11 @@
   </div>
 
   <div id="toast" class="toast" hidden></div>
+
+  <div id="update-notice" class="update-notice" role="status" hidden>
+    <span>Neue Version verfügbar</span>
+    <button id="update-reload" type="button">Neu laden</button>
+  </div>
 
   <div id="gift" class="overlay" hidden>
     <div class="panel">

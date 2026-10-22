@@ -14,7 +14,7 @@ import {
   setMusicEnabled, setMusicIntensity, setSoundEnabled, setVibrationEnabled, sounds, startMusic, stopMusic, unlockAudio, vibrate,
 } from './audio.js';
 import { burst, chips as chipBurst, initFx, suitColor } from './fx.js';
-import { createPlatformClient } from './platform.js';
+import { createPlatformClient, leaderboardPath } from './platform.js';
 import { load, save } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
@@ -22,7 +22,7 @@ const root = document.documentElement;
 const version = root.dataset.version;
 const platform = createPlatformClient({ version });
 platform.start();
-void platform.prepareAccount();
+$('platform-home').hidden = !platform.hosted;
 
 const els = {
   app: $('app'),
@@ -137,21 +137,36 @@ let shownScore = state.score;
 // Die Zähler gelten für diesen Seitenbesuch; beim Verlassen endet die Sitzung als "abort".
 const boardForMode = (value) => (value === 'daily' ? 'taeglich' : 'klassisch');
 let platformRound = null;
+let gameplayActive = false;
+let waitingWorker = null;
+let reloadRequested = false;
+
+function renderUpdateNotice() {
+  const notice = $('update-notice');
+  notice.hidden = !waitingWorker;
+  const button = $('update-reload');
+  button.disabled = gameplayActive;
+  button.textContent = gameplayActive ? 'Neu laden nach der Runde' : 'Neu laden';
+}
 
 function hideLeaderboard() {
   $('leaderboard-result').hidden = true;
   $('leaderboard-rank').textContent = '';
 }
 
-function showLeaderboard(result) {
+function showLeaderboard(result, board) {
   hideLeaderboard();
   if (!result || result.listed === false || !Number.isInteger(result.week?.rank)) return;
   $('leaderboard-rank').textContent = `Platz ${result.week.rank} diese Woche`;
+  $('leaderboard-link').href = leaderboardPath(board);
   $('leaderboard-result').hidden = false;
 }
 
 function startPlatformRound() {
-  if (platformRound || state.over) return;
+  if (state.over) return;
+  gameplayActive = true;
+  renderUpdateNotice();
+  if (platformRound) return;
   const board = boardForMode(mode);
   if (!platform.beginLevel(board)) return;
   platformRound = { board, lines: 0, hands: new Array(HANDS.length).fill(0) };
@@ -176,10 +191,11 @@ function finishPlatformRound(result, { keepalive = false, showRank = false } = {
   if (!platformRound) return;
   const round = platformRound;
   platformRound = null;
+  renderUpdateNotice();
   platform.endLevel({ result, score: state.score, stars: 0, data: platformData(round) });
   void platform.flush({ keepalive });
   const score = platform.submitScore(round.board, state.score, { keepalive });
-  if (showRank) void score.then(showLeaderboard);
+  if (showRank) void score.then((response) => showLeaderboard(response, round.board));
 }
 
 function persist() {
@@ -1070,6 +1086,8 @@ function startGame(newMode, fresh) {
 
 function gameOver() {
   if (!state.over) return;
+  gameplayActive = false;
+  renderUpdateNotice();
   sounds.gameOver();
   vibrate([40, 60, 40]);
   $('final-score').textContent = fmt(state.score);
@@ -1222,6 +1240,116 @@ function claimGift() {
 
 // ---------- Startbildschirm, Statistik, Teilen, Rubbellos ----------
 
+const dismissedAnnouncements = new Set(
+  load('dismissed-announcements', []).filter((id) => Number.isInteger(id) && id >= 0).slice(-50),
+);
+let visibleAnnouncementId = null;
+
+function safePlatformLink(value, allowExternal = false) {
+  if (typeof value !== 'string') return null;
+  if (value.startsWith('/') && !value.startsWith('//')) return value;
+  if (!allowExternal) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function platformLink(text, href) {
+  const link = document.createElement('a');
+  link.textContent = text;
+  link.href = href;
+  return link;
+}
+
+function boardLabel(board) {
+  if (board === 'klassisch') return 'Klassisch';
+  if (board === 'taeglich') return 'Täglich';
+  return board;
+}
+
+function renderPlatformAccount(hub) {
+  const container = $('platform-account');
+  container.replaceChildren();
+  const links = hub?.links ?? {};
+  if (hub?.user) {
+    const user = hub.user;
+    const avatar = safePlatformLink(user.avatar_url);
+    const picture = avatar?.startsWith('/avatars/')
+      ? Object.assign(document.createElement('img'), { className: 'platform-avatar', src: avatar, alt: '' })
+      : Object.assign(document.createElement('span'), { className: 'platform-initial', textContent: String(user.initial ?? '?').slice(0, 2) });
+    const copy = Object.assign(document.createElement('span'), { className: 'platform-account-copy' });
+    copy.append(
+      Object.assign(document.createElement('strong'), { textContent: `Angemeldet als ${String(user.display_name ?? '')}` }),
+      Object.assign(document.createElement('small'), { textContent: 'Fortschritt wird gesichert' }),
+    );
+    const best = user.listed !== false && Array.isArray(hub.best)
+      ? hub.best.slice(0, 3).filter((item) => Number.isInteger(item?.rank) && item.rank > 0).sort((a, b) => a.rank - b.rank)[0]
+      : null;
+    if (best) copy.append(Object.assign(document.createElement('small'), {
+      textContent: `🏆 Platz ${best.rank} in ${boardLabel(String(best.board ?? ''))}`,
+    }));
+    const actions = Object.assign(document.createElement('span'), { className: 'platform-account-actions' });
+    const rankings = safePlatformLink(links.rankings);
+    const profile = safePlatformLink(user.profile_url ?? links.account);
+    if (rankings) actions.append(platformLink('Ranglisten', rankings));
+    if (profile) actions.append(platformLink('Profil', profile));
+    container.append(picture, copy, actions);
+  } else {
+    const copy = Object.assign(document.createElement('span'), { className: 'platform-account-copy' });
+    copy.append(
+      Object.assign(document.createElement('strong'), { textContent: 'Ohne Konto spielen' }),
+      Object.assign(document.createElement('small'), { textContent: 'Mit Konto werden Punkte und Platzierungen gesichert.' }),
+    );
+    const actions = Object.assign(document.createElement('span'), { className: 'platform-account-actions' });
+    const login = safePlatformLink(links.login);
+    const register = safePlatformLink(links.register);
+    if (login) actions.append(platformLink('Anmelden', login));
+    if (register) actions.append(platformLink('Konto erstellen', register));
+    container.append(copy, actions);
+  }
+  container.hidden = false;
+}
+
+function renderPlatformAnnouncement(hub) {
+  const banner = $('platform-announcement');
+  const announcement = Array.isArray(hub?.announcements)
+    ? hub.announcements.find((item) => Number.isInteger(item?.id) && !dismissedAnnouncements.has(item.id))
+    : null;
+  if (!announcement) {
+    visibleAnnouncementId = null;
+    banner.hidden = true;
+    return;
+  }
+  visibleAnnouncementId = announcement.id;
+  banner.dataset.level = ['success', 'warning'].includes(announcement.level) ? announcement.level : 'info';
+  $('announcement-title').textContent = String(announcement.title ?? 'Ankündigung');
+  $('announcement-body').textContent = String(announcement.body ?? '');
+  const link = $('announcement-link');
+  const href = safePlatformLink(announcement.link, true);
+  link.hidden = !href;
+  if (href) link.href = href;
+  banner.hidden = false;
+}
+
+function renderPlatformHub(hub) {
+  if (!hub || !platform.hosted) return;
+  renderPlatformAccount(hub);
+  renderPlatformAnnouncement(hub);
+}
+
+$('announcement-dismiss').addEventListener('click', () => {
+  if (visibleAnnouncementId === null) return;
+  dismissedAnnouncements.add(visibleAnnouncementId);
+  save('dismissed-announcements', [...dismissedAnnouncements].slice(-50));
+  $('platform-announcement').hidden = true;
+  visibleAnnouncementId = null;
+});
+
+void platform.fetchHub().then(renderPlatformHub);
+
 // Regeln in zwei kurzen Schritten; die Knöpfe unten bleiben immer sichtbar
 let helpPage = 1;
 function showHelp(page) {
@@ -1250,6 +1378,8 @@ function renderStart() {
 }
 
 function showHome() {
+  gameplayActive = false;
+  renderUpdateNotice();
   setPowerMode(null);
   renderStart();
   openOverlay('start');
@@ -1302,7 +1432,9 @@ function toast(text) {
 async function shareScore() {
   const score = state.over ? state.score : Math.max(stats.bestScore, best);
   const hand = state.bestHand >= 0 ? ` mit ${HANDS[state.bestHand].name}` : '';
-  const url = new URL('./', location.href).href;
+  const url = platform.hosted
+    ? new URL(leaderboardPath(boardForMode(mode)), location.origin).href
+    : new URL('./', location.href).href;
   const text = `Ich habe ${fmt(score)} Punkte bei Royal Blocks geschafft${hand}! Schaffst du mehr?`;
   try {
     if (navigator.share) {
@@ -1351,6 +1483,8 @@ const actions = {
   'free-continue'() {
     if (!useFreeContinue(state)) return;
     sounds.power();
+    gameplayActive = true;
+    renderUpdateNotice();
     closeOverlays();
     renderTray(true);
     persist();
@@ -1517,6 +1651,27 @@ else {
 // Offline-Betrieb (nur im gebauten Spiel; beim Entwickeln würde der Cache stören)
 if (version !== 'dev' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).then((registration) => {
+      const offerUpdate = (worker) => {
+        waitingWorker = worker;
+        renderUpdateNotice();
+      };
+      if (registration.waiting) offerUpdate(registration.waiting);
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing;
+        worker?.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && registration.active) offerUpdate(worker);
+        });
+      });
+    }).catch(() => {});
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloadRequested) location.reload();
+  });
+  $('update-reload').addEventListener('click', () => {
+    if (!waitingWorker || gameplayActive) return;
+    reloadRequested = true;
+    $('update-reload').disabled = true;
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
   });
 }
