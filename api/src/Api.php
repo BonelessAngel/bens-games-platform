@@ -39,7 +39,7 @@ final class Api
         // Pfade mit Spiel-ID, z. B. games/nova-bastion/save → games/{id}/save
         $path = $request->path;
         $gameId = '';
-        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?|scores|leaderboard|hub)$#', $path, $match)) {
+        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?|scores|leaderboard|hub|campaign|levels(?:/get|/upload|/like|/result|/delete)?)$#', $path, $match)) {
             $gameId = $match[1];
             $path = 'games/{id}/' . $match[2];
         }
@@ -70,6 +70,15 @@ final class Api
             )],
             // Startbildschirm eines Spiels: Anmeldung, beste Plätze, Ankündigungen, Links (docs/spiele-anbindung.md).
             'games/{id}/hub' => ['GET', false, fn (): Response => $this->community()->hub($gameId, $this->sessions()->current($request), $this->announcements())],
+            // Community-Level (docs/community-level-api.md): spielen für alle, hochladen/Daumen/löschen mit Konto.
+            'games/{id}/levels' => ['GET', false, fn (): Response => $this->levels()->list($gameId, $this->sessions()->current($request))],
+            'games/{id}/levels/get' => ['GET', false, fn (): Response => $this->levels()->get($gameId, $request->query)],
+            'games/{id}/levels/upload' => ['POST', true, fn (array $session): Response => $this->levels()->upload($session, $gameId, $request->json(), $request)],
+            'games/{id}/levels/like' => ['POST', true, fn (array $session): Response => $this->levels()->like($session, $gameId, $request->json())],
+            'games/{id}/levels/delete' => ['POST', true, fn (array $session): Response => $this->levels()->delete($session, $gameId, $request->json(), $request)],
+            // Ergebnis auch ohne Konto (wie die Spielstatistik: Herkunftsprüfung statt CSRF-Token).
+            'games/{id}/levels/result' => ['POST', false, fn (): Response => $this->levels()->result($this->sessions()->current($request), $gameId, $request->json(), $request)],
+            'games/{id}/campaign' => ['GET', false, fn (): Response => $this->content()->get($gameId, 'campaign')],
             'account/recent' => ['GET', true, fn (array $session): Response => $this->community()->recent($session, new AppCatalog($this->pdo(), $this->clock))],
             'players/profile' => ['GET', false, fn (): Response => $this->community()->profile($request->query, $this->sessions()->current($request))],
             'health' => ['GET', false, fn (): Response => $this->health()],
@@ -118,6 +127,24 @@ final class Api
             'admin/apps' => ['GET', true, fn (array $session): Response => $this->admin()->apps($session)],
             'admin/apps/update' => ['POST', true, fn (array $session): Response => $this->admin()->updateApp($session, $request->json(), $request)],
             'admin/apps/access' => ['POST', true, fn (array $session): Response => $this->admin()->setAppAccess($session, $request->json(), $request)],
+            'admin/levels' => ['GET', true, function (array $session) use ($request): Response {
+                $this->permitted($session, 'moderation');
+                return $this->levels()->moderationList($request->query);
+            }],
+            'admin/levels/hide' => ['POST', true, function (array $session) use ($request): Response {
+                $this->permitted($session, 'moderation');
+                return $this->levels()->setHidden($session, $request->json(), $request);
+            }],
+            'admin/levels/delete' => ['POST', true, function (array $session) use ($request): Response {
+                $this->permitted($session, 'moderation');
+                return $this->levels()->moderatorDelete($session, $request->json(), $request);
+            }],
+            'admin/content' => ['GET', true, function (array $session) use ($request): Response {
+                $appId = (string) ($request->query['app'] ?? '');
+                $this->permitted($session, "app.$appId.manage");
+                return $this->content()->info($appId, (string) ($request->query['key'] ?? ''));
+            }],
+            'admin/content/publish' => ['POST', true, fn (array $session): Response => $this->publishContent($session, $request)],
             'admin/announcements' => ['GET', true, fn (array $session): Response => $this->announcementsFor($session)->all()],
             'admin/announcements/save' => ['POST', true, fn (array $session): Response => $this->announcementsFor($session)->save($session, $request->json(), $request)],
             'admin/announcements/delete' => ['POST', true, fn (array $session): Response => $this->announcementsFor($session)->delete($session, $request->json(), $request)],
@@ -229,6 +256,38 @@ final class Api
     private function community(): Community
     {
         return new Community($this->pdo(), $this->leaderboards());
+    }
+
+    /** Prüft ein Recht in der Zentrale (bricht sonst mit 403 ab). @param array<string, mixed> $session */
+    private function permitted(array $session, string $permission): void
+    {
+        if (!(new Permissions($this->pdo()))->has((int) $session['id'], $permission)) {
+            throw new HttpError(403, 'missing_permission', ['permission' => $permission]);
+        }
+    }
+
+    private function levels(): CommunityLevels
+    {
+        $pdo = $this->pdo();
+        return new CommunityLevels($pdo, $this->clock, new RateLimiter($pdo, $this->clock), new AuditLog($pdo, $this->clock));
+    }
+
+    private function content(): GameContent
+    {
+        $pdo = $this->pdo();
+        return new GameContent($pdo, $this->clock, new AuditLog($pdo, $this->clock));
+    }
+
+    /** Kampagne veröffentlichen: nur in der Zentrale mit app.<id>.manage. @param array<string, mixed> $session */
+    private function publishContent(array $session, Request $request): Response
+    {
+        $input = $request->json();
+        $appId = (string) ($input['app_id'] ?? '');
+        if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $appId)) {
+            throw new HttpError(404, 'unknown_app');
+        }
+        $this->permitted($session, "app.$appId.manage");
+        return $this->content()->put($session, $appId, (string) ($input['key'] ?? ''), $input['json'] ?? null, $request);
     }
 
     private function gameStats(): GameStats

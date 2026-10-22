@@ -46,6 +46,12 @@ const ACTIONS = {
   'admin.app_updated': 'Zentrale: App geändert',
   'admin.app_access_granted': 'Zentrale: App freigeschaltet',
   'admin.app_access_revoked': 'Zentrale: App-Freigabe entfernt',
+  'admin.level_hidden': 'Zentrale: Community-Level ausgeblendet',
+  'admin.level_shown': 'Zentrale: Community-Level eingeblendet',
+  'admin.level_deleted': 'Zentrale: Community-Level gelöscht',
+  'admin.content_published': 'Zentrale: Kampagne veröffentlicht',
+  'user.level_uploaded': 'Community-Level hochgeladen',
+  'user.level_deleted': 'Eigenes Community-Level gelöscht',
   'admin.announcement_saved': 'Zentrale: Ankündigung gespeichert',
   'admin.announcement_deleted': 'Zentrale: Ankündigung gelöscht',
   'user.leaderboard_opt_out':'Aus Ranglisten herausgenommen',
@@ -478,6 +484,49 @@ async function loadModeration() {
     row.append(empty);
     $('[data-mod-entries]').replaceChildren(row);
   }
+  loadLevels();
+}
+
+// Community-Level: ausblenden, wieder einblenden oder endgültig löschen.
+$('[data-levels-game]').addEventListener('change', () => loadLevels());
+
+async function loadLevels() {
+  const { ok, data } = await api('admin/levels', { query: { app: $('[data-levels-game]').value } });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-levels-game]').replaceChildren(...data.apps.map((app) => new Option(app.name, app.id)));
+  $('[data-levels-game]').value = data.app;
+  const rows = data.levels.map((level) => {
+    const hidden = level.hidden_at !== null;
+    const row = document.createElement('tr');
+    const status = hidden ? `ausgeblendet${level.hidden_reason ? ` (${level.hidden_reason})` : ''}` : level.status === 'locked' ? 'Konto gesperrt' : 'sichtbar';
+    row.append(cell(level.name), cell(level.display_name), cell(formatDate(level.created_at)), cell(`${number(Number(level.plays))} / ${number(Number(level.wins))} / ♥ ${number(Number(level.likes))}`), cell(status));
+    const actions = Object.assign(document.createElement('td'), { className: 'actions' });
+    actions.append(
+      button(hidden ? 'Einblenden' : 'Ausblenden', async () => {
+        const reason = hidden ? '' : window.prompt('Grund (optional, z. B. „beleidigender Name“):', '') ?? null;
+        if (reason === null) return;
+        const result = await api('admin/levels/hide', { method: 'POST', body: { id: Number(level.id), hidden: !hidden, reason } });
+        if (!result.ok) return notify(MESSAGES[result.data.error] ?? FALLBACK);
+        loadLevels();
+      }, hidden ? 'secondary' : 'danger'),
+      button('Löschen', async () => {
+        if (!window.confirm(`Level „${level.name}“ von ${level.display_name} endgültig löschen?`)) return;
+        const result = await api('admin/levels/delete', { method: 'POST', body: { id: Number(level.id) } });
+        if (!result.ok) return notify(MESSAGES[result.data.error] ?? FALLBACK);
+        loadLevels();
+      }, 'danger'),
+    );
+    row.append(actions);
+    return row;
+  });
+  if (!rows.length) {
+    const row = document.createElement('tr');
+    const empty = cell('Noch keine Community-Level.');
+    empty.colSpan = 6;
+    row.append(empty);
+    rows.push(row);
+  }
+  $('[data-levels]').replaceChildren(...rows);
 }
 
 // --- Apps ------------------------------------------------------------------
@@ -529,8 +578,35 @@ async function loadApps() {
     });
 
     panel.append(form, Object.assign(document.createElement('h3'), { textContent: 'Freigaben' }), access, grant);
+    campaignBox(app).then((box) => box && panel.append(box));
     return panel;
   }));
+}
+
+// Kampagne (z. B. Nova Bastion): Datei aus dem Level-Editor des Spiels hochladen; gilt sofort für alle Spieler.
+async function campaignBox(app) {
+  const { ok, data } = await api('admin/content', { query: { app: app.id, key: 'campaign' } });
+  if (!ok) return null; // Spiel hat keine veröffentlichbare Kampagne
+  const box = document.createElement('div');
+  const info = Object.assign(document.createElement('p'), { className: 'hint' });
+  info.textContent = data.content
+    ? `Online-Kampagne vom ${formatDate(data.content.updated_at)} (${number(Math.round(data.content.size / 1024))} KB${data.content.updated_by ? `, von ${data.content.updated_by}` : ''}).`
+    : 'Noch keine Online-Kampagne – alle spielen die Kampagne aus der eingebauten Spielversion.';
+  const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.json,application/json' });
+  input.setAttribute('aria-label', 'Kampagnen-Datei');
+  const upload = button('Kampagne veröffentlichen', async () => {
+    const file = input.files?.[0];
+    if (!file) return notify('Bitte zuerst die Kampagnen-Datei (.json) auswählen.');
+    if (!window.confirm(`„${file.name}“ sofort für alle Spieler von ${app.name} veröffentlichen?`)) return;
+    const result = await api('admin/content/publish', { method: 'POST', body: { app_id: app.id, key: 'campaign', json: await file.text() } });
+    if (!result.ok) return notify(Object.values(result.data.fields ?? {}).join(' ') || (MESSAGES[result.data.error] ?? FALLBACK));
+    notify(`${app.name}: Kampagne veröffentlicht. Spieler bekommen sie beim nächsten Start.`, 'success');
+    loadApps();
+  }, 'primary');
+  const row = Object.assign(document.createElement('div'), { className: 'admin-search' });
+  row.append(input, upload);
+  box.append(Object.assign(document.createElement('h3'), { textContent: 'Kampagne' }), info, row);
+  return box;
 }
 
 // --- Ankündigungen ---------------------------------------------------------
