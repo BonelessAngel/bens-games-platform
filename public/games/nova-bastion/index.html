@@ -140,6 +140,8 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .sx.off{color:#3a4060}
 @keyframes starpop{0%{transform:scale(0) rotate(-120deg);opacity:0}70%{transform:scale(1.5) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0)}}
 #eLvl{color:var(--am)!important}
+#eRank{font-family:'Press Start 2P',monospace;font-size:.58em!important;color:var(--grn)!important}
+#eRank a{color:var(--cy);text-decoration:underline;text-underline-offset:.18em}
 .xpbar{height:.6em;background:#1c2246;position:relative;overflow:hidden}
 .xpbar i{position:absolute;left:0;top:0;bottom:0;background:var(--cy);width:0}
 #end .xpbar{height:.8em}
@@ -1364,6 +1366,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
     <p id="eXp"></p>
     <div class="xpbar"><i id="eXpBar"></i></div>
     <p id="eLvl"></p>
+    <p id="eRank"></p>
     <p id="eLoot" style="font-size:1.25em"></p>
     <div class="endActions">
      <button class="big" id="bNext">NÄCHSTES LEVEL</button>
@@ -2434,7 +2437,7 @@ function normSave(s){
 try{var s0=localStorage.getItem(KEY);if(s0){SAVE=JSON.parse(s0);}}catch(e){}
 SAVE=normSave(SAVE);
 var DEV=false,PR=SAVE.camp;
-function setMode(dev){DEV=dev;PR=dev?SAVE.dev:SAVE.camp;}
+function setMode(dev){var changed=DEV!==!!dev;DEV=!!dev;PR=DEV?SAVE.dev:SAVE.camp;if(changed&&typeof platformModeChanged==='function')platformModeChanged();}
 var ACCOUNT_SYNC_KEY='novabastion.account-sync';
 var Cloud={doc:null,status:'checking',timer:null,busy:false,again:false,account:false,csrf:'',accountId:'',accountTimer:null,accountBusy:false,accountAgain:false,lastPut:0,conflictRemote:null};
 function storeLocalSave(){try{localStorage.setItem(KEY,JSON.stringify(SAVE));}catch(e){}}
@@ -2560,6 +2563,75 @@ function accountInit(){
     if(r.status===401){Cloud.account=false;Cloud.status='local';return null;}
     if(!r.ok)throw new Error('save unavailable');return r.json();
   }).then(function(body){if(body)reconcileAccount(body);if(scene==='title')refreshTitle();}).catch(function(){Cloud.status='error';if(scene==='title')refreshTitle();});
+}
+/* =============== Plattform: anonyme Statistik und Konto-Ranglisten =============== */
+var PLATFORM={app:'nova-bastion',visit:'',events:[],visibleAt:0,activeMs:0,level:null,run:0,timer:null};
+function platformEnabled(g){
+  return location.protocol==='https:'&&location.pathname.indexOf('/games/nova-bastion/')===0&&!window.claude&&!DEV&&!(g&&g.test)&&navigator.globalPrivacyControl!==true;
+}
+function platformVisit(){
+  var a=new Uint8Array(16);crypto.getRandomValues(a);return Array.prototype.map.call(a,function(n){return n.toString(16).padStart(2,'0');}).join('');
+}
+function platformClockReset(){PLATFORM.activeMs=0;PLATFORM.visibleAt=document.hidden?0:Date.now();}
+function platformModeChanged(){PLATFORM.events.length=0;PLATFORM.level=null;platformClockReset();}
+function platformQueue(e,g){
+  if(!platformEnabled(g)||!PLATFORM.visit){PLATFORM.events.length=0;return;}
+  PLATFORM.events.push(e);if(PLATFORM.events.length>=25)platformFlush(false);
+}
+function platformFlush(keepalive){
+  if(!platformEnabled(G)||!PLATFORM.visit){PLATFORM.events.length=0;return;}
+  var events=PLATFORM.events.splice(0,50);if(!events.length)return;
+  try{fetch('/api/events',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({app:PLATFORM.app,visit:PLATFORM.visit,events:events}),keepalive:!!keepalive}).catch(function(){});}catch(e){}
+}
+function platformHeartbeat(){
+  if(!platformEnabled(G)){platformClockReset();PLATFORM.events.length=0;PLATFORM.level=null;return;}
+  var now=Date.now();if(PLATFORM.visibleAt)PLATFORM.activeMs+=Math.max(0,now-PLATFORM.visibleAt);PLATFORM.visibleAt=document.hidden?0:now;
+  var seconds=Math.floor(PLATFORM.activeMs/1000);PLATFORM.activeMs-=seconds*1000;
+  while(seconds>0){var part=Math.min(600,seconds);platformQueue({type:'heartbeat',seconds:part},G);seconds-=part;}
+}
+function platformStart(){
+  try{if(!platformEnabled(null))return;PLATFORM.visit=platformVisit();platformClockReset();platformQueue({type:'start'},null);PLATFORM.timer=setInterval(function(){platformHeartbeat();platformFlush(false);},60000);}catch(e){}
+}
+function platformLevelId(g){
+  if(!g||!g.L)return null;var n=String((g.L.k|0)+1);
+  if(g.mode==='normal')return n;if(g.mode==='heroic')return 'heroic-'+n;if(g.mode==='endless')return 'endlos';if(g.mode==='daily')return 'daily-'+n;
+  if(g.mode==='tower'&&g.tw)return 'tower-'+String(g.tw.mode).replace(/[^a-z0-9_-]/g,'').slice(0,12)+'-'+Math.max(1,g.tw.floor|0);
+  if(g.mode==='comm')return 'community';return null;
+}
+function platformBoard(g){return g&&g.mode==='normal'?String((g.L.k|0)+1):g&&g.mode==='endless'?'endlos':null;}
+function platformPoints(g){return Math.min(1000000000,Math.max(0,Math.round(g&&g.xp||0)));}
+function platformData(g){
+  var data={},keys=Object.keys(g.builtBy||{}).filter(function(k){return /^[a-z0-9_]{1,26}$/.test(k)&&(g.builtBy[k]|0)>0;});
+  keys.sort(function(a,b){return (g.builtBy[b]|0)-(g.builtBy[a]|0);}).slice(0,10).forEach(function(k){data['tower_'+k]=g.builtBy[k]|0;});
+  if(/^[a-z0-9_-]{1,32}$/.test(g.heroKey||''))data.hero=g.heroKey;
+  data.leaks=Math.max(0,g.leaked|0);return data;
+}
+function platformRankRender(rank,listed,run){
+  if(!G||G.platformRun!==run)return;var el=$('eRank');el.textContent='';
+  if(listed!==false&&Number.isInteger(rank)&&rank>0)el.appendChild(document.createTextNode('PLATZ '+rank+' DIESE WOCHE  ·  '));
+  var a=document.createElement('a');a.href='/ranglisten/?spiel=nova-bastion';a.textContent='ALLE RANGLISTEN';el.appendChild(a);disp('eRank',true,'block');
+}
+function platformScore(board,score,run,keepalive){
+  if(!platformEnabled(G)||!Cloud.account||!Cloud.csrf||!board)return;
+  try{fetch('/api/games/nova-bastion/scores',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':Cloud.csrf},body:JSON.stringify({board:board,score:score}),keepalive:!!keepalive})
+    .then(function(r){return r.ok?r.json():null;}).then(function(j){
+      if(!j)return;if(j.listed===false){platformRankRender(null,false,run);return;}
+      var fallback=j.week&&j.week.rank;
+      return fetch('/api/games/nova-bastion/leaderboard?board='+encodeURIComponent(board)+'&period=week&page=1',{credentials:'same-origin'})
+        .then(function(r){return r.ok?r.json():null;}).then(function(b){platformRankRender(b&&b.me?b.me.rank:fallback,true,run);},function(){platformRankRender(fallback,true,run);});
+    }).catch(function(){});}catch(e){}
+}
+function platformLevelStart(g){
+  if(!platformEnabled(g)){PLATFORM.events.length=0;PLATFORM.level=null;platformClockReset();return;}
+  if(PLATFORM.level&&!PLATFORM.level.ended)platformLevelEnd('abort',0,undefined,false);
+  var level=platformLevelId(g);if(!level)return;g.platformRun=++PLATFORM.run;PLATFORM.level={game:g,level:level,board:platformBoard(g),ended:false};
+  $('eRank').textContent='';disp('eRank',false);platformQueue({type:'level_start',level:level},g);
+}
+function platformLevelEnd(result,stars,score,keepalive){
+  var p=PLATFORM.level,g=p&&p.game;if(!p||p.ended||!platformEnabled(g))return;p.ended=true;
+  score=score===undefined?platformPoints(g):Math.min(1000000000,Math.max(0,Math.round(score)));
+  platformQueue({type:'level_end',level:p.level,result:result,score:score,stars:Math.max(0,Math.min(10,stars|0)),seconds:Math.max(0,Math.round(g.time||0)),data:platformData(g)},g);
+  platformFlush(!!keepalive);platformScore(p.board,score,g.platformRun,!!keepalive);
 }
 function cloudInit(){
   if(!window.claude||typeof window.claude.use!=='function'){accountInit();return;}
@@ -3496,6 +3568,7 @@ function startLevel(k,mode,Lx){
   });
   G.gravs=[];G.planes=[];G.bombs=[];G.pickups=[];G.mines=[];G.wvIdx=null;
   initObjective(L);
+  platformLevelStart(G);
   Mus.fin=!!L.finale;
   if(!DEV&&mode==='normal'&&!test&&L.k===0&&!Lx&&!PR.tutDone)tutStart();else disp('tutBox',false);G.goldT=0;G.empT=0;G.rallyT=0;G.frostAmp=G.abil.frost?0.1*abUp('frost',1):0;
   closeMenu();show('play');disp('end',false);disp('dev',false);setPaused(false);speedUI();setHint('');updateHud();
@@ -5003,10 +5076,11 @@ function renderTacticalReport(win){
   var leakTx=leaks.length?'<div class="erleak">DURCHGEBROCHEN: '+leaks.slice(0,3).map(function(k){return ENEMIES[k].name+' ×'+G.leakedBy[k];}).join(' · ')+'</div>':'';
   $('eReport').innerHTML='<h4>TAKTIK-AUSWERTUNG</h4><div class="erfacts"><span>'+G.kills+' BESIEGT</span><span>'+leakN+' DURCH</span><span>COMBO '+G.maxCombo+'</span><span>'+G.abUsed+' FÄHIGK.</span></div><div class="errows">'+rows+'</div>'+leakTx+'<div class="ertip">'+tacticalTip(win)+'</div>';
 }
-function endGame(win){
+function endGame(win,result){
   if(G.over)return;
   if(G.bot){G.over=true;G.botWin=!!win;return;}
-  statSend(win?'win':'lose');
+  result=result==='abort'?'abort':win?'win':'lose';
+  statSend(result==='abort'?'quit':result);
   if(G.test&&win&&ED.comm)ED.clearedJ=cbCoreJ();
   if(G.mode==='comm')commResult(win);
   G.over=true;closeMenu();G.aim=null;G.rally=null;setHint('');disp('dev',false);
@@ -5069,6 +5143,7 @@ function endGame(win){
     title=win?(last?'KAMPAGNE GESCHAFFT':L.boss?'MUTTERSCHIFF ZERSTÖRT':'SEKTOR GESICHERT'):'STATION GEFALLEN';
     text=win?'Leben übrig: '+G.lives+' von '+ml+'  ·  '+G.kills+' Gegner':'Erreichte Welle '+reached+' von '+total+'  ·  '+G.kills+' Gegner';
   }
+  platformLevelEnd(result,st,platformPoints(G),false);
   var before=plInfo();
   if(!DEV){PR.xp+=xp;PR.crystals+=cr;PR.st.crysTotal+=cr;}
   persist();
@@ -6210,6 +6285,7 @@ function renderArsenal(k){
   });
 }
 function goMap(w){
+  if(G&&!G.over)platformLevelEnd('abort',0,undefined,false);
   if(G&&G.test){G=null;show('edit');if(ED.comm&&ED.clearedJ===cbCoreJ())toast('GESCHAFFT! JETZT KANNST DU HOCHLADEN','#6be07a');return;}
   if(G&&G.comm){if(!G.over)flushStats();G=null;show('comm');return;}
   if(G&&G.tw){var twm=G.tw.mode;if(!G.over)flushStats();G=null;if(twm==='week'){ACHTAB='week';show('ach');}else if(twm==='finale')show('map');else show('tower');return;}
@@ -9420,9 +9496,9 @@ function buildPauseTick(dt){
 $('bPause').addEventListener('click',function(){if(G&&!G.over)setPaused(true);});
 $('bResume').addEventListener('click',function(){setPaused(false);});
 function again(){if(G.tw)startTower(G.tw.mode,G.tw.floor);else if(G.test)startLevel(-1,'test',G.L);else if(G.mode==='comm'){var gc=G.comm;startLevel(-1,'comm',G.L);G.comm=gc;}else startLevel(G.L.k,G.mode);}
-$('bRestart').addEventListener('click',function(){if(G&&!G.over)statSend('quit');flushStats();again();});
+$('bRestart').addEventListener('click',function(){if(G&&!G.over){platformLevelEnd('abort',0,undefined,false);statSend('quit');}flushStats();again();});
 $('bQuit').addEventListener('click',function(){
-  if(G.endless&&!G.over){setPaused(false);endGame(false);return;}
+  if(G.endless&&!G.over){setPaused(false);endGame(false,'abort');return;}
   goMap(G.L.w);
 });
 function toggleSound(){SAVE.opt.sfx=SAVE.opt.sfx>0?0:1;applyOpt();persist();Snd.init();Snd.play('tick');}
@@ -9537,7 +9613,9 @@ $('dClose').addEventListener('click',closeDev);
 document.addEventListener('visibilitychange',function(){
   if(document.hidden&&scene==='play'&&G&&!G.over&&!G.paused)setPaused(true);
   if(document.hidden&&Cloud.account)accountPush(true);
+  platformHeartbeat();if(document.hidden)platformFlush(true);
 });
+window.addEventListener('pagehide',function(e){if(!e.persisted&&G&&!G.over)platformLevelEnd('abort',0,undefined,true);platformFlush(true);});
 document.addEventListener('gesturestart',function(e){e.preventDefault();});
 /* Doppeltipp-Zoom und -Verschieben auf dem iPad abfangen: der zweite Tipp wird selbst als Klick weitergegeben */
 var lastTapEnd=0;
@@ -9647,6 +9725,7 @@ window.addEventListener('resize',fit);window.addEventListener('orientationchange
 if(window.visualViewport)window.visualViewport.addEventListener('resize',fit);
 window.__nb={econ:econ,ECON:ECON,rt:function(dt){realTick(dt);},get LEVELS(){return LEVELS;},get WORLDS(){return WORLDS;},get PR(){return PR;},ED:ED,get CAMP(){return CAMP;},edDown:edDown,edMove:edMove,edUp:edUp,get G(){return G;},get SAVE(){return SAVE;},startLevel:startLevel,goMap:goMap,setMode:setMode,show:show,update:function(dt){update(dt);},dailyInfo:dailyInfo,openLevel:openLevel};
 fit();show('title');requestAnimationFrame(frame);
+platformStart();
 cloudInit();
 })();
 </script>

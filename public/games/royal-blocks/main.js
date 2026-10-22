@@ -14,11 +14,15 @@ import {
   setMusicEnabled, setMusicIntensity, setSoundEnabled, setVibrationEnabled, sounds, startMusic, stopMusic, unlockAudio, vibrate,
 } from './audio.js';
 import { burst, chips as chipBurst, initFx, suitColor } from './fx.js';
+import { createPlatformClient } from './platform.js';
 import { load, save } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
 const version = root.dataset.version;
+const platform = createPlatformClient({ version });
+platform.start();
+void platform.prepareAccount();
 
 const els = {
   app: $('app'),
@@ -128,6 +132,55 @@ let state = loadGame(mode) ?? freshGame(mode);
 let best = getBest(mode);
 let bestAtStart = best;
 let shownScore = state.score;
+
+// Eine Royal-Blocks-Runde entspricht für Statistik und Rangliste einem Level.
+// Die Zähler gelten für diesen Seitenbesuch; beim Verlassen endet die Sitzung als "abort".
+const boardForMode = (value) => (value === 'daily' ? 'taeglich' : 'klassisch');
+let platformRound = null;
+
+function hideLeaderboard() {
+  $('leaderboard-result').hidden = true;
+  $('leaderboard-rank').textContent = '';
+}
+
+function showLeaderboard(result) {
+  hideLeaderboard();
+  if (!result || result.listed === false || !Number.isInteger(result.week?.rank)) return;
+  $('leaderboard-rank').textContent = `Platz ${result.week.rank} diese Woche`;
+  $('leaderboard-result').hidden = false;
+}
+
+function startPlatformRound() {
+  if (platformRound || state.over) return;
+  const board = boardForMode(mode);
+  if (!platform.beginLevel(board)) return;
+  platformRound = { board, lines: 0, hands: new Array(HANDS.length).fill(0) };
+  hideLeaderboard();
+}
+
+function trackPlatformMove(result) {
+  if (!platformRound) return;
+  platformRound.lines += result.lines.length;
+  for (const line of result.lines) platformRound.hands[line.hand.level]++;
+}
+
+function platformData(round) {
+  const data = { lines: round.lines };
+  round.hands.forEach((count, level) => {
+    if (count) data[`hand_${HANDS[level].id.replaceAll('-', '_')}`] = count;
+  });
+  return data;
+}
+
+function finishPlatformRound(result, { keepalive = false, showRank = false } = {}) {
+  if (!platformRound) return;
+  const round = platformRound;
+  platformRound = null;
+  platform.endLevel({ result, score: state.score, stars: 0, data: platformData(round) });
+  void platform.flush({ keepalive });
+  const score = platform.submitScore(round.board, state.score, { keepalive });
+  if (showRank) void score.then(showLeaderboard);
+}
 
 function persist() {
   save(saveKey(mode), state);
@@ -521,6 +574,7 @@ function queueBanner(fn, minDelay = 0) {
 function place(slot, x, y) {
   const res = placePiece(state, slot, x, y);
   if (!res) return;
+  trackPlatformMove(res);
   sounds.place();
   vibrate(8);
 
@@ -995,6 +1049,7 @@ function renderSettings() {
 }
 
 function startGame(newMode, fresh) {
+  if (platformRound && (fresh || newMode !== mode)) finishPlatformRound(state.over ? 'lose' : 'abort');
   mode = newMode;
   settings.mode = mode;
   saveSettings();
@@ -1010,6 +1065,7 @@ function startGame(newMode, fresh) {
   renderTray(true);
   renderSettings();
   if (state.over) gameOver();
+  else startPlatformRound();
 }
 
 function gameOver() {
@@ -1045,6 +1101,7 @@ function nextLockedDesign() {
 // Runde beenden: Truhe öffnen, Erfahrung gutschreiben, Level-Belohnungen verteilen.
 function openChest() {
   if (!state.over || state.rewarded) return;
+  finishPlatformRound('lose', { showRank: true });
   state.rewarded = true;
   const reward = chestReward(state, Math.random);
   const before = xp;
@@ -1157,7 +1214,10 @@ function claimGift() {
   chipBurst(box.left + box.width / 2, box.top, 30);
   pendingGift = null;
   if (giftReturn) openOverlay(giftReturn);
-  else closeOverlays();
+  else {
+    closeOverlays();
+    startPlatformRound();
+  }
 }
 
 // ---------- Startbildschirm, Statistik, Teilen, Rubbellos ----------
@@ -1286,6 +1346,7 @@ const actions = {
       saveSettings();
       checkGift();
     }
+    if (!visibleOverlay()) startPlatformRound();
   },
   'free-continue'() {
     if (!useFreeContinue(state)) return;
@@ -1302,6 +1363,7 @@ const actions = {
     if (mode !== 'free') startGame('free', false);
     closeOverlays();
     if (state.over) gameOver();
+    else startPlatformRound();
   },
   'play-daily': () => startGame('daily', false),
   stats() {
@@ -1430,6 +1492,16 @@ document.addEventListener('visibilitychange', () => {
   } else if (settings.music) {
     startMusic();
   }
+});
+
+let endedByPageHide = false;
+window.addEventListener('pagehide', () => {
+  if (platformRound) finishPlatformRound(state.over ? 'lose' : 'abort', { keepalive: true });
+  endedByPageHide = true;
+});
+window.addEventListener('pageshow', () => {
+  if (endedByPageHide && !state.over && !visibleOverlay()) startPlatformRound();
+  endedByPageHide = false;
 });
 
 // iPhone/iPad: Ton erst nach einer echten Berührung freischalten – bei jeder Art von Eingabe versuchen
