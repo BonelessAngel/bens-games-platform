@@ -102,10 +102,48 @@ async function busy(form, task) {
   }
 }
 
+// Rücksprung ins Spiel (?zurueck=/games/…/) auch über Registrieren → E-Mail bestätigen → Anmelden erhalten.
+// Gemerkt wird nur der Pfad, höchstens einen Tag (localStorage „bg-return“).
+const RETURN_KEY = 'bg-return';
+
+function returnTarget() {
+  const target = safeReturnPath(window.location.search);
+  return target === '/konto/' ? null : target;
+}
+
+function carryReturn(root) {
+  const target = returnTarget();
+  if (!target) return;
+  for (const link of root.querySelectorAll('.auth__switch a')) link.href += `?zurueck=${encodeURIComponent(target)}`;
+}
+
+function rememberReturn() {
+  const path = returnTarget();
+  try {
+    if (path) localStorage.setItem(RETURN_KEY, JSON.stringify({ path, t: Date.now() }));
+  } catch {
+    // ohne Speicher landet man nach der Bestätigung bei der normalen Anmeldung
+  }
+}
+
+function takeReturn() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(RETURN_KEY) ?? 'null');
+    localStorage.removeItem(RETURN_KEY);
+    if (!saved || Date.now() - saved.t > 86_400_000) return null;
+    const path = safeReturnPath(`?zurueck=${encodeURIComponent(saved.path)}`);
+    return path === '/konto/' ? null : path;
+  } catch {
+    return null;
+  }
+}
+
 const pages = {
   registrieren(root) {
     const form = root.querySelector('form');
     const notice = root.querySelector('[data-notice]');
+    carryReturn(root);
+    rememberReturn();
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       busy(form, async () => {
@@ -127,6 +165,7 @@ const pages = {
     const notice = root.querySelector('[data-notice]');
     const resend = root.querySelector('[data-resend]');
     let challenge = '';
+    carryReturn(root);
 
     form.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -184,6 +223,12 @@ const pages = {
     const { ok, data } = await api('auth/verify', { method: 'POST', body: { token } });
     if (ok) {
       show(notice, 'Deine E-Mail-Adresse ist bestätigt. Du kannst dich jetzt anmelden.', 'success');
+      // Kam die Registrierung aus einem Spiel, geht es nach der Anmeldung dorthin zurück.
+      const back = takeReturn();
+      if (back) {
+        next.href = `/konto/anmelden/?zurueck=${encodeURIComponent(back)}`;
+        next.textContent = 'Anmelden und weiterspielen';
+      }
       next.hidden = false;
     } else {
       show(notice, MESSAGES[data.error] ?? FALLBACK);

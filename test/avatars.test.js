@@ -25,3 +25,11 @@ test('ohne Avatar: Anfangsbuchstabe, Namen werden maskiert', () => {
   assert.match(avatarSvg({ avatar: 'crown', color: 'amber' }), /#f59e0b/);
   assert.match(avatarSvg({ avatar: 'gibt-es-nicht', name: 'Max' }), />M<\/text>/);
 });
+
+test('Profilbilder als eigene SVG-Dateien für Spiele', async () => {
+  const { avatarFiles } = await import('../lib/avatars.js');
+  const files = avatarFiles();
+  assert.equal(files.length, AVATARS.length * AVATAR_COLORS.length);
+  assert.ok(files.some((f) => f.fileName === 'avatars/fox-amber.svg'));
+  for (const file of files) assert.match(file.source, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" /);
+});

@@ -39,7 +39,7 @@ final class Api
         // Pfade mit Spiel-ID, z. B. games/nova-bastion/save → games/{id}/save
         $path = $request->path;
         $gameId = '';
-        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?|scores|leaderboard)$#', $path, $match)) {
+        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?|scores|leaderboard|hub)$#', $path, $match)) {
             $gameId = $match[1];
             $path = 'games/{id}/' . $match[2];
         }
@@ -68,6 +68,8 @@ final class Api
                 preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', (string) ($request->query['app'] ?? '')) === 1 ? (string) $request->query['app'] : null,
                 $this->sessions()->current($request),
             )],
+            // Startbildschirm eines Spiels: Anmeldung, beste Plätze, Ankündigungen, Links (docs/spiele-anbindung.md).
+            'games/{id}/hub' => ['GET', false, fn (): Response => $this->community()->hub($gameId, $this->sessions()->current($request), $this->announcements())],
             'account/recent' => ['GET', true, fn (array $session): Response => $this->community()->recent($session, new AppCatalog($this->pdo(), $this->clock))],
             'players/profile' => ['GET', false, fn (): Response => $this->community()->profile($request->query, $this->sessions()->current($request))],
             'health' => ['GET', false, fn (): Response => $this->health()],

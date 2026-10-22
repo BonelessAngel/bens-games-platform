@@ -126,6 +126,60 @@ final class Community
         ]]);
     }
 
+    /**
+     * Alles für den Startbildschirm eines Spiels in einer Anfrage (docs/spiele-anbindung.md):
+     * wer angemeldet ist, die besten eigenen Plätze, Ankündigungen für dieses Spiel und die passenden Links.
+     * @param array<string, mixed>|null $session
+     */
+    public function hub(string $appId, ?array $session, Announcements $announcements): Response
+    {
+        $statement = $this->pdo->prepare("SELECT 1 FROM apps WHERE id = ? AND type = 'game'");
+        $statement->execute([$appId]);
+        if (!$statement->fetchColumn()) {
+            throw new HttpError(404, 'unknown_game');
+        }
+
+        $user = null;
+        $best = [];
+        if ($session !== null) {
+            $userId = (int) $session['id'];
+            $listed = empty($session['leaderboard_opt_out']);
+            $user = [
+                'display_name' => $session['display_name'],
+                'initial' => mb_strtoupper(mb_substr(trim((string) $session['display_name']), 0, 1)),
+                'avatar_url' => $session['avatar'] !== null ? "/avatars/{$session['avatar']}-{$session['avatar_color']}.svg" : null,
+                'listed' => $listed,
+                'profile_url' => $listed ? '/spieler/?name=' . rawurlencode((string) $session['display_name']) : null,
+            ];
+            $entries = $this->pdo->prepare("SELECT board, score FROM leaderboard_entries WHERE user_id = ? AND app_id = ? AND period = 'all' AND hidden_at IS NULL");
+            $entries->execute([$userId, $appId]);
+            foreach ($entries->fetchAll() as $row) {
+                $best[] = [
+                    'board' => $row['board'],
+                    'score' => (int) $row['score'],
+                    'rank' => $listed ? $this->leaderboards->rankOf($appId, $row['board'], 'all', $userId)['rank'] : null,
+                ];
+            }
+            // Beste Plätze zuerst, höchstens drei.
+            usort($best, static fn (array $a, array $b): int => [$a['rank'] ?? PHP_INT_MAX, -$a['score']] <=> [$b['rank'] ?? PHP_INT_MAX, -$b['score']]);
+            $best = array_slice($best, 0, 3);
+        }
+
+        $return = rawurlencode("/games/$appId/");
+        return new Response(200, [
+            'user' => $user,
+            'best' => $best,
+            'announcements' => $announcements->active($appId, $session)->body['announcements'],
+            'links' => [
+                'website' => '/',
+                'rankings' => '/ranglisten/?spiel=' . $appId,
+                'login' => "/konto/anmelden/?zurueck=$return",
+                'register' => "/konto/registrieren/?zurueck=$return",
+                'account' => '/konto/',
+            ],
+        ]);
+    }
+
     /** @return list<array<string, string>> */
     private function achievements(int $userId): array
     {
