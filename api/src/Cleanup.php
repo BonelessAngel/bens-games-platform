@@ -13,6 +13,7 @@ use PDO;
 final class Cleanup
 {
     public const AUDIT_DAYS = 90;          // Protokoll wichtiger Aktionen
+    public const GAME_EVENT_DAYS = 90;     // Rohdaten der Spielstatistik
     public const UNVERIFIED_DAYS = 7;      // nie bestätigte Konten
     public const ENDED_SESSION_DAYS = 7;   // abgelaufene oder abgemeldete Sitzungen
     public const USED_TOKEN_DAYS = 7;      // verbrauchte oder abgelaufene E-Mail-Links
@@ -30,6 +31,7 @@ final class Cleanup
 
         return [
             'audit_log' => $this->delete('DELETE FROM audit_log WHERE created_at < ?', [$days(self::AUDIT_DAYS)]),
+            'game_events' => $this->delete('DELETE FROM game_events WHERE created_at < ?', [$days(self::GAME_EVENT_DAYS)]),
             'users_unverified' => $this->delete('DELETE FROM users WHERE email_verified_at IS NULL AND created_at < ?', [$days(self::UNVERIFIED_DAYS)]),
             'sessions' => $this->delete(
                 'DELETE FROM sessions WHERE expires_at < ? OR revoked_at < ?',

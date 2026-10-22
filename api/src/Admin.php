@@ -21,7 +21,33 @@ final class Admin
         private Permissions $permissions,
         private Sessions $sessions,
         private AuditLog $audit,
+        private GameStats $stats,
     ) {
+    }
+
+    /**
+     * Auswertung eines Spiels (Spielzeit, Besuche, Level, Punkte, Zusatzwerte).
+     * @param array<string, mixed> $session
+     * @param array<string, string> $query {app, days}
+     */
+    public function games(array $session, array $query): Response
+    {
+        $this->require($session, 'stats.view');
+        return $this->stats->report($query);
+    }
+
+    /**
+     * Statistik eines einzelnen Kontos – nur mit stats.view und users.view.
+     * @param array<string, mixed> $session
+     * @param array<string, string> $query {id}
+     */
+    public function userStats(array $session, array $query): Response
+    {
+        $this->require($session, 'stats.view');
+        $this->require($session, 'users.view');
+        $target = (int) ($query['id'] ?? 0);
+        $this->assertUserExists($target);
+        return new Response(200, ['user_id' => $target, 'games' => $this->stats->forUser($target)]);
     }
 
     /** Wer bin ich in der Zentrale, was darf ich? @param array<string, mixed> $session */
@@ -114,6 +140,15 @@ final class Admin
             }
             return $user;
         }, $statement->fetchAll());
+
+        // Spielzeit der letzten 90 Tage nur zusammen mit dem Recht für Statistik.
+        if ($this->permissions->has((int) $session['id'], 'stats.view')) {
+            $playtime = $this->stats->playtimeByUser(array_column($users, 'id'));
+            foreach ($users as &$user) {
+                $user['playtime_seconds'] = $playtime[$user['id']] ?? 0;
+            }
+            unset($user);
+        }
 
         return new Response(200, ['users' => $users, 'total' => $total, 'page' => $page, 'page_size' => self::PAGE_SIZE]);
     }
