@@ -6,13 +6,24 @@ const DATA_KEY_RE = /^[a-z0-9_]{1,32}$/;
 const DATA_ID_RE = /^[a-z0-9_-]{1,32}$/;
 const RESULTS = new Set(['win', 'lose', 'abort']);
 const RELEASE_RE = /^\d+\.\d+\.\d+$/;
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 const integer = (value, max = Number.MAX_SAFE_INTEGER) => Math.min(max, Math.max(0, Math.floor(Number(value) || 0)));
 
-export function platformEnabled(version, navigatorObject = globalThis.navigator, locationObject = globalThis.location) {
+export function platformHosted(version, locationObject = globalThis.location) {
   const host = locationObject?.hostname ?? '';
-  return RELEASE_RE.test(version ?? '') && navigatorObject?.globalPrivacyControl !== true &&
-    host !== 'localhost' && host !== '127.0.0.1' && host !== '::1';
+  return RELEASE_RE.test(version ?? '') && !LOCAL_HOSTS.has(host) && locationObject?.protocol !== 'file:' &&
+    (locationObject?.pathname ?? '').startsWith('/games/');
+}
+
+export function platformEnabled(version, navigatorObject = globalThis.navigator, locationObject = globalThis.location) {
+  return platformHosted(version, locationObject) && navigatorObject?.globalPrivacyControl !== true;
+}
+
+export function leaderboardPath(board) {
+  return LEVEL_RE.test(board ?? '')
+    ? `/ranglisten/?spiel=royal-blocks&liste=${encodeURIComponent(board)}`
+    : '/ranglisten/?spiel=royal-blocks';
 }
 
 export function randomVisit(cryptoObject = globalThis.crypto, random = Math.random) {
@@ -55,8 +66,10 @@ export function createPlatformClient({
   navigatorObject = globalThis.navigator, documentObject = globalThis.document, locationObject = globalThis.location,
   cryptoObject = globalThis.crypto, now = () => globalThis.performance?.now?.() ?? Date.now(),
   setIntervalImpl = globalThis.setInterval?.bind(globalThis), clearIntervalImpl = globalThis.clearInterval?.bind(globalThis),
+  setTimeoutImpl = globalThis.setTimeout?.bind(globalThis), clearTimeoutImpl = globalThis.clearTimeout?.bind(globalThis),
 } = {}) {
-  const enabled = Boolean(fetchImpl) && platformEnabled(version, navigatorObject, locationObject);
+  const hosted = Boolean(fetchImpl) && platformHosted(version, locationObject);
+  const enabled = hosted && navigatorObject?.globalPrivacyControl !== true;
   const visit = randomVisit(cryptoObject);
   const queue = [];
   let started = false;
@@ -68,6 +81,16 @@ export function createPlatformClient({
   let levelStartedAt = 0;
   let accountPromise = null;
   let csrfToken = null;
+
+  async function request(url, options = {}) {
+    const controller = typeof AbortController === 'undefined' ? null : new AbortController();
+    const timeout = controller && setTimeoutImpl ? setTimeoutImpl(() => controller.abort(), 3_000) : null;
+    try {
+      return await fetchImpl(url, { ...options, signal: controller?.signal });
+    } finally {
+      if (timeout !== null && clearTimeoutImpl) clearTimeoutImpl(timeout);
+    }
+  }
 
   function updateActive() {
     if (visibleAt === null) return;
@@ -89,7 +112,7 @@ export function createPlatformClient({
     if (!enabled || !queue.length) return null;
     const events = queue.splice(0, 50);
     try {
-      return await fetchImpl('/api/events', {
+      return await request('/api/events', {
         method: 'POST', credentials: 'same-origin', keepalive,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ app, visit, events }),
@@ -153,7 +176,7 @@ export function createPlatformClient({
     if (!enabled) return null;
     if (!accountPromise) accountPromise = (async () => {
       try {
-        const response = await fetchImpl('/api/account/me', { credentials: 'same-origin' });
+        const response = await request('/api/account/me', { credentials: 'same-origin' });
         if (!response?.ok) return null;
         const account = await response.json();
         csrfToken = csrfFrom(account);
@@ -167,12 +190,22 @@ export function createPlatformClient({
     return account;
   }
 
+  async function fetchHub() {
+    if (!hosted) return null;
+    try {
+      const response = await request(`/api/games/${encodeURIComponent(app)}/hub`, { credentials: 'same-origin' });
+      return response?.ok ? await response.json() : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function submitScore(board, score, { keepalive = false } = {}) {
     if (!enabled || !LEVEL_RE.test(board)) return null;
     if (!csrfToken && !keepalive) await prepareAccount();
     if (!csrfToken) return null;
     try {
-      const response = await fetchImpl(`/api/games/${encodeURIComponent(app)}/scores`, {
+      const response = await request(`/api/games/${encodeURIComponent(app)}/scores`, {
         method: 'POST', credentials: 'same-origin', keepalive,
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ board, score: integer(score, 1_000_000_000) }),
@@ -190,7 +223,7 @@ export function createPlatformClient({
   }
 
   return {
-    enabled, visit, start, stop, beginLevel, endLevel, heartbeat, flush, prepareAccount, submitScore,
+    hosted, enabled, visit, start, stop, beginLevel, endLevel, heartbeat, flush, fetchHub, prepareAccount, submitScore,
     pending: () => queue.map((event) => ({ ...event })),
   };
 }

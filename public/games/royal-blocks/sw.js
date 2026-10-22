@@ -1,16 +1,19 @@
 // Service Worker von Royal Blocks – gilt nur für den Ordner des Spiels (/games/royal-blocks/).
 // CACHE und FILES setzt scripts/build.mjs beim Bauen ein. Fremde Caches werden nie angefasst.
 
-const CACHE = 'royal-blocks-v1.4.0-f87357a26e';
+const CACHE = 'royal-blocks-v1.5.0-a77d234e7a';
 const FILES = ["./","index.html","style.css","main.js","platform.js","game.js","poker.js","pieces.js","audio.js","fx.js","storage.js","progress.js","scratch.js","manifest.webmanifest","icon-180.png","icon-192.png","icon-512.png"];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(FILES.map((file) => new Request(file, { cache: 'reload' }))))
-      .then(() => self.skipWaiting()),
+      .then((cache) => cache.addAll(FILES.map((file) => new Request(file, { cache: 'reload' })))),
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -26,6 +29,7 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/')) return;
   if (url.origin !== self.location.origin || !url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
 
   // Seite und Skripte immer aus demselben Cache-Stand, damit nie alte und neue Dateien gemischt werden.
