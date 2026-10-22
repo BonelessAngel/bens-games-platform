@@ -117,6 +117,22 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 #title .lvl b{font-weight:400;color:var(--grn)}
 #title .lvl em{font-style:normal;color:#8890aa}
 #title .lvl a{color:var(--cy);text-decoration:underline;text-underline-offset:.15em}
+.hubhome{display:none;position:absolute;left:1em;top:1em;padding:.75em .9em;background:#0b1024e8;border:.16em solid var(--cy);box-shadow:.2em .2em 0 #000;
+  color:var(--cy);font-family:'Press Start 2P',monospace;font-size:.58em;text-decoration:none;z-index:3}
+#bReset{top:4.7em!important}
+.hubcard{display:none;position:absolute;right:1em;bottom:5.2em;width:21em;padding:.55em;background:#0b1024ee;border:.16em solid #2c3566;
+  box-shadow:.25em .25em 0 #000;text-align:left;z-index:3}
+.hubmain{display:flex;gap:.6em;align-items:center}.hubavatar{width:3.2em;height:3.2em;flex:none;border-radius:50%;border:.16em solid var(--cy);background:#182044;
+  display:flex;align-items:center;justify-content:center;color:var(--am);font-family:'Press Start 2P',monospace;font-size:1.1em;overflow:hidden}
+.hubavatar img{width:100%;height:100%;object-fit:cover}.hubcopy{min-width:0;flex:1}.hubname{font-family:'Press Start 2P',monospace;font-size:.52em;color:#fff;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hubstatus,.hubbest{font-size:1.05em;line-height:1.05;color:#a8baf0}.hubbest{color:var(--am);margin-top:.15em}.hubactions{display:flex;gap:.35em;margin-top:.45em}
+.hubactions a{flex:1;padding:.45em .3em;background:#111936;border:.12em solid var(--cy);color:var(--cy);font-family:'Press Start 2P',monospace;font-size:.42em;line-height:1.35;text-align:center;text-decoration:none}
+.noticestack{position:absolute;left:50%;top:.7em;transform:translateX(-50%);width:min(34em,68%);display:flex;flex-direction:column;gap:.35em;z-index:12;pointer-events:none}
+.notice{display:none;align-items:center;gap:.5em;padding:.5em .65em;background:#0b1024f5;border:.16em solid var(--cy);box-shadow:.22em .22em 0 #000;text-align:left;pointer-events:auto}
+.notice.success{border-color:var(--grn)}.notice.warning{border-color:var(--am)}.notice .ntx{min-width:0;flex:1}.notice b{display:block;font-family:'Press Start 2P',monospace;font-size:.5em;color:#fff;line-height:1.45}
+.notice span{display:block;font-size:1.05em;line-height:1;color:#cfdcff}.notice a{color:var(--cy);font-size:1em}.notice button{flex:none;background:#111936;border:.12em solid var(--line);color:#fff;padding:.25em .45em}
+#updateNotice{border-color:var(--am);justify-content:center;font-family:'Press Start 2P',monospace;font-size:.5em;color:var(--am);text-align:center}#updateReload{border-color:var(--am);color:var(--am);font-size:1em}
+.updateglobal{position:absolute;left:50%;top:.7em;transform:translateX(-50%);z-index:15;pointer-events:auto;white-space:nowrap}
 .syncpick{display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0}
 .syncpick button{font-size:.75em;line-height:1.5;padding:1.2em}
 .syncpick button span{display:block;font-family:'VT323',monospace;font-size:1.7em;font-weight:400;margin-top:.5em;color:#dfe9ff}
@@ -140,8 +156,9 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .sx.off{color:#3a4060}
 @keyframes starpop{0%{transform:scale(0) rotate(-120deg);opacity:0}70%{transform:scale(1.5) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0)}}
 #eLvl{color:var(--am)!important}
-#eRank{font-family:'Press Start 2P',monospace;font-size:.58em!important;color:var(--grn)!important}
-#eRank a{color:var(--cy);text-decoration:underline;text-underline-offset:.18em}
+.endrank{display:none;align-items:center;justify-content:center;gap:.7em}.endrank>span{font-family:'Press Start 2P',monospace;font-size:.55em;color:var(--grn);line-height:1.45}
+.rankacts{display:flex;gap:.35em}.rankacts a,.rankacts button{padding:.42em .55em;background:#111936;border:.14em solid var(--cy);color:var(--cy);font-family:'Press Start 2P',monospace;font-size:.43em;text-decoration:none;white-space:nowrap}
+.rankacts button{border-color:var(--am);color:var(--am)}.endrank.best>span{color:var(--am);animation:pulse2 1s steps(2) 2}
 .xpbar{height:.6em;background:#1c2246;position:relative;overflow:hidden}
 .xpbar i{position:absolute;left:0;top:0;bottom:0;background:var(--cy);width:0}
 #end .xpbar{height:.8em}
@@ -389,6 +406,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 #edui.comm #eWPrev,#edui.comm #eWNext,#edui.comm #eWName,#edui.comm #eLPrev,#edui.comm #eLNext,#edui.comm #eAddL,#edui.comm #eCopy,#edui.comm #eAddW,#edui.comm #eDel,#edui.comm #eMap{display:none!important}
 #edpanel.comm .dev-only,#edpanel.comm #evGoal,#edpanel.comm #evGoalM,#edpanel.comm #evGoalP,#edpanel.comm #evDefault,#edpanel.comm .wrow{display:none!important}
 .cbonly{display:none}
+#edui.comm #eExport{display:none!important}#eExport{display:none;white-space:nowrap;font-size:.72em}
 #edpanel.comm .cbonly{display:block}
 .cbstars{display:flex;gap:.3em}
 .cbstars .pb{flex:1;font-size:.6em;height:2.8em;padding:0}
@@ -493,6 +511,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .hu.hab .r i.f{background:var(--mg)}
 #lpFoes{white-space:pre-line}
 #loginScr{background:#05060fc8}
+#commLogin{background:#05060fd8;z-index:14}.commlogin{max-width:31em}.commlogin a.big{display:block;text-decoration:none}.commlogin p{line-height:1.15}
 #shopScr,#unlockScr{background:#05060fc8;z-index:7}
 #statScr{background:#05060fe8;z-index:8}
 .stpanel{width:min(64em,96%);max-height:94%;display:flex;flex-direction:column;gap:.5em}
@@ -917,6 +936,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
     <button class="pb" id="eHelp" style="display:none">?</button>
     <button class="pb mg" id="eTest">TESTEN</button>
     <button class="pb go" id="eSave">SPEICHERN</button>
+    <button class="pb vi" id="eExport">KAMPAGNE ALS DATEI EXPORTIEREN</button>
    </div>
    <div class="ebar b">
     <button class="pb" data-tool="path">WEG</button>
@@ -1033,6 +1053,10 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
    </div>
   </div>
   <div id="title" class="screen">
+   <a id="bHome" class="hubhome" href="/">← BENS GAMES</a>
+   <div id="noticeStack" class="noticestack">
+    <div id="announce" class="notice"><div class="ntx"><b id="announceTitle"></b><span id="announceBody"></span><a id="announceLink"></a></div><button id="announceClose" aria-label="Ankündigung schließen">×</button></div>
+   </div>
    <h1>NOVA<br>BASTION</h1>
    <p id="tTag">Der Schwarm hat fünf Welten überrannt. Hol sie dir zurück.</p>
    <div class="btns">
@@ -1040,11 +1064,13 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
     <button class="big dev" id="bPlayDev">DEV MODUS</button>
    </div>
    <span class="lvl"><span id="tLv"></span><br><span id="tCloud"></span></span>
+   <div id="hubCard" class="hubcard"><div class="hubmain"><div id="hubAvatar" class="hubavatar"></div><div class="hubcopy"><div id="hubName" class="hubname"></div><div id="hubStatus" class="hubstatus"></div><div id="hubBest" class="hubbest"></div></div></div><div id="hubActions" class="hubactions"></div></div>
    <button class="small" id="bSndT" style="display:none">TON AN</button>
    <button class="small" id="bMusT" style="display:none">MUSIK AN</button>
    <button class="small" id="bOptT">⚙ EINSTELLUNGEN</button>
    <button class="small" id="bReset" style="right:auto;left:1em;bottom:auto;top:1em;color:#ff8a8a;border-color:#5a2a3a">KAMPAGNE ZURÜCKSETZEN</button>
   </div>
+  <div id="updateNotice" class="notice updateglobal">NEUE VERSION VERFÜGBAR – <button id="updateReload">NEU LADEN</button></div>
 
   <div id="syncScr" class="screen">
    <div class="panel" style="max-width:42em">
@@ -1166,6 +1192,15 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
    </div>
    <div id="commInfo"></div>
    <div id="commList" class="scroll"></div>
+  </div>
+
+  <div id="commLogin" class="screen">
+   <div class="panel commlogin">
+    <h3>KONTO BENÖTIGT</h3>
+    <p>Zum Hochladen, Bewerten oder Löschen brauchst du ein Bens-Games-Konto. Spielen kannst du auch ohne Konto.</p>
+    <a class="big" href="/konto/anmelden/?zurueck=/games/nova-bastion/">ANMELDEN</a>
+    <button class="big alt" id="commLoginClose">WEITERSPIELEN</button>
+   </div>
   </div>
 
   <div id="syUI">
@@ -1366,7 +1401,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
     <p id="eXp"></p>
     <div class="xpbar"><i id="eXpBar"></i></div>
     <p id="eLvl"></p>
-    <p id="eRank"></p>
+    <div id="eRank" class="endrank"><span id="eRankText"></span><div class="rankacts"><a id="eRankLink" href="/ranglisten/?spiel=nova-bastion">RANGLISTE ANSEHEN</a><button id="eShare">TEILEN</button></div></div>
     <p id="eLoot" style="font-size:1.25em"></p>
     <div class="endActions">
      <button class="big" id="bNext">NÄCHSTES LEVEL</button>
@@ -2437,7 +2472,7 @@ function normSave(s){
 try{var s0=localStorage.getItem(KEY);if(s0){SAVE=JSON.parse(s0);}}catch(e){}
 SAVE=normSave(SAVE);
 var DEV=false,PR=SAVE.camp;
-function setMode(dev){var changed=DEV!==!!dev;DEV=!!dev;PR=DEV?SAVE.dev:SAVE.camp;if(changed&&typeof platformModeChanged==='function')platformModeChanged();}
+function setMode(dev){var changed=DEV!==!!dev;DEV=!!dev;PR=DEV?SAVE.dev:SAVE.camp;if(changed&&typeof platformModeChanged==='function'){platformModeChanged();if(typeof hubModeChanged==='function')hubModeChanged();}}
 var ACCOUNT_SYNC_KEY='novabastion.account-sync';
 var Cloud={doc:null,status:'checking',timer:null,busy:false,again:false,account:false,csrf:'',accountId:'',accountTimer:null,accountBusy:false,accountAgain:false,lastPut:0,conflictRemote:null};
 function storeLocalSave(){try{localStorage.setItem(KEY,JSON.stringify(SAVE));}catch(e){}}
@@ -2565,9 +2600,16 @@ function accountInit(){
   }).then(function(body){if(body)reconcileAccount(body);if(scene==='title')refreshTitle();}).catch(function(){Cloud.status='error';if(scene==='title')refreshTitle();});
 }
 /* =============== Plattform: anonyme Statistik und Konto-Ranglisten =============== */
-var PLATFORM={app:'nova-bastion',visit:'',events:[],visibleAt:0,activeMs:0,level:null,run:0,timer:null};
+var PLATFORM={app:'nova-bastion',visit:'',events:[],visibleAt:0,activeMs:0,level:null,run:0,timer:null,share:null};
+function platformSite(){var h=location.hostname;return (location.protocol==='https:'||location.protocol==='http:')&&h!=='localhost'&&h.indexOf('127.')!==0&&location.pathname.indexOf('/games/nova-bastion/')===0&&!window.claude;}
+function platformHosted(){return platformSite()&&!DEV;}
+function platformFetch(url,options){
+  options=options||{};options.credentials='same-origin';if(typeof AbortController==='undefined')return Promise.reject(new Error('abort unavailable'));
+  var c=new AbortController(),t=setTimeout(function(){c.abort();},3000);options.signal=c.signal;
+  return fetch(url,options).then(function(r){clearTimeout(t);return r;},function(e){clearTimeout(t);throw e;});
+}
 function platformEnabled(g){
-  return location.protocol==='https:'&&location.pathname.indexOf('/games/nova-bastion/')===0&&!window.claude&&!DEV&&!(g&&g.test)&&navigator.globalPrivacyControl!==true;
+  return platformHosted()&&location.protocol==='https:'&&!(g&&g.test)&&navigator.globalPrivacyControl!==true;
 }
 function platformVisit(){
   var a=new Uint8Array(16);crypto.getRandomValues(a);return Array.prototype.map.call(a,function(n){return n.toString(16).padStart(2,'0');}).join('');
@@ -2606,32 +2648,84 @@ function platformData(g){
   if(/^[a-z0-9_-]{1,32}$/.test(g.heroKey||''))data.hero=g.heroKey;
   data.leaks=Math.max(0,g.leaked|0);return data;
 }
-function platformRankRender(rank,listed,run){
-  if(!G||G.platformRun!==run)return;var el=$('eRank');el.textContent='';
-  if(listed!==false&&Number.isInteger(rank)&&rank>0)el.appendChild(document.createTextNode('PLATZ '+rank+' DIESE WOCHE  ·  '));
-  var a=document.createElement('a');a.href='/ranglisten/?spiel=nova-bastion';a.textContent='ALLE RANGLISTEN';el.appendChild(a);disp('eRank',true,'block');
+function platformRankRender(rank,listed,run,board,score,best){
+  if(!G||G.platformRun!==run)return;var el=$('eRank'),tx=$('eRankText'),link=$('eRankLink');
+  tx.textContent=listed!==false&&Number.isInteger(rank)&&rank>0?(best?'NEUER BESTWERT · ':'')+'PLATZ '+rank+' DIESE WOCHE':'PUNKTE GEMELDET';
+  link.href='/ranglisten/?spiel=nova-bastion&liste='+encodeURIComponent(board);PLATFORM.share={board:board,score:score,rank:listed===false?null:rank,url:link.href};
+  el.classList.toggle('best',!!best);disp('eRank',true,'flex');
 }
 function platformScore(board,score,run,keepalive){
   if(!platformEnabled(G)||!Cloud.account||!Cloud.csrf||!board)return;
   try{fetch('/api/games/nova-bastion/scores',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':Cloud.csrf},body:JSON.stringify({board:board,score:score}),keepalive:!!keepalive})
     .then(function(r){return r.ok?r.json():null;}).then(function(j){
-      if(!j)return;if(j.listed===false){platformRankRender(null,false,run);return;}
+      if(!j)return;var best=!!(j.week&&j.week.score===score);if(j.listed===false){platformRankRender(null,false,run,board,score,best);return;}
       var fallback=j.week&&j.week.rank;
       return fetch('/api/games/nova-bastion/leaderboard?board='+encodeURIComponent(board)+'&period=week&page=1',{credentials:'same-origin'})
-        .then(function(r){return r.ok?r.json():null;}).then(function(b){platformRankRender(b&&b.me?b.me.rank:fallback,true,run);},function(){platformRankRender(fallback,true,run);});
+        .then(function(r){return r.ok?r.json():null;}).then(function(b){platformRankRender(b&&b.me?b.me.rank:fallback,true,run,board,score,best);},function(){platformRankRender(fallback,true,run,board,score,best);});
     }).catch(function(){});}catch(e){}
 }
 function platformLevelStart(g){
   if(!platformEnabled(g)){PLATFORM.events.length=0;PLATFORM.level=null;platformClockReset();return;}
   if(PLATFORM.level&&!PLATFORM.level.ended)platformLevelEnd('abort',0,undefined,false);
   var level=platformLevelId(g);if(!level)return;g.platformRun=++PLATFORM.run;PLATFORM.level={game:g,level:level,board:platformBoard(g),ended:false};
-  $('eRank').textContent='';disp('eRank',false);platformQueue({type:'level_start',level:level},g);
+  $('eRankText').textContent='';PLATFORM.share=null;disp('eRank',false);platformQueue({type:'level_start',level:level},g);
 }
 function platformLevelEnd(result,stars,score,keepalive){
   var p=PLATFORM.level,g=p&&p.game;if(!p||p.ended||!platformEnabled(g))return;p.ended=true;
   score=score===undefined?platformPoints(g):Math.min(1000000000,Math.max(0,Math.round(score)));
   platformQueue({type:'level_end',level:p.level,result:result,score:score,stars:Math.max(0,Math.min(10,stars|0)),seconds:Math.max(0,Math.round(g.time||0)),data:platformData(g)},g);
   platformFlush(!!keepalive);platformScore(p.board,score,g.platformRun,!!keepalive);
+}
+$('eShare').addEventListener('click',function(){
+  var s=PLATFORM.share;if(!s)return;var text='Nova Bastion: '+s.score+' Punkte'+(Number.isInteger(s.rank)?' · Platz '+s.rank+' diese Woche':''),url=new URL(s.url,location.origin).href;
+  try{if(navigator.share){navigator.share({title:'Nova Bastion',text:text,url:url}).catch(function(){});return;}
+    if(navigator.clipboard)navigator.clipboard.writeText(url).then(function(){toast('RANGLISTEN-LINK KOPIERT','#6be07a');},function(){});}catch(e){}
+});
+
+/* Startbildschirm-Zugabe der Plattform: Konto, Bestplatz und Ankündigung. */
+var HUB={data:null,dismissed:[]};
+function hubSafePath(v){return typeof v==='string'&&/^\/(?!\/)[^\s\\]*$/.test(v)?v:null;}
+function hubSafeAnnouncementLink(v){
+  if(hubSafePath(v))return v;if(typeof v!=='string')return null;
+  try{var u=new URL(v);return u.protocol==='https:'?u.href:null;}catch(e){return null;}
+}
+function hubClear(el){el.textContent='';}
+function hubAction(parent,label,href){href=hubSafePath(href);if(!href)return;var a=document.createElement('a');a.href=href;a.textContent=label;parent.appendChild(a);}
+function hubBoardName(board){board=String(board||'');return /^\d+$/.test(board)?'Level '+board:board==='endlos'?'Endlos':board.charAt(0).toUpperCase()+board.slice(1);}
+function hubDismissed(){
+  try{var a=JSON.parse(localStorage.getItem('novabastion.announcements')||'[]');if(Array.isArray(a))return a.filter(function(n){return Number.isInteger(n)&&n>=0;}).slice(-50);}catch(e){}return [];
+}
+function hubSaveDismissed(){try{localStorage.setItem('novabastion.announcements',JSON.stringify(HUB.dismissed.slice(-50)));}catch(e){}}
+function hubAnnouncement(){
+  var list=HUB.data&&Array.isArray(HUB.data.announcements)?HUB.data.announcements:[],a=null;
+  for(var i=0,item;i<list.length;i++){item=list[i];if(item&&Number.isInteger(item.id)&&HUB.dismissed.indexOf(item.id)<0){a=item;break;}}
+  if(!a){disp('announce',false);return;}
+  $('announce').className='notice '+(['success','warning'].indexOf(a.level)>=0?a.level:'info');
+  $('announceTitle').textContent=typeof a.title==='string'?a.title.slice(0,80):'';$('announceBody').textContent=typeof a.body==='string'?a.body.slice(0,240):'';
+  var link=hubSafeAnnouncementLink(a.link),le=$('announceLink');le.textContent=link?'MEHR':'';if(link)le.href=link;disp('announce',true,'flex');
+  $('announceClose').onclick=function(){HUB.dismissed.push(a.id);HUB.dismissed=HUB.dismissed.filter(function(id,p,all){return all.indexOf(id)===p;}).slice(-50);hubSaveDismissed();hubAnnouncement();};
+}
+function hubRender(){
+  var d=HUB.data;if(!d||!platformHosted()){disp('hubCard',false);disp('announce',false);return;}
+  var user=d.user&&typeof d.user==='object'?d.user:null,avatar=$('hubAvatar'),actions=$('hubActions');hubClear(avatar);hubClear(actions);$('hubBest').textContent='';
+  if(user){
+    var img=typeof user.avatar_url==='string'&&/^\/avatars\/[A-Za-z0-9_-]+\.(?:svg|png|webp)$/.test(user.avatar_url)?document.createElement('img'):null;
+    if(img){img.src=user.avatar_url;img.alt='';avatar.appendChild(img);}else avatar.textContent=typeof user.initial==='string'?user.initial.slice(0,2):'?';
+    $('hubName').textContent=typeof user.display_name==='string'?'ANGEMELDET ALS '+user.display_name:'ANGEMELDET';$('hubStatus').textContent='Fortschritt wird gesichert';
+    var best=(Array.isArray(d.best)?d.best:[]).find(function(b){return b&&Number.isInteger(b.rank)&&b.rank>0;});
+    if(best)$('hubBest').textContent='🏆 Platz '+best.rank+' in '+hubBoardName(best.board);
+    hubAction(actions,'RANGLISTE',d.links&&d.links.rankings);hubAction(actions,'MEIN PROFIL',user.profile_url);
+  }else{
+    avatar.textContent='?';$('hubName').textContent='NICHT ANGEMELDET';$('hubStatus').textContent='Mit Konto auf allen Geräten weiterspielen und in Ranglisten erscheinen.';
+    hubAction(actions,'ANMELDEN',d.links&&d.links.login);hubAction(actions,'KONTO ERSTELLEN',d.links&&d.links.register);
+  }
+  disp('hubCard',true,'block');hubAnnouncement();
+}
+function hubModeChanged(){var on=platformHosted();disp('bHome',on,'block');if(on&&HUB.data)hubRender();else{disp('hubCard',false);disp('announce',false);}}
+function hubInit(){
+  hubModeChanged();if(!platformHosted()||typeof AbortController==='undefined')return;HUB.dismissed=hubDismissed();var c=new AbortController(),done=false,t=setTimeout(function(){if(!done)c.abort();},3000);
+  fetch('/api/games/nova-bastion/hub',{credentials:'same-origin',signal:c.signal}).then(function(r){if(r.status===404)return null;if(!r.ok)throw 0;return r.json();})
+    .then(function(d){done=true;clearTimeout(t);if(!d)return;HUB.data=d;hubRender();},function(){done=true;clearTimeout(t);});
 }
 function cloudInit(){
   if(!window.claude||typeof window.claude.use!=='function'){accountInit();return;}
@@ -3604,6 +3698,7 @@ function show(s){
   disp('achScr',s==='ach');
   disp('lexScr',s==='lex');
   disp('commScr',s==='comm');
+  if(s!=='comm'&&s!=='edit')disp('commLogin',false);
   disp('syUI',s==='story','block');if(s!=='story')disp('syMenu',false);
   if(s==='comm')commOpen();
   disp('wsScr',s==='ws');
@@ -3629,6 +3724,7 @@ function show(s){
   if(s==='ach')renderAch();
   if(s==='lex')renderLex();
   if(s==='title')refreshTitle();
+  if(typeof updateNoticeRefresh==='function')updateNoticeRefresh();
 }
 function setPaused(v){
   if(!G)return;G.paused=v;disp('pause',v&&!G.over);
@@ -5183,6 +5279,7 @@ function endGame(win,result){
     $('bNext').textContent=g.tw?(g.tw.mode==='week'?'NÄCHSTE MISSION':'NÄCHSTE ETAGE'):L.boss?'NÄCHSTE WELT':'NÄCHSTES LEVEL';
     disp('bNext',canNext,'block');
     disp('end',true);
+    if(typeof updateNoticeRefresh==='function')updateNoticeRefresh();
     checkAch();checkWeekly();
   },900);
 }
@@ -6245,7 +6342,7 @@ function refreshMapUI(){
   $('bNextW').classList.toggle('lock',mapW<WORLDS.length-1&&!unlocked(wFirst(mapW+1)));
   disp('bEditor',DEV&&canEdit(),'');
   disp('bStats',DEV&&WEB.ok,'');
-  disp('bComm',WEB.ok,'');
+  disp('bComm',communityAvailable(),'');
   disp('bFinale',mapW===WORLDS.length-1&&(DEV||PR.stars[wLast(WORLDS.length-1)]>0),'');
   $('bFinale').textContent=PR.tower.finale?'FINALE ✓':'FINALE';
   var eo=endlessOpen(mapW),rec=PR.endless[mapW]||0;
@@ -6440,6 +6537,7 @@ function edRefresh(){
   $('eReal').classList.toggle('on',ED.real);
   $('eEnt').textContent='EINGÄNGE '+lv.paths.length;
   $('eSave').textContent=ED.dirty?'SPEICHERN *':'GESPEICHERT';
+  disp('eExport',!ED.comm,'block');
   $('eHelp').style.display=ED.comm?'':'none';
   $('eUndo').disabled=!ED.hist||!ED.hist.length;
   $('eCopy').style.display=map?'none':'';
@@ -8487,12 +8585,14 @@ function webName(force){
   ONL.last=0;pushScore();return m.name;
 }
 (function(){
+  if(platformHosted()){webCampLoad();return;}
   if(window.claude||(location.protocol!=='https:'&&location.hostname!=='localhost'))return;
   fetch(WEB.url+'?ping=1').then(function(r){return r.ok?r.json():null;}).then(function(j){if(j&&j.ok){WEB.ok=true;pushScore();webCampLoad();if(scene==='map')refreshMapUI();}}).catch(function(){});
 })();
 /* Kampagne auf der Webseite: beim Start die neueste aus dem Online-Speicher holen */
 function webCampLoad(){
-  fetch(apiUrl('camp'),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+  var on=platformHosted(),request=on?platformFetch('/api/games/nova-bastion/campaign',{cache:'no-store'}):fetch(apiUrl('camp'),{cache:'no-store'});
+  request.then(function(r){return r.ok?r.json():null;}).then(function(d){
     if(!d||!d.json||!(d.ts>(CAMP.ts||0)))return;
     var c=null;try{c=JSON.parse(d.json);}catch(e){}
     if(!c||!Array.isArray(c.worlds))return;c.ts=d.ts;applyCampaign(c);
@@ -8569,9 +8669,19 @@ $('stClose').addEventListener('click',function(){Snd.play('tick');disp('statScr'
 /* Spieler bauen mit einem vereinfachten Editor eigene Level, laden sie hoch und spielen die Level der anderen.
    Ein Level wird intern an eine Stelle der Kampagne gesetzt (Schwierigkeit 1-5 = Welt 1-5), damit Gegnerstärke,
    Spezialgegner und Druck automatisch passen. */
-var COMM={url:apiUrl('community'),tab:'new',list:null,me:'',del:''};
+var COMM={platform:platformSite(),url:platformSite()?'/api/games/nova-bastion/levels':apiUrl('community'),tab:'new',list:null,me:'',del:''};
 var CB={star:2,boss:false};
-function commPost(b){return fetch(COMM.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json().catch(function(){return {};}).then(function(j){j._s=r.status;return j;});});}
+function communityAvailable(){return COMM.platform?platformHosted():WEB.ok;}
+function commAccountNotice(){disp('commLogin',true,'flex');Snd.play('no');}
+function commPost(action,b,auth){
+  var request;
+  if(COMM.platform){
+    var headers={'Content-Type':'application/json'};if(auth&&Cloud.csrf)headers['X-CSRF-Token']=Cloud.csrf;
+    request=platformFetch(COMM.url+'/'+action,{method:'POST',headers:headers,body:JSON.stringify(b)});
+  }else{b=Object.assign({act:action},b);request=fetch(COMM.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)});}
+  return request.then(function(r){return r.json().catch(function(){return {};}).then(function(j){j._s=r.status;return j;});});
+}
+$('commLoginClose').addEventListener('click',function(){Snd.play('tick');disp('commLogin',false);});
 function commPR(){PR.comm=PR.comm||{};var c=PR.comm;c.won=c.won||{};c.likes=c.likes||{};c.liked=c.liked||{};if(c.day!==today()){c.day=today();c.n=0;}return c;}
 function sha256hex(s){
   if(!window.crypto||!crypto.subtle)return Promise.resolve('');
@@ -8595,23 +8705,25 @@ function commThumb(paths,style){
 }
 function commOpen(){
   Array.prototype.forEach.call(document.querySelectorAll('#commTabs .pb'),function(b){b.classList.toggle('on',b.dataset.t===COMM.tab);});
-  if(!WEB.ok){$('commInfo').textContent='Community-Level gibt es nur auf der Webseite.';$('commList').innerHTML='';return;}
+  if(!communityAvailable()){$('commInfo').textContent='Community-Level gibt es nur auf der Webseite.';$('commList').textContent='';return;}
   $('commInfo').textContent='Lade Level ...';
-  var m=webMe();
-  sha256hex('a:'+m.id).then(function(h){COMM.me=h;return fetch(COMM.url+'?list=1',{cache:'no-store'});})
+  var request;
+  if(COMM.platform)request=platformFetch(COMM.url,{cache:'no-store'});
+  else{var m=webMe();request=sha256hex('a:'+m.id).then(function(h){COMM.me=h;return fetch(COMM.url+'?list=1',{cache:'no-store'});});}
+  request
     .then(function(r){return r.json();}).then(function(d){COMM.list=d.levels||[];commClaim();commRender();})
     .catch(function(){$('commInfo').textContent='Keine Verbindung. Versuch es gleich nochmal.';});
 }
 /* Ersteller bekommen 5 Kristalle pro neuem Daumen hoch */
 function commClaim(){
   var c=commPR(),add=0;
-  (COMM.list||[]).forEach(function(m){if(m.ah!==COMM.me)return;var had=c.likes[m.id]||0;if(m.likes>had)add+=m.likes-had;c.likes[m.id]=m.likes;});
+  (COMM.list||[]).forEach(function(m){if(COMM.platform?!m.mine:m.ah!==COMM.me)return;var had=c.likes[m.id]||0;if(m.likes>had)add+=m.likes-had;c.likes[m.id]=m.likes;});
   if(add>0&&!DEV){PR.crystals+=add*5;PR.st.crysTotal+=add*5;toast(add+' NEUE DAUMEN FÜR DEINE LEVEL · +'+(add*5)+' KRISTALLE','#6be07a');Snd.play('coin');}
   persist();
 }
 function commRender(){
-  var list=(COMM.list||[]).slice(),c=commPR(),box=$('commList');box.innerHTML='';
-  if(COMM.tab==='mine')list=list.filter(function(m){return m.ah===COMM.me;});
+  var list=(COMM.list||[]).slice(),c=commPR(),box=$('commList');box.textContent='';
+  if(COMM.tab==='mine')list=list.filter(function(m){return COMM.platform?m.mine:m.ah===COMM.me;});
   if(COMM.tab==='top')list.sort(function(a,b){return (b.likes-a.likes)||(b.plays-a.plays);});else list.sort(function(a,b){return b.t-a.t;});
   $('commInfo').textContent=COMM.tab==='mine'?(list.length?'Deine Level. Für jeden Daumen hoch bekommst du 5 Kristalle.':'Du hast noch kein Level hochgeladen. Tippe auf + LEVEL BAUEN.')
     :list.length?list.length+' Level von Spielern. Erste Siege bringen XP und Kristalle (bis zu 5 pro Tag).':'Noch keine Level. Sei der Erste: + LEVEL BAUEN!';
@@ -8622,32 +8734,34 @@ function commRender(){
     var by=document.createElement('div');by.className='by';by.textContent='von '+m.author+(c.won[m.id]?'  ·  ✓ geschafft':'');d.appendChild(by);
     var st=document.createElement('div');st.className='st2';
     var rate=m.plays?Math.round(m.wins/m.plays*100)+'%':'-';
-    st.innerHTML='<span><b>'+'★'.repeat(m.star)+'</b>'+'☆'.repeat(5-m.star)+'</span><span>♥ <b>'+m.likes+'</b></span><span>gespielt <b>'+m.plays+'</b></span><span>geschafft <b>'+rate+'</b></span>';
+    [['★'.repeat(m.star)+'☆'.repeat(5-m.star),''],['♥ '+m.likes,''],['gespielt '+m.plays,''],['geschafft '+rate,'']].forEach(function(v){var s=document.createElement('span');s.textContent=v[0];st.appendChild(s);});
     if(m.boss||m.focus){var tg=document.createElement('span');tg.textContent=(m.boss?'MUTTERSCHIFF ':'')+(m.focus&&FOCUS[m.focus]?FOCUS[m.focus][0]:'');tg.style.color='#ff9ad0';st.appendChild(tg);}
     d.appendChild(st);
     var be=document.createElement('div');be.className='best';be.textContent=m.best&&m.best.length?'BESTE: '+m.best.slice(0,3).map(function(r){return r.n+' ('+r.l+')';}).join(', '):'';d.appendChild(be);
     var bt=document.createElement('div');bt.className='bt';
     var pl=document.createElement('button');pl.className='pb go';pl.textContent='SPIELEN';pl.addEventListener('click',function(){Snd.init();Snd.play('tick');commPlay(m);});bt.appendChild(pl);
-    var lk=document.createElement('button');lk.className='pb lk'+(c.liked[m.id]?' on':'');lk.textContent='♥';lk.title='Daumen hoch';
+    var lk=document.createElement('button'),liked=COMM.platform?m.liked:c.liked[m.id];lk.className='pb lk'+(liked?' on':'');lk.textContent='♥';lk.title='Daumen hoch';
     lk.addEventListener('click',function(){commLike(m,lk);});bt.appendChild(lk);
-    if(DEV||m.ah===COMM.me){var dl=document.createElement('button');dl.className='pb hard';dl.textContent=COMM.del===m.id?'SICHER?':'LÖSCHEN';dl.addEventListener('click',function(){commDelete(m);});bt.appendChild(dl);}
+    if(COMM.platform?m.mine:(DEV||m.ah===COMM.me)){var dl=document.createElement('button');dl.className='pb hard';dl.textContent=COMM.del===m.id?'SICHER?':'LÖSCHEN';dl.addEventListener('click',function(){commDelete(m);});bt.appendChild(dl);}
     d.appendChild(bt);box.appendChild(d);
   });
 }
 function commLike(m,el){
-  var me=webMe(),c=commPR();if(m.ah===COMM.me){toast('DEIN EIGENES LEVEL','#ffc23c');return;}
-  commPost({act:'like',id:m.id,pid:me.id,token:me.token}).then(function(j){if(!j.ok)return;m.likes=j.likes;c.liked[m.id]=j.liked;persist();Snd.play(j.liked?'up':'tick');commRender();});
+  var c=commPR();if(COMM.platform?m.mine:m.ah===COMM.me){toast('DEIN EIGENES LEVEL','#ffc23c');return;}if(COMM.platform&&(!Cloud.account||!Cloud.csrf)){commAccountNotice();return;}
+  var me=COMM.platform?null:webMe(),body=COMM.platform?{id:m.id}:{id:m.id,pid:me.id,token:me.token};
+  commPost('like',body,COMM.platform).then(function(j){if(j._s===401){Cloud.account=false;commAccountNotice();return;}if(!j.ok){if(j.error==='own_level')toast('DEIN EIGENES LEVEL','#ffc23c');return;}m.likes=j.likes;m.liked=j.liked;c.liked[m.id]=j.liked;persist();Snd.play(j.liked?'up':'tick');commRender();}).catch(function(){});
 }
 function commDelete(m){
+  if(COMM.platform&&(!Cloud.account||!Cloud.csrf)){commAccountNotice();return;}
   if(COMM.del!==m.id){COMM.del=m.id;Snd.play('tick');commRender();setTimeout(function(){if(COMM.del===m.id){COMM.del='';commRender();}},3000);return;}
-  COMM.del='';var me=webMe(),b={act:'delete',id:m.id};
-  if(m.ah===COMM.me){b.pid=me.id;b.token=me.token;}
-  else{var pin=null;try{pin=localStorage.getItem('novabastion.pin');}catch(e){}if(!pin)pin=window.prompt('Entwickler-Passwort zum Löschen');if(!pin)return;b.pin=String(pin).trim();}
-  commPost(b).then(function(j){if(j.ok){Snd.play('sell');toast('LEVEL GELÖSCHT','#ff8a5a');if(b.pin){try{localStorage.setItem('novabastion.pin',b.pin);}catch(e){}}commOpen();}else toast(j._s===403?'FALSCHES PASSWORT':'LÖSCHEN FEHLGESCHLAGEN','#ff5d5d');});
+  COMM.del='';var b={id:m.id};
+  if(!COMM.platform){var me=webMe();if(m.ah===COMM.me){b.pid=me.id;b.token=me.token;}else{var pin=null;try{pin=localStorage.getItem('novabastion.pin');}catch(e){}if(!pin)pin=window.prompt('Entwickler-Passwort zum Löschen');if(!pin)return;b.pin=String(pin).trim();}}
+  commPost('delete',b,COMM.platform).then(function(j){if(j._s===401){Cloud.account=false;commAccountNotice();return;}if(j.ok){Snd.play('sell');toast('LEVEL GELÖSCHT','#ff8a5a');if(b.pin){try{localStorage.setItem('novabastion.pin',b.pin);}catch(e){}}commOpen();}else toast(j._s===403?'FALSCHES PASSWORT':'LÖSCHEN FEHLGESCHLAGEN','#ff5d5d');}).catch(function(){toast('LÖSCHEN FEHLGESCHLAGEN','#ff5d5d');});
 }
 function commPlay(m){
   toast('LADE LEVEL ...','#3de8ff');
-  fetch(COMM.url+'?id='+encodeURIComponent(m.id),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+  var url=COMM.platform?COMM.url+'/get?id='+encodeURIComponent(m.id):COMM.url+'?id='+encodeURIComponent(m.id),request=COMM.platform?platformFetch(url,{cache:'no-store'}):fetch(url,{cache:'no-store'});
+  request.then(function(r){return r.json();}).then(function(d){
     if(!d||!d.level){toast('LEVEL NICHT GEFUNDEN','#ff5d5d');return;}
     var lv=d.level;lv.id='c'+m.id;
     var L=commBuildL(lv,m.star,m.boss,m.style);L.cauthor=m.author;
@@ -8655,8 +8769,9 @@ function commPlay(m){
   }).catch(function(){toast('KEINE VERBINDUNG','#ff5d5d');});
 }
 function commResult(win){
-  var gc=G.comm;if(!gc||!WEB.ok)return;
-  commPost({act:'result',id:gc.id,win:!!win,lives:G.lives,name:webMe().name||''}).catch(function(){});
+  var gc=G.comm;if(!gc||!communityAvailable())return;
+  var b={id:gc.id,win:!!win,lives:G.lives};if(!COMM.platform)b.name=webMe().name||'';
+  commPost('result',b,false).catch(function(){});
 }
 
 /* ----- Baukasten für alle ----- */
@@ -8692,13 +8807,16 @@ function cbUI(){
   $('eLName').textContent='DEIN LEVEL';
 }
 function cbUpload(){
-  if(!WEB.ok){toast('HOCHLADEN GEHT NUR AUF DER WEBSEITE','#ff5d5d');return;}
+  if(!communityAvailable()){toast('HOCHLADEN GEHT NUR AUF DER WEBSEITE','#ff5d5d');return;}
+  if(COMM.platform&&(!Cloud.account||!Cloud.csrf)){commAccountNotice();return;}
   if(ED.clearedJ!==cbCoreJ()){Snd.play('no');toast('ERST MIT TESTEN EINMAL SELBST SCHAFFEN, DANN HOCHLADEN','#ffc23c');return;}
-  var m=webMe();if(!m.name){webName(true);m=webMe();if(!m.name)return;}
+  var m=COMM.platform?null:webMe();if(!COMM.platform&&!m.name){webName(true);m=webMe();if(!m.name)return;}
   var st=cbState();toast('LADE HOCH ...','#ffc23c');
-  commPost({act:'upload',pid:m.id,token:m.token,author:m.name,level:st.lv,star:st.star,boss:st.boss,style:st.style}).then(function(j){
+  var body={level:st.lv,star:st.star,boss:st.boss,style:st.style};if(!COMM.platform)Object.assign(body,{pid:m.id,token:m.token,author:m.name});
+  commPost('upload',body,COMM.platform).then(function(j){
+    if(j._s===401){Cloud.account=false;commAccountNotice();return;}
     if(j.ok){try{localStorage.removeItem('novabastion.commdraft');}catch(e){}ED.clearedJ='';Snd.play('lvup');toast('HOCHGELADEN! JETZT KÖNNEN ALLE DEIN LEVEL SPIELEN','#6be07a');COMM.tab='mine';ED.comm=false;$('edui').classList.remove('comm');$('edpanel').classList.remove('comm');show('comm');return;}
-    toast(j.error==='limit'?'HÖCHSTENS 15 LEVEL PRO SPIELER':j.error==='wait'?'BITTE EINE MINUTE WARTEN':j.error==='bad level'?'DAS LEVEL IST FEHLERHAFT':'HOCHLADEN FEHLGESCHLAGEN','#ff5d5d');
+    toast(j.error==='limit'?'HÖCHSTENS 15 LEVEL PRO KONTO':j.error==='wait'?'BITTE EINE MINUTE WARTEN':j.error==='full'?'DIE COMMUNITY IST VOLL':j.error==='too_big'?'DAS LEVEL IST ZU GROSS':j.error==='bad_level'?'DAS LEVEL IST FEHLERHAFT':'HOCHLADEN FEHLGESCHLAGEN','#ff5d5d');
   }).catch(function(){toast('KEINE VERBINDUNG','#ff5d5d');});
 }
 $('bComm').addEventListener('click',function(){Snd.play('tick');show('comm');});
@@ -8712,12 +8830,20 @@ $('bCommBuild').addEventListener('click',function(){
 $('eHelp').addEventListener('click',function(){Snd.play('tick');disp('cbHelp',true);});
 $('cbHelpOk').addEventListener('click',function(){Snd.play('tick');disp('cbHelp',false);});
 $('cbBoss').addEventListener('click',function(){cbChange(function(st){st.boss=!st.boss;});});
-/* Editor auf der Webseite: mit Entwickler-Passwort für alle veröffentlichen */
+function campaignText(c){return JSON.stringify(c);}
+function campaignExport(c){
+  var text=campaignText(c),url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=document.createElement('a');
+  a.href=url;a.download='nova-bastion-kampagne-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},0);
+  toast('KAMPAGNE ALS DATEI EXPORTIERT','#6be07a');
+}
+$('eExport').addEventListener('click',function(){var c=clone(ED.camp);c.v=4;c.ts=Date.now();campaignExport(c);});
+/* Alte Webseite: Kampagne weiterhin per Entwickler-Passwort veröffentlichen. */
 function webCampSave(c){
+  if(platformSite()){campaignExport(c);return;}
   var pin=null;try{pin=localStorage.getItem('novabastion.pin');}catch(e){}
   if(!pin){pin=window.prompt('Entwickler-Passwort zum Veröffentlichen');if(!pin){toast('NUR AUF DIESEM GERÄT GESPEICHERT','#ffc23c');return;}}
   toast('SPEICHERE FÜR ALLE SPIELER ...','#ffc23c');
-  fetch(apiUrl('camp'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin:String(pin).trim(),json:JSON.stringify(c)})})
+  fetch(apiUrl('camp'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin:String(pin).trim(),json:campaignText(c)})})
     .then(function(r){
       if(r.ok){try{localStorage.setItem('novabastion.pin',String(pin).trim());}catch(e){}toast('GESPEICHERT · GILT JETZT FÜR ALLE SPIELER','#6be07a');return;}
       try{localStorage.removeItem('novabastion.pin');}catch(e){}
@@ -9404,13 +9530,14 @@ $('syncAccount').addEventListener('click',function(){Snd.play('tick');chooseAcco
 var DEVKEY='novabastion.devok',DEVVAL='server-ok';
 function devOK(){
   if(!Owner.local)return !!Owner.is;
+  if(platformSite())return false;
   var hn=location.hostname;if(hn==='localhost'||hn==='127.0.0.1'||hn==='')return true;
   try{return localStorage.getItem(DEVKEY)===DEVVAL;}catch(e){return false;}
 }
 var logoTaps=[];
 $('title').querySelector('h1').addEventListener('click',function(){
   var now=Date.now();logoTaps=logoTaps.filter(function(t){return now-t<2500;});logoTaps.push(now);
-  if(logoTaps.length<7||devOK()||!Owner.local)return;logoTaps=[];
+  if(logoTaps.length<7||devOK()||!Owner.local||platformSite())return;logoTaps=[];
   var p=window.prompt('Entwickler-Passwort');if(p==null)return;p=p.trim();if(!p)return;
   toast('PRÜFE ...','#ffc23c');
   fetch(apiUrl('dev'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin:p})}).then(function(r){
@@ -9634,11 +9761,22 @@ window.addEventListener('scroll',unshift,{passive:true});
 if(window.visualViewport)window.visualViewport.addEventListener('scroll',function(){unshift();});
 document.addEventListener('touchmove',function(e){if(e.target&&e.target.closest&&e.target.closest('.scroll'))return;e.preventDefault();},{passive:false});
 
-/* Offline-Start nur im eigenen Plattform-Ordner; an der Domain-Wurzel bleibt das Spiel ohne neuen Service Worker lauffähig. */
+/* Offline-Start und kontrollierter Versionswechsel nur im Plattform-Ordner. */
+var SWUPDATE={worker:null,reload:false,ready:false};
+function updateNoticeRefresh(){disp('updateNotice',!!SWUPDATE.worker&&!(scene==='play'&&G&&!G.over),'flex');}
+function swUpdateAvailable(worker){SWUPDATE.worker=worker;updateNoticeRefresh();}
+$('updateReload').addEventListener('click',function(){
+  if(!SWUPDATE.worker||scene==='play'&&G&&!G.over)return;if(SWUPDATE.ready){location.reload();return;}SWUPDATE.reload=true;SWUPDATE.worker.postMessage({type:'SKIP_WAITING'});
+});
 (function(){
   try{var base='/games/nova-bastion/';
-    if(!('serviceWorker' in navigator)||location.protocol!=='https:'||window.claude||location.pathname.indexOf(base)!==0)return;
-    fetch('sw.js',{method:'HEAD'}).then(function(r){if(r.ok)navigator.serviceWorker.register('sw.js',{scope:base}).catch(function(){});}).catch(function(){});}catch(e){}
+    if(!('serviceWorker' in navigator)||!platformHosted()||location.protocol!=='https:'||location.pathname.indexOf(base)!==0)return;
+    navigator.serviceWorker.addEventListener('controllerchange',function(){if(!SWUPDATE.reload)return;SWUPDATE.ready=true;if(!(scene==='play'&&G&&!G.over))location.reload();});
+    navigator.serviceWorker.register('sw.js',{scope:base}).then(function(reg){
+      if(reg.waiting)swUpdateAvailable(reg.waiting);
+      reg.onupdatefound=function(){var w=reg.installing;if(!w)return;w.addEventListener('statechange',function(){if(w.state==='installed'&&navigator.serviceWorker.controller)swUpdateAvailable(w);});};
+    }).catch(function(){});
+  }catch(e){}
 })();
 function refreshTitle(){
   setMode(false);
@@ -9726,6 +9864,7 @@ if(window.visualViewport)window.visualViewport.addEventListener('resize',fit);
 window.__nb={econ:econ,ECON:ECON,rt:function(dt){realTick(dt);},get LEVELS(){return LEVELS;},get WORLDS(){return WORLDS;},get PR(){return PR;},ED:ED,get CAMP(){return CAMP;},edDown:edDown,edMove:edMove,edUp:edUp,get G(){return G;},get SAVE(){return SAVE;},startLevel:startLevel,goMap:goMap,setMode:setMode,show:show,update:function(dt){update(dt);},dailyInfo:dailyInfo,openLevel:openLevel};
 fit();show('title');requestAnimationFrame(frame);
 platformStart();
+hubInit();
 cloudInit();
 })();
 </script>
