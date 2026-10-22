@@ -39,7 +39,7 @@ final class Api
         // Pfade mit Spiel-ID, z. B. games/nova-bastion/save → games/{id}/save
         $path = $request->path;
         $gameId = '';
-        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?)$#', $path, $match)) {
+        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?|scores|leaderboard)$#', $path, $match)) {
             $gameId = $match[1];
             $path = 'games/{id}/' . $match[2];
         }
@@ -50,6 +50,19 @@ final class Api
             'games/{id}/save/put' => ['POST', true, fn (array $session): Response => $this->gameSaves()->put($session, $gameId, $request->json())],
             'games/{id}/save/delete' => ['POST', true, fn (array $session): Response => $this->gameSaves()->delete($session, $gameId, $request)],
             'account/games' => ['GET', true, fn (array $session): Response => $this->gameSaves()->overview($session)],
+            // Spielstatistik: Gäste anonym, Angemeldete mit Konto (außer bei Widerspruch). Kein CSRF-Token nötig,
+            // die Herkunftsprüfung verhindert Ereignisse von fremden Seiten.
+            'events' => ['POST', false, fn (): Response => $this->gameStats()->record($request->json(), $this->sessions()->current($request), $request)],
+            'account/stats' => ['GET', true, fn (array $session): Response => new Response(200, [
+                'opt_out' => (bool) $session['stats_opt_out'],
+                'leaderboard_opt_out' => (bool) $session['leaderboard_opt_out'],
+                'games' => $this->gameStats()->forUser((int) $session['id']),
+            ])],
+            'account/stats/settings' => ['POST', true, fn (array $session): Response => $this->statsSettings($session, $request)],
+            'account/leaderboard/settings' => ['POST', true, fn (array $session): Response => $this->leaderboardSettings($session, $request)],
+            // Ranglisten: lesen öffentlich (mit Anmeldung zusätzlich der eigene Platz), melden nur angemeldet mit CSRF-Token.
+            'games/{id}/leaderboard' => ['GET', false, fn (): Response => $this->leaderboards()->show($gameId, $request->query, $this->sessions()->current($request))],
+            'games/{id}/scores' => ['POST', true, fn (array $session): Response => $this->leaderboards()->submit($session, $gameId, $request->json())],
             'health' => ['GET', false, fn (): Response => $this->health()],
             'apps' => ['GET', false, fn (): Response => $this->apps($request)],
             'admin/migrate' => ['POST', false, fn (): Response => $this->migrate($request)],
@@ -88,6 +101,13 @@ final class Api
             'admin/rights' => ['GET', true, fn (array $session): Response => $this->admin()->rights($session, $request->query)],
             'admin/rights/set' => ['POST', true, fn (array $session): Response => $this->admin()->setRights($session, $request->json(), $request)],
             'admin/audit' => ['GET', true, fn (array $session): Response => $this->admin()->audit($session, $request->query)],
+            'admin/games' => ['GET', true, fn (array $session): Response => $this->admin()->games($session, $request->query)],
+            'admin/users/stats' => ['GET', true, fn (array $session): Response => $this->admin()->userStats($session, $request->query)],
+            'admin/leaderboard' => ['GET', true, fn (array $session): Response => $this->admin()->leaderboard($session, $request->query, $this->leaderboards())],
+            'admin/leaderboard/hide' => ['POST', true, fn (array $session): Response => $this->admin()->hideScore($session, $request->json(), $request, $this->leaderboards())],
+            'admin/apps' => ['GET', true, fn (array $session): Response => $this->admin()->apps($session)],
+            'admin/apps/update' => ['POST', true, fn (array $session): Response => $this->admin()->updateApp($session, $request->json(), $request)],
+            'admin/apps/access' => ['POST', true, fn (array $session): Response => $this->admin()->setAppAccess($session, $request->json(), $request)],
         ];
 
         $routes = $this->isAdmin() ? $adminRoutes : $siteRoutes;
@@ -175,7 +195,41 @@ final class Api
     private function admin(): Admin
     {
         $pdo = $this->pdo();
-        return new Admin($pdo, $this->clock, new Permissions($pdo), $this->sessions(), new AuditLog($pdo, $this->clock));
+        return new Admin($pdo, $this->clock, new Permissions($pdo), $this->sessions(), new AuditLog($pdo, $this->clock), $this->gameStats());
+    }
+
+    private function gameStats(): GameStats
+    {
+        $pdo = $this->pdo();
+        return new GameStats($pdo, $this->clock, new RateLimiter($pdo, $this->clock));
+    }
+
+    private function leaderboards(): Leaderboards
+    {
+        $pdo = $this->pdo();
+        return new Leaderboards($pdo, $this->clock, new RateLimiter($pdo, $this->clock), new AuditLog($pdo, $this->clock));
+    }
+
+    /** In Ranglisten erscheinen oder nicht. @param array<string, mixed> $session */
+    private function leaderboardSettings(array $session, Request $request): Response
+    {
+        $optOut = ($request->json()['opt_out'] ?? null) === true;
+        $this->pdo()->prepare('UPDATE users SET leaderboard_opt_out = ? WHERE id = ?')->execute([$optOut ? 1 : 0, $session['id']]);
+        (new AuditLog($this->pdo(), $this->clock))->log($optOut ? 'user.leaderboard_opt_out' : 'user.leaderboard_opt_in', $request, actorUserId: (int) $session['id'], targetType: 'user', targetId: (string) $session['id']);
+        return new Response(200, ['opt_out' => $optOut]);
+    }
+
+    /** Widerspruch gegen die Zuordnung der Spielstatistik zum Konto (Art. 21 DSGVO). @param array<string, mixed> $session */
+    private function statsSettings(array $session, Request $request): Response
+    {
+        $optOut = ($request->json()['opt_out'] ?? null) === true;
+        $this->pdo()->prepare('UPDATE users SET stats_opt_out = ? WHERE id = ?')->execute([$optOut ? 1 : 0, $session['id']]);
+        if ($optOut) {
+            // Auch die bisherige Statistik vom Konto trennen – sie zählt nur noch anonym mit.
+            $this->pdo()->prepare('UPDATE game_events SET user_id = NULL WHERE user_id = ?')->execute([$session['id']]);
+        }
+        (new AuditLog($this->pdo(), $this->clock))->log($optOut ? 'user.stats_opt_out' : 'user.stats_opt_in', $request, actorUserId: (int) $session['id'], targetType: 'user', targetId: (string) $session['id']);
+        return new Response(200, ['opt_out' => $optOut]);
     }
 
     private function gameSaves(): GameSaves

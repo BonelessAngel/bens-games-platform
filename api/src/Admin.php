@@ -21,7 +21,132 @@ final class Admin
         private Permissions $permissions,
         private Sessions $sessions,
         private AuditLog $audit,
+        private GameStats $stats,
     ) {
+    }
+
+    /**
+     * Auswertung eines Spiels (Spielzeit, Besuche, Level, Punkte, Zusatzwerte).
+     * @param array<string, mixed> $session
+     * @param array<string, string> $query {app, days}
+     */
+    public function games(array $session, array $query): Response
+    {
+        $this->require($session, 'stats.view');
+        return $this->stats->report($query);
+    }
+
+    /**
+     * Apps, die dieses Konto verwalten darf (app.<id>.manage oder Besitzer), mit Status, Sichtbarkeit und Freigaben.
+     * @param array<string, mixed> $session
+     */
+    public function apps(array $session): Response
+    {
+        $apps = array_values(array_filter(
+            $this->pdo->query('SELECT id, name, type, status, visibility, version, path FROM apps ORDER BY sort_order, name')->fetchAll(),
+            fn (array $app): bool => $this->canManageApp($session, $app['id']),
+        ));
+        $access = $this->pdo->prepare(
+            'SELECT u.id, u.display_name, x.created_at FROM app_access x JOIN users u ON u.id = x.user_id WHERE x.app_id = ? ORDER BY u.display_name'
+        );
+        foreach ($apps as &$app) {
+            $access->execute([$app['id']]);
+            $app['access'] = $access->fetchAll();
+        }
+        unset($app);
+        return new Response(200, ['apps' => $apps, 'statuses' => ['public', 'beta', 'private', 'maintenance'], 'visibilities' => ['all', 'signed_in', 'selected']]);
+    }
+
+    /**
+     * Status und Sichtbarkeit einer App ändern (z. B. Wartungsmodus).
+     * @param array<string, mixed> $session
+     * @param array<string, mixed> $input {id, status, visibility}
+     */
+    public function updateApp(array $session, array $input, Request $request): Response
+    {
+        $appId = (string) ($input['id'] ?? '');
+        $this->requireApp($session, $appId);
+        $status = (string) ($input['status'] ?? '');
+        $visibility = (string) ($input['visibility'] ?? '');
+        if (!in_array($status, ['public', 'beta', 'private', 'maintenance'], true) || !in_array($visibility, ['all', 'signed_in', 'selected'], true)) {
+            throw new HttpError(422, 'validation');
+        }
+        $this->pdo->prepare('UPDATE apps SET status = ?, visibility = ?, updated_at = ? WHERE id = ?')
+            ->execute([$status, $visibility, $this->clock->datetime(), $appId]);
+        $this->audit->log('admin.app_updated', $request, actorUserId: (int) $session['id'], targetType: 'app', targetId: $appId, details: ['status' => $status, 'visibility' => $visibility]);
+        return new Response(200, ['status' => $status, 'visibility' => $visibility]);
+    }
+
+    /**
+     * Ein Konto (per Anzeigename) für eine App freischalten oder die Freigabe entziehen.
+     * @param array<string, mixed> $session
+     * @param array<string, mixed> $input {app_id, display_name, grant: bool}
+     */
+    public function setAppAccess(array $session, array $input, Request $request): Response
+    {
+        $appId = (string) ($input['app_id'] ?? '');
+        $this->requireApp($session, $appId);
+        $statement = $this->pdo->prepare('SELECT id FROM users WHERE display_name = ?');
+        $statement->execute([trim((string) ($input['display_name'] ?? ''))]);
+        $userId = (int) $statement->fetchColumn();
+        if ($userId === 0) {
+            throw new HttpError(404, 'unknown_user');
+        }
+        $grant = ($input['grant'] ?? null) === true;
+        if ($grant) {
+            $this->pdo->prepare('INSERT IGNORE INTO app_access (user_id, app_id, created_at) VALUES (?, ?, ?)')->execute([$userId, $appId, $this->clock->datetime()]);
+        } else {
+            $this->pdo->prepare('DELETE FROM app_access WHERE user_id = ? AND app_id = ?')->execute([$userId, $appId]);
+        }
+        $this->audit->log($grant ? 'admin.app_access_granted' : 'admin.app_access_revoked', $request, actorUserId: (int) $session['id'], targetType: 'app', targetId: $appId, details: ['user' => $userId]);
+        return new Response(200, ['granted' => $grant, 'user_id' => $userId]);
+    }
+
+    /** Ranglisten moderieren (Recht „moderation“). @param array<string, mixed> $session @param array<string, string> $query */
+    public function leaderboard(array $session, array $query, Leaderboards $leaderboards): Response
+    {
+        $this->require($session, 'moderation');
+        return $leaderboards->moderationList($query);
+    }
+
+    /** @param array<string, mixed> $session @param array<string, mixed> $input */
+    public function hideScore(array $session, array $input, Request $request, Leaderboards $leaderboards): Response
+    {
+        $this->require($session, 'moderation');
+        return $leaderboards->setHidden($session, $input, $request);
+    }
+
+    /** @param array<string, mixed> $session */
+    private function canManageApp(array $session, string $appId): bool
+    {
+        return $this->permissions->has((int) $session['id'], "app.$appId.manage");
+    }
+
+    /** @param array<string, mixed> $session */
+    private function requireApp(array $session, string $appId): void
+    {
+        $statement = $this->pdo->prepare('SELECT 1 FROM apps WHERE id = ?');
+        $statement->execute([$appId]);
+        if (!$statement->fetchColumn()) {
+            throw new HttpError(404, 'unknown_app');
+        }
+        if (!$this->canManageApp($session, $appId)) {
+            throw new HttpError(403, 'missing_permission', ['permission' => "app.$appId.manage"]);
+        }
+    }
+
+    /**
+     * Statistik eines einzelnen Kontos – nur mit stats.view und users.view.
+     * @param array<string, mixed> $session
+     * @param array<string, string> $query {id}
+     */
+    public function userStats(array $session, array $query): Response
+    {
+        $this->require($session, 'stats.view');
+        $this->require($session, 'users.view');
+        $target = (int) ($query['id'] ?? 0);
+        $this->assertUserExists($target);
+        return new Response(200, ['user_id' => $target, 'games' => $this->stats->forUser($target)]);
     }
 
     /** Wer bin ich in der Zentrale, was darf ich? @param array<string, mixed> $session */
@@ -114,6 +239,15 @@ final class Admin
             }
             return $user;
         }, $statement->fetchAll());
+
+        // Spielzeit der letzten 90 Tage nur zusammen mit dem Recht für Statistik.
+        if ($this->permissions->has((int) $session['id'], 'stats.view')) {
+            $playtime = $this->stats->playtimeByUser(array_column($users, 'id'));
+            foreach ($users as &$user) {
+                $user['playtime_seconds'] = $playtime[$user['id']] ?? 0;
+            }
+            unset($user);
+        }
 
         return new Response(200, ['users' => $users, 'total' => $total, 'page' => $page, 'page_size' => self::PAGE_SIZE]);
     }

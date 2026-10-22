@@ -21,7 +21,10 @@
       </span>
       <nav aria-label="Bereiche" data-nav hidden>
         <a href="#uebersicht" data-tab="uebersicht" data-needs="stats.view">Übersicht</a>
+        <a href="#spiele" data-tab="spiele" data-needs="stats.view">Spiele</a>
         <a href="#konten" data-tab="konten" data-needs="users.view">Konten</a>
+        <a href="#moderation" data-tab="moderation" data-needs="moderation">Moderation</a>
+        <a href="#apps" data-tab="apps" data-needs="app.*.manage">Apps</a>
         <a href="#protokoll" data-tab="protokoll" data-needs="audit.view">Protokoll</a>
         <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
       </nav>
@@ -61,6 +64,37 @@
       <table class="table"><thead><tr><th>Spiel</th><th>Spielstände</th></tr></thead><tbody data-saves></tbody></table>
     </section>
 
+    <section data-view="spiele" hidden>
+      <h1>Spiele</h1>
+      <div class="admin-search">
+        <select data-game-select aria-label="Spiel"></select>
+        <select data-game-days aria-label="Zeitraum">
+          <option value="7">letzte 7 Tage</option>
+          <option value="30" selected>letzte 30 Tage</option>
+          <option value="90">letzte 90 Tage</option>
+        </select>
+      </div>
+      <div class="stats" data-game-tiles></div>
+
+      <h2>Besuche und Spielzeit pro Tag</h2>
+      <div class="chart" data-game-chart role="img" aria-label="Spielzeit pro Tag"></div>
+
+      <h2>Level</h2>
+      <p class="hint" data-game-hints></p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Level</th><th>Versuche</th><th>Gewonnen</th><th>Verloren</th><th>Aufgegeben</th><th>Gewinnquote</th><th>Ø Dauer</th><th>Ø Punkte</th><th>Bestwert</th><th>Ø Sterne</th></tr></thead>
+          <tbody data-game-levels></tbody>
+        </table>
+      </div>
+
+      <h2>Details</h2>
+      <p class="hint">Zusatzwerte, die das Spiel beim Levelende meldet (z. B. genutzte Türme), summiert.</p>
+      <div class="table-wrap">
+        <table class="table"><thead><tr><th>Wert</th><th>Summe</th></tr></thead><tbody data-game-details></tbody></table>
+      </div>
+    </section>
+
     <section data-view="konten" hidden>
       <h1>Konten</h1>
       <form class="admin-search" data-form="search">
@@ -69,11 +103,17 @@
       </form>
       <div class="table-wrap">
         <table class="table">
-          <thead><tr><th>Name</th><th data-email-col>E-Mail</th><th>Status</th><th>Registriert</th><th>Zuletzt angemeldet</th><th>2FA</th><th>Rollen</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th data-email-col>E-Mail</th><th>Status</th><th>Registriert</th><th>Zuletzt angemeldet</th><th>2FA</th><th data-playtime-col>Spielzeit (90 T.)</th><th>Rollen</th><th></th></tr></thead>
           <tbody data-users></tbody>
         </table>
       </div>
       <div class="pager" data-pager="users"></div>
+
+      <div class="panel" data-user-stats hidden>
+        <h2>Spielstatistik von <span data-user-stats-name></span></h2>
+        <ul class="sessions" data-user-stats-list></ul>
+        <button class="button button--secondary" type="button" data-user-stats-close>Schließen</button>
+      </div>
 
       <div class="panel" data-rights hidden>
         <h2>Rechte für <span data-rights-name></span></h2>
@@ -87,6 +127,31 @@
           </div>
         </form>
       </div>
+    </section>
+
+    <section data-view="moderation" hidden>
+      <h1>Moderation: Ranglisten</h1>
+      <p class="hint">Verdächtige Einträge (z. B. unmögliche Punktzahlen) ausblenden. Ausgeblendete Einträge erscheinen in keiner Rangliste; jede Änderung landet im Protokoll.</p>
+      <div class="admin-search">
+        <select data-mod-game aria-label="Spiel"></select>
+        <select data-mod-board aria-label="Rangliste"></select>
+        <select data-mod-period aria-label="Zeitraum">
+          <option value="week">Diese Woche</option>
+          <option value="all">Gesamt</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Platz</th><th>Name</th><th>Punkte</th><th>Erreicht</th><th>Status</th><th></th></tr></thead>
+          <tbody data-mod-entries></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section data-view="apps" hidden>
+      <h1>Apps</h1>
+      <p class="hint">Status und Sichtbarkeit gelten sofort. „Wartung“ zeigt die App in der Bibliothek ausgegraut und ohne Link. Freigaben gelten für „ausgewählte Nutzer“ und private Apps.</p>
+      <div data-apps></div>
     </section>
 
     <section data-view="protokoll" hidden>

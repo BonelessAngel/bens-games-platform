@@ -40,6 +40,15 @@ const ACTIONS = {
   'admin.user_unlocked': 'Zentrale: Konto entsperrt',
   'admin.sessions_revoked': 'Zentrale: Sitzungen beendet',
   'admin.rights_changed': 'Zentrale: Rechte geändert',
+  'admin.score_hidden': 'Zentrale: Ranglisten-Eintrag ausgeblendet',
+  'admin.score_shown': 'Zentrale: Ranglisten-Eintrag eingeblendet',
+  'admin.app_updated': 'Zentrale: App geändert',
+  'admin.app_access_granted': 'Zentrale: App freigeschaltet',
+  'admin.app_access_revoked': 'Zentrale: App-Freigabe entfernt',
+  'user.leaderboard_opt_out': 'Aus Ranglisten herausgenommen',
+  'user.leaderboard_opt_in': 'In Ranglisten aufgenommen',
+  'user.stats_opt_out': 'Statistik-Zuordnung abgeschaltet',
+  'user.stats_opt_in': 'Statistik-Zuordnung eingeschaltet',
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -71,7 +80,11 @@ function notify(text, kind = 'error') {
   notice.hidden = !text;
 }
 
-const can = (permission) => me?.permissions.includes('*') || me?.permissions.includes(permission);
+const can = (permission) => {
+  if (me?.permissions.includes('*')) return true;
+  if (permission === 'app.*.manage') return me?.permissions.some((p) => /^app\..+\.manage$/.test(p)) ?? false;
+  return me?.permissions.includes(permission) ?? false;
+};
 
 function formatDate(utc) {
   if (!utc) return '–';
@@ -161,7 +174,14 @@ function showTab(name) {
     else tabLink.removeAttribute('aria-current');
   }
   notify('');
-  ({ uebersicht: loadOverview, konten: () => loadUsers(1), protokoll: () => loadAudit(1) })[tab]?.();
+  ({
+    uebersicht: loadOverview,
+    spiele: loadGames,
+    konten: () => loadUsers(1),
+    moderation: loadModeration,
+    apps: loadApps,
+    protokoll: () => loadAudit(1),
+  })[tab]?.();
 }
 
 window.addEventListener('hashchange', () => me && showTab(window.location.hash.slice(1)));
@@ -207,6 +227,85 @@ async function loadOverview() {
   }));
 }
 
+// --- Spiele ----------------------------------------------------------------
+
+function formatDuration(seconds) {
+  if (seconds == null) return '–';
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.round(seconds / 60);
+  return minutes < 60 ? `${minutes} Min.` : `${Math.floor(minutes / 60)} Std. ${minutes % 60} Min.`;
+}
+
+const percent = (value) => (value == null ? '–' : `${Math.round(value * 100)} %`);
+const number = (value) => (value == null ? '–' : Number(value).toLocaleString('de-DE'));
+
+$('[data-game-select]').addEventListener('change', () => loadGames());
+$('[data-game-days]').addEventListener('change', () => loadGames());
+
+async function loadGames() {
+  const select = $('[data-game-select]');
+  const { ok, data } = await api('admin/games', { query: { app: select.value, days: $('[data-game-days]').value } });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+
+  if (select.options.length !== data.apps.length) {
+    select.replaceChildren(...data.apps.map((app) => new Option(app.name, app.id)));
+  }
+  select.value = data.app;
+
+  const t = data.totals;
+  const tiles = [
+    [formatDuration(t.seconds), 'Spielzeit gesamt'],
+    [number(t.visits), 'Besuche'],
+    [formatDuration(t.avg_seconds_per_visit), 'Ø Spielzeit pro Besuch'],
+    [number(t.players), 'Spieler mit Konto'],
+    [number(t.level_starts), 'Level gestartet'],
+    [number(t.wins), 'Level gewonnen'],
+  ];
+  $('[data-game-tiles]').replaceChildren(...tiles.map(([value, label]) => {
+    const tile = Object.assign(document.createElement('div'), { className: 'stat' });
+    tile.append(Object.assign(document.createElement('strong'), { textContent: value }), Object.assign(document.createElement('span'), { textContent: label }));
+    return tile;
+  }));
+
+  // Balken pro Tag: Höhe = Spielzeit, Beschriftung beim Darüberfahren.
+  const max = Math.max(1, ...data.daily.map((d) => d.seconds));
+  const chart = $('[data-game-chart]');
+  chart.replaceChildren(...data.daily.map((day) => {
+    const bar = Object.assign(document.createElement('div'), { className: 'chart__bar' });
+    bar.style.height = `${Math.max(2, Math.round((day.seconds / max) * 100))}%`;
+    bar.title = `${new Date(day.day).toLocaleDateString('de-DE')}: ${day.visits} Besuche, ${formatDuration(day.seconds)}`;
+    return bar;
+  }));
+  if (!data.daily.length) chart.append(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Noch keine Daten in diesem Zeitraum.' }));
+
+  const hardest = new Set(data.hardest.slice(0, 1));
+  const abandoned = new Set(data.most_abandoned.slice(0, 1));
+  const hints = [];
+  if (data.hardest.length) hints.push(`Schwerstes Level: ${data.hardest[0]}`);
+  if (data.most_abandoned.length) hints.push(`am häufigsten aufgegeben: ${data.most_abandoned[0]}`);
+  $('[data-game-hints]').textContent = hints.length
+    ? `${hints.join(' · ')} (berücksichtigt ab ${data.min_tries_for_ranking} Versuchen)`
+    : `Hinweise auf schwere Level erscheinen ab ${data.min_tries_for_ranking} Versuchen pro Level.`;
+
+  $('[data-game-levels]').replaceChildren(...data.levels.map((level) => {
+    const row = document.createElement('tr');
+    if (hardest.has(level.level)) row.className = 'row--hard';
+    if (abandoned.has(level.level)) row.className = 'row--abandoned';
+    row.append(
+      cell(level.level), cell(number(level.tries)), cell(number(level.wins)), cell(number(level.losses)), cell(number(level.aborts)),
+      cell(percent(level.win_rate)), cell(formatDuration(level.avg_seconds)), cell(number(level.avg_score)), cell(number(level.max_score)),
+      cell(level.avg_stars == null ? '–' : String(level.avg_stars).replace('.', ',')),
+    );
+    return row;
+  }));
+
+  $('[data-game-details]').replaceChildren(...data.details.map((detail) => {
+    const row = document.createElement('tr');
+    row.append(cell(detail.key), cell(number(detail.total)));
+    return row;
+  }));
+}
+
 // --- Konten ----------------------------------------------------------------
 
 let userQuery = '';
@@ -221,7 +320,9 @@ async function loadUsers(page) {
   const { ok, data } = await api('admin/users', { query: { q: userQuery, page } });
   if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
   const showEmail = can('users.view_email');
+  const showPlaytime = can('stats.view');
   $('[data-email-col]').hidden = !showEmail;
+  $('[data-playtime-col]').hidden = !showPlaytime;
   $('[data-form="search"] input').placeholder = showEmail ? 'Name oder E-Mail suchen …' : 'Name suchen …';
 
   $('[data-users]').replaceChildren(...data.users.map((user) => {
@@ -230,7 +331,9 @@ async function loadUsers(page) {
     if (user.status === 'locked') status.className = 'status--locked';
     row.append(cell(user.display_name));
     if (showEmail) row.append(cell(user.email ?? ''));
-    row.append(status, cell(formatDate(user.created_at)), cell(formatDate(user.last_login_at)), cell(user.two_factor ? 'an' : '–'), cell(user.roles.join(', ') || '–'));
+    row.append(status, cell(formatDate(user.created_at)), cell(formatDate(user.last_login_at)), cell(user.two_factor ? 'an' : '–'));
+    if (showPlaytime) row.append(cell(formatDuration(user.playtime_seconds)));
+    row.append(cell(user.roles.join(', ') || '–'));
 
     const actions = Object.assign(document.createElement('td'), { className: 'actions' });
     const isSelf = user.id === me.user.id;
@@ -250,11 +353,39 @@ async function loadUsers(page) {
     if (can('roles.manage') && !isSelf && !user.roles.includes('owner')) {
       actions.append(button('Rechte', () => openRights(user)));
     }
+    if (can('stats.view') && can('users.view')) {
+      actions.append(button('Statistik', () => openUserStats(user)));
+    }
     row.append(actions);
     return row;
   }));
   pager('users', data.page, data.page * data.page_size < data.total, loadUsers);
 }
+
+async function openUserStats(user) {
+  const { ok, data } = await api('admin/users/stats', { query: { id: user.id } });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-user-stats-name]').textContent = user.display_name;
+  const items = data.games.map((game) => {
+    const item = Object.assign(document.createElement('li'), { className: 'sessions__item' });
+    const text = document.createElement('div');
+    text.append(
+      Object.assign(document.createElement('strong'), { textContent: game.name }),
+      Object.assign(document.createElement('span'), {
+        textContent: `${formatDuration(game.seconds)} gespielt · ${game.wins} von ${game.finished} Leveln geschafft · Bestwert ${number(game.best_score)} · zuletzt ${formatDate(game.last_played)}`,
+      }),
+    );
+    item.append(text);
+    return item;
+  });
+  $('[data-user-stats-list]').replaceChildren(...(items.length ? items : [Object.assign(document.createElement('li'), { textContent: 'Keine Statistik (noch nicht gespielt oder Zuordnung abgeschaltet).' })]));
+  $('[data-user-stats]').hidden = false;
+  $('[data-user-stats]').scrollIntoView({ behavior: 'smooth' });
+}
+
+$('[data-user-stats-close]').addEventListener('click', () => {
+  $('[data-user-stats]').hidden = true;
+});
 
 // --- Rechte ----------------------------------------------------------------
 
@@ -298,6 +429,105 @@ $('[data-form="rights"]').addEventListener('submit', async (event) => {
   notify(`Rechte für ${rightsUser.display_name} gespeichert.`, 'success');
   loadUsers(1);
 });
+
+// --- Moderation ------------------------------------------------------------
+
+for (const selector of ['[data-mod-game]', '[data-mod-board]', '[data-mod-period]']) {
+  $(selector).addEventListener('change', (event) => {
+    if (selector === '[data-mod-game]') $('[data-mod-board]').replaceChildren();
+    loadModeration();
+  });
+}
+
+async function loadModeration() {
+  const { ok, data } = await api('admin/leaderboard', {
+    query: { app: $('[data-mod-game]').value, board: $('[data-mod-board]').value, period: $('[data-mod-period]').value },
+  });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-mod-game]').replaceChildren(...data.apps.map((app) => new Option(app.name, app.id)));
+  $('[data-mod-game]').value = data.app;
+  $('[data-mod-board]').replaceChildren(...data.boards.map((board) => new Option(/^\d+$/.test(board) ? `Level ${board}` : board, board)));
+  $('[data-mod-board]').value = data.board;
+
+  let rank = 0;
+  $('[data-mod-entries]').replaceChildren(...data.entries.map((entry) => {
+    const hidden = entry.hidden_at !== null;
+    if (!hidden && entry.status === 'active') rank += 1;
+    const row = document.createElement('tr');
+    const status = hidden ? `ausgeblendet${entry.hidden_reason ? ` (${entry.hidden_reason})` : ''}` : entry.status === 'locked' ? 'Konto gesperrt' : 'sichtbar';
+    row.append(cell(hidden || entry.status !== 'active' ? '–' : String(rank)), cell(entry.display_name), cell(number(entry.score)), cell(formatDate(entry.achieved_at)), cell(status));
+    const actions = Object.assign(document.createElement('td'), { className: 'actions' });
+    actions.append(button(hidden ? 'Einblenden' : 'Ausblenden', async () => {
+      const reason = hidden ? '' : window.prompt('Grund (optional, z. B. „unmögliche Punktzahl“):', '') ?? null;
+      if (reason === null) return;
+      const result = await api('admin/leaderboard/hide', { method: 'POST', body: { id: Number(entry.id), hidden: !hidden, reason } });
+      if (!result.ok) return notify(MESSAGES[result.data.error] ?? FALLBACK);
+      loadModeration();
+    }, hidden ? 'secondary' : 'danger'));
+    row.append(actions);
+    return row;
+  }));
+  if (!data.entries.length) {
+    const row = document.createElement('tr');
+    const empty = cell('Noch keine Einträge.');
+    empty.colSpan = 6;
+    row.append(empty);
+    $('[data-mod-entries]').replaceChildren(row);
+  }
+}
+
+// --- Apps ------------------------------------------------------------------
+
+const STATUS_LABELS = { public: 'öffentlich', beta: 'Beta', private: 'privat', maintenance: 'Wartung' };
+const VISIBILITY_LABELS = { all: 'alle', signed_in: 'nur angemeldete Nutzer', selected: 'ausgewählte Nutzer' };
+
+async function loadApps() {
+  const { ok, data } = await api('admin/apps');
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-apps]').replaceChildren(...data.apps.map((app) => {
+    const panel = Object.assign(document.createElement('div'), { className: 'panel' });
+    panel.append(Object.assign(document.createElement('h2'), { textContent: `${app.name} · Version ${app.version}` }));
+
+    const form = Object.assign(document.createElement('form'), { className: 'admin-search' });
+    const status = document.createElement('select');
+    status.append(...data.statuses.map((value) => new Option(STATUS_LABELS[value], value, false, value === app.status)));
+    status.setAttribute('aria-label', 'Status');
+    const visibility = document.createElement('select');
+    visibility.append(...data.visibilities.map((value) => new Option(VISIBILITY_LABELS[value], value, false, value === app.visibility)));
+    visibility.setAttribute('aria-label', 'Sichtbarkeit');
+    const save = Object.assign(document.createElement('button'), { type: 'submit', className: 'button', textContent: 'Speichern' });
+    form.append(status, visibility, save);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const result = await api('admin/apps/update', { method: 'POST', body: { id: app.id, status: status.value, visibility: visibility.value } });
+      notify(result.ok ? `${app.name}: gespeichert.` : MESSAGES[result.data.error] ?? FALLBACK, result.ok ? 'success' : 'error');
+    });
+
+    const access = Object.assign(document.createElement('ul'), { className: 'sessions' });
+    access.append(...app.access.map((user) => {
+      const item = Object.assign(document.createElement('li'), { className: 'sessions__item' });
+      item.append(Object.assign(document.createElement('span'), { textContent: user.display_name }), button('Entfernen', async () => {
+        await api('admin/apps/access', { method: 'POST', body: { app_id: app.id, display_name: user.display_name, grant: false } });
+        loadApps();
+      }));
+      return item;
+    }));
+
+    const grant = Object.assign(document.createElement('form'), { className: 'admin-search' });
+    const name = Object.assign(document.createElement('input'), { type: 'text', placeholder: 'Name des Kontos freischalten …' });
+    name.setAttribute('aria-label', 'Name des Kontos');
+    grant.append(name, Object.assign(document.createElement('button'), { type: 'submit', className: 'button button--secondary', textContent: 'Freischalten' }));
+    grant.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const result = await api('admin/apps/access', { method: 'POST', body: { app_id: app.id, display_name: name.value, grant: true } });
+      if (!result.ok) return notify(result.data.error === 'unknown_user' ? 'Kein Konto mit diesem Namen.' : MESSAGES[result.data.error] ?? FALLBACK);
+      loadApps();
+    });
+
+    panel.append(form, Object.assign(document.createElement('h3'), { textContent: 'Freigaben' }), access, grant);
+    return panel;
+  }));
+}
 
 // --- Protokoll -------------------------------------------------------------
 

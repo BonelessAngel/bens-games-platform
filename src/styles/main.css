@@ -639,6 +639,129 @@ a.card:focus-visible .card__cta {
   overflow-wrap: anywhere;
 }
 
+/* Ranglisten */
+.ranks {
+  max-width: 760px;
+  padding-top: 48px;
+  padding-bottom: 64px;
+}
+
+.ranks h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+.ranks__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.ranks__controls label {
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.ranks__controls select {
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.segmented button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+.ranks__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranks__item {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.ranks__rank {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.ranks__item--top1 .ranks__rank { color: #f6c453; }
+.ranks__item--top2 .ranks__rank { color: #c9d1e6; }
+.ranks__item--top3 .ranks__rank { color: #e0965a; }
+
+.ranks__name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranks__score {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranks__date {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.ranks__item--me {
+  border-color: var(--accent);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+@media (max-width: 480px) {
+  .ranks__item {
+    grid-template-columns: 2.2rem 1fr auto;
+  }
+
+  .ranks__date {
+    display: none;
+  }
+}
+
 /* Fußzeile */
 .site-footer {
   border-top: 1px solid var(--border);

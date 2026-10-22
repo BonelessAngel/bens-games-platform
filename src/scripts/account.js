@@ -267,6 +267,7 @@ const pages = {
 
     setupTwoFactor(root, data.user, csrf, () => loadSessions());
     loadGames(root, csrf);
+    loadStats(root, csrf);
 
     // Geräte
     const list = root.querySelector('[data-sessions]');
@@ -363,6 +364,50 @@ async function loadGames(root, csrf) {
     item.append(text, button);
     list.append(item);
   }
+}
+
+function formatDuration(seconds) {
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} Min.`;
+  return `${Math.floor(minutes / 60)} Std. ${minutes % 60} Min.`;
+}
+
+// Bereich „Spielstatistik“ auf „Mein Konto“: eigene Werte und Widerspruch gegen die Zuordnung.
+async function loadStats(root, csrf) {
+  const list = root.querySelector('[data-stats-list]');
+  const toggle = root.querySelector('[data-stats-optin]');
+  const { ok, data } = await api('account/stats');
+  if (!ok) return;
+  toggle.checked = !data.opt_out;
+  list.replaceChildren(...(data.games.length ? data.games : []).map((game) => {
+    const item = Object.assign(document.createElement('li'), { className: 'sessions__item' });
+    const text = document.createElement('div');
+    const finished = game.finished ? ` · ${game.wins} von ${game.finished} Leveln geschafft` : '';
+    const best = game.best_score != null ? ` · Bestwert ${game.best_score.toLocaleString('de-DE')}` : '';
+    text.append(
+      Object.assign(document.createElement('strong'), { textContent: game.name }),
+      Object.assign(document.createElement('span'), { textContent: `${formatDuration(game.seconds)} gespielt${finished}${best}` }),
+    );
+    item.append(text);
+    return item;
+  }));
+  const ranks = root.querySelector('[data-leaderboard-optin]');
+  ranks.checked = !data.leaderboard_opt_out;
+  ranks.onchange = async () => {
+    ranks.disabled = true;
+    await api('account/leaderboard/settings', { method: 'POST', body: { opt_out: !ranks.checked }, csrf });
+    ranks.disabled = false;
+  };
+  toggle.onchange = async () => {
+    if (!toggle.checked && !window.confirm('Statistik nicht mehr deinem Konto zuordnen? Auch die bisherige wird vom Konto getrennt und zählt nur noch anonym.')) {
+      toggle.checked = true;
+      return;
+    }
+    toggle.disabled = true;
+    await api('account/stats/settings', { method: 'POST', body: { opt_out: !toggle.checked }, csrf });
+    toggle.disabled = false;
+    loadStats(root, csrf);
+  };
 }
 
 // Bereich „Zwei-Faktor-Anmeldung“ auf „Mein Konto“: aus → einrichten → Codes zeigen → an.
