@@ -1,5 +1,6 @@
 // Zentrale (admin.bens-games.de): Anmeldung mit Zwei-Faktor, Übersicht, Konten, Rechte, Protokoll.
 // Alle Prüfungen passieren auf dem Server – hier wird nur angezeigt, was die API erlaubt.
+import { boardLabel } from '../lib/boards.js';
 
 const MESSAGES = {
   invalid_credentials: 'E-Mail oder Passwort ist falsch.',
@@ -446,7 +447,7 @@ async function loadModeration() {
   if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
   $('[data-mod-game]').replaceChildren(...data.apps.map((app) => new Option(app.name, app.id)));
   $('[data-mod-game]').value = data.app;
-  $('[data-mod-board]').replaceChildren(...data.boards.map((board) => new Option(/^\d+$/.test(board) ? `Level ${board}` : board, board)));
+  $('[data-mod-board]').replaceChildren(...data.boards.map((board) => new Option(boardLabel(board), board)));
   $('[data-mod-board]').value = data.board;
 
   let rank = 0;

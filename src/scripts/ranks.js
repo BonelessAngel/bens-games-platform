@@ -1,6 +1,7 @@
 // Öffentliche Ranglisten: Rekord aller Zeiten, Siegertreppchen für Platz 1–3, Liste ab Platz 4,
 // eigener Platz unten angeheftet. Ohne Konto sichtbar; mit Anmeldung wird der eigene Eintrag hervorgehoben.
 import { avatarSvg } from '../../lib/avatars.js';
+import { boardLabel } from '../../lib/boards.js';
 import { userReady } from './nav.js';
 
 const $ = (selector) => document.querySelector(selector);
@@ -17,7 +18,27 @@ async function getJson(path) {
 
 const formatDate = (utc) => new Date(`${utc.replace(' ', 'T')}Z`).toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' });
 const points = (value) => value.toLocaleString('de-DE');
-export const boardLabel = (board) => (/^\d+$/.test(board) ? `Level ${board}` : board.charAt(0).toUpperCase() + board.slice(1));
+
+// Auswahl als Kacheln (Spiele) bzw. Chips (Ranglisten) statt Ausklapplisten.
+function renderChoices(container, items, selected, className, onPick) {
+  container.replaceChildren(...items.map((item) => {
+    const button = el('button', className);
+    button.type = 'button';
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', String(item.id === selected));
+    if (item.icon) {
+      const img = document.createElement('img');
+      img.src = item.icon;
+      img.alt = '';
+      img.width = 36;
+      img.height = 36;
+      button.append(img);
+    }
+    button.append(el('span', null, item.label));
+    button.addEventListener('click', () => onPick(item.id));
+    return button;
+  }));
+}
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -77,14 +98,26 @@ function row(entry) {
   return item;
 }
 
+let games = [];
+
+function renderGames() {
+  renderChoices($('[data-rank-games]'), games.map((g) => ({ id: g.id, label: g.name, icon: g.icon })), state.game, 'game-tab', (id) => {
+    state.game = id;
+    state.board = '';
+    const url = new URL(window.location.href);
+    url.searchParams.set('spiel', id);
+    history.replaceState(null, '', url);
+    renderGames();
+    load();
+  });
+}
+
 async function loadGames() {
   const data = await getJson('/api/apps');
-  const games = (data?.apps ?? []).filter((app) => app.type === 'game');
-  const select = $('[data-rank-game]');
-  select.replaceChildren(...games.map((game) => new Option(game.name, game.id)));
+  games = (data?.apps ?? []).filter((app) => app.type === 'game');
   const fromUrl = new URLSearchParams(window.location.search).get('spiel');
   state.game = games.some((g) => g.id === fromUrl) ? fromUrl : games[0]?.id ?? '';
-  select.value = state.game;
+  renderGames();
 }
 
 async function load() {
@@ -96,7 +129,6 @@ async function load() {
     userReady,
   ]);
 
-  const boardSelect = $('[data-rank-board]');
   if (!data) {
     renderRecord(null);
     renderPodium([]);
@@ -107,9 +139,10 @@ async function load() {
   }
 
   state.board = data.board;
-  boardSelect.replaceChildren(...data.boards.map((board) => new Option(boardLabel(board), board)));
-  boardSelect.value = data.board;
-  boardSelect.disabled = data.boards.length === 0;
+  renderChoices($('[data-rank-boards]'), data.boards.map((b) => ({ id: b, label: boardLabel(b) })), data.board, 'chip', (id) => {
+    state.board = id;
+    load();
+  });
 
   renderRecord(data.record);
   renderPodium(data.entries.filter((e) => e.rank <= 3));
@@ -130,15 +163,6 @@ async function load() {
   $('[data-rank-hint]').hidden = Boolean(user);
 }
 
-$('[data-rank-game]').addEventListener('change', (event) => {
-  state.game = event.target.value;
-  state.board = '';
-  load();
-});
-$('[data-rank-board]').addEventListener('change', (event) => {
-  state.board = event.target.value;
-  load();
-});
 for (const button of document.querySelectorAll('[data-rank-period]')) {
   button.addEventListener('click', () => {
     state.period = button.dataset.rankPeriod;
