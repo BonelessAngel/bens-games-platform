@@ -28,7 +28,7 @@ test('Nova-Bastion-Level: nur bekannte Felder, Werte begrenzt, Texte bereinigt',
     $lv = NovaBastionLevel::sanitize(sampleLevel());
     same('Mein bLevel/b', $lv['name']);
     same([[100, 100, 'high', ['only' => ['laser'], 'pre' => 'laser', 'pt' => 3]]], $lv['spots']);
-    same(5, $lv['diff']['hp']);
+    same(5.0, $lv['diff']['hp']);
     same(1.5, $lv['diff']['gold']);
     same(null, $lv['obj']);
     same('air', $lv['focus']);
