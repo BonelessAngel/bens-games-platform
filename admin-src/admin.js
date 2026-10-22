@@ -40,6 +40,8 @@ const ACTIONS = {
   'admin.user_unlocked': 'Zentrale: Konto entsperrt',
   'admin.sessions_revoked': 'Zentrale: Sitzungen beendet',
   'admin.rights_changed': 'Zentrale: Rechte geändert',
+  'user.stats_opt_out': 'Statistik-Zuordnung abgeschaltet',
+  'user.stats_opt_in': 'Statistik-Zuordnung eingeschaltet',
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -161,7 +163,7 @@ function showTab(name) {
     else tabLink.removeAttribute('aria-current');
   }
   notify('');
-  ({ uebersicht: loadOverview, konten: () => loadUsers(1), protokoll: () => loadAudit(1) })[tab]?.();
+  ({ uebersicht: loadOverview, spiele: loadGames, konten: () => loadUsers(1), protokoll: () => loadAudit(1) })[tab]?.();
 }
 
 window.addEventListener('hashchange', () => me && showTab(window.location.hash.slice(1)));
@@ -207,6 +209,85 @@ async function loadOverview() {
   }));
 }
 
+// --- Spiele ----------------------------------------------------------------
+
+function formatDuration(seconds) {
+  if (seconds == null) return '–';
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.round(seconds / 60);
+  return minutes < 60 ? `${minutes} Min.` : `${Math.floor(minutes / 60)} Std. ${minutes % 60} Min.`;
+}
+
+const percent = (value) => (value == null ? '–' : `${Math.round(value * 100)} %`);
+const number = (value) => (value == null ? '–' : Number(value).toLocaleString('de-DE'));
+
+$('[data-game-select]').addEventListener('change', () => loadGames());
+$('[data-game-days]').addEventListener('change', () => loadGames());
+
+async function loadGames() {
+  const select = $('[data-game-select]');
+  const { ok, data } = await api('admin/games', { query: { app: select.value, days: $('[data-game-days]').value } });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+
+  if (select.options.length !== data.apps.length) {
+    select.replaceChildren(...data.apps.map((app) => new Option(app.name, app.id)));
+  }
+  select.value = data.app;
+
+  const t = data.totals;
+  const tiles = [
+    [formatDuration(t.seconds), 'Spielzeit gesamt'],
+    [number(t.visits), 'Besuche'],
+    [formatDuration(t.avg_seconds_per_visit), 'Ø Spielzeit pro Besuch'],
+    [number(t.players), 'Spieler mit Konto'],
+    [number(t.level_starts), 'Level gestartet'],
+    [number(t.wins), 'Level gewonnen'],
+  ];
+  $('[data-game-tiles]').replaceChildren(...tiles.map(([value, label]) => {
+    const tile = Object.assign(document.createElement('div'), { className: 'stat' });
+    tile.append(Object.assign(document.createElement('strong'), { textContent: value }), Object.assign(document.createElement('span'), { textContent: label }));
+    return tile;
+  }));
+
+  // Balken pro Tag: Höhe = Spielzeit, Beschriftung beim Darüberfahren.
+  const max = Math.max(1, ...data.daily.map((d) => d.seconds));
+  const chart = $('[data-game-chart]');
+  chart.replaceChildren(...data.daily.map((day) => {
+    const bar = Object.assign(document.createElement('div'), { className: 'chart__bar' });
+    bar.style.height = `${Math.max(2, Math.round((day.seconds / max) * 100))}%`;
+    bar.title = `${new Date(day.day).toLocaleDateString('de-DE')}: ${day.visits} Besuche, ${formatDuration(day.seconds)}`;
+    return bar;
+  }));
+  if (!data.daily.length) chart.append(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Noch keine Daten in diesem Zeitraum.' }));
+
+  const hardest = new Set(data.hardest.slice(0, 1));
+  const abandoned = new Set(data.most_abandoned.slice(0, 1));
+  const hints = [];
+  if (data.hardest.length) hints.push(`Schwerstes Level: ${data.hardest[0]}`);
+  if (data.most_abandoned.length) hints.push(`am häufigsten aufgegeben: ${data.most_abandoned[0]}`);
+  $('[data-game-hints]').textContent = hints.length
+    ? `${hints.join(' · ')} (berücksichtigt ab ${data.min_tries_for_ranking} Versuchen)`
+    : `Hinweise auf schwere Level erscheinen ab ${data.min_tries_for_ranking} Versuchen pro Level.`;
+
+  $('[data-game-levels]').replaceChildren(...data.levels.map((level) => {
+    const row = document.createElement('tr');
+    if (hardest.has(level.level)) row.className = 'row--hard';
+    if (abandoned.has(level.level)) row.className = 'row--abandoned';
+    row.append(
+      cell(level.level), cell(number(level.tries)), cell(number(level.wins)), cell(number(level.losses)), cell(number(level.aborts)),
+      cell(percent(level.win_rate)), cell(formatDuration(level.avg_seconds)), cell(number(level.avg_score)), cell(number(level.max_score)),
+      cell(level.avg_stars == null ? '–' : String(level.avg_stars).replace('.', ',')),
+    );
+    return row;
+  }));
+
+  $('[data-game-details]').replaceChildren(...data.details.map((detail) => {
+    const row = document.createElement('tr');
+    row.append(cell(detail.key), cell(number(detail.total)));
+    return row;
+  }));
+}
+
 // --- Konten ----------------------------------------------------------------
 
 let userQuery = '';
@@ -221,7 +302,9 @@ async function loadUsers(page) {
   const { ok, data } = await api('admin/users', { query: { q: userQuery, page } });
   if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
   const showEmail = can('users.view_email');
+  const showPlaytime = can('stats.view');
   $('[data-email-col]').hidden = !showEmail;
+  $('[data-playtime-col]').hidden = !showPlaytime;
   $('[data-form="search"] input').placeholder = showEmail ? 'Name oder E-Mail suchen …' : 'Name suchen …';
 
   $('[data-users]').replaceChildren(...data.users.map((user) => {
@@ -230,7 +313,9 @@ async function loadUsers(page) {
     if (user.status === 'locked') status.className = 'status--locked';
     row.append(cell(user.display_name));
     if (showEmail) row.append(cell(user.email ?? ''));
-    row.append(status, cell(formatDate(user.created_at)), cell(formatDate(user.last_login_at)), cell(user.two_factor ? 'an' : '–'), cell(user.roles.join(', ') || '–'));
+    row.append(status, cell(formatDate(user.created_at)), cell(formatDate(user.last_login_at)), cell(user.two_factor ? 'an' : '–'));
+    if (showPlaytime) row.append(cell(formatDuration(user.playtime_seconds)));
+    row.append(cell(user.roles.join(', ') || '–'));
 
     const actions = Object.assign(document.createElement('td'), { className: 'actions' });
     const isSelf = user.id === me.user.id;
@@ -250,11 +335,39 @@ async function loadUsers(page) {
     if (can('roles.manage') && !isSelf && !user.roles.includes('owner')) {
       actions.append(button('Rechte', () => openRights(user)));
     }
+    if (can('stats.view') && can('users.view')) {
+      actions.append(button('Statistik', () => openUserStats(user)));
+    }
     row.append(actions);
     return row;
   }));
   pager('users', data.page, data.page * data.page_size < data.total, loadUsers);
 }
+
+async function openUserStats(user) {
+  const { ok, data } = await api('admin/users/stats', { query: { id: user.id } });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-user-stats-name]').textContent = user.display_name;
+  const items = data.games.map((game) => {
+    const item = Object.assign(document.createElement('li'), { className: 'sessions__item' });
+    const text = document.createElement('div');
+    text.append(
+      Object.assign(document.createElement('strong'), { textContent: game.name }),
+      Object.assign(document.createElement('span'), {
+        textContent: `${formatDuration(game.seconds)} gespielt · ${game.wins} von ${game.finished} Leveln geschafft · Bestwert ${number(game.best_score)} · zuletzt ${formatDate(game.last_played)}`,
+      }),
+    );
+    item.append(text);
+    return item;
+  });
+  $('[data-user-stats-list]').replaceChildren(...(items.length ? items : [Object.assign(document.createElement('li'), { textContent: 'Keine Statistik (noch nicht gespielt oder Zuordnung abgeschaltet).' })]));
+  $('[data-user-stats]').hidden = false;
+  $('[data-user-stats]').scrollIntoView({ behavior: 'smooth' });
+}
+
+$('[data-user-stats-close]').addEventListener('click', () => {
+  $('[data-user-stats]').hidden = true;
+});
 
 // --- Rechte ----------------------------------------------------------------
 

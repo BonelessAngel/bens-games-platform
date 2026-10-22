@@ -133,6 +133,46 @@
   margin-top: 24px;
 }
 
+.hint {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 160px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+
+.chart__bar {
+  flex: 1;
+  min-width: 4px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+}
+
+.chart__bar:hover {
+  background: var(--accent-2);
+}
+
+.row--hard td:first-child::after {
+  content: " · schwerstes";
+  color: var(--badge-maintenance);
+  font-size: 0.8rem;
+}
+
+.row--abandoned td:first-child::after {
+  content: " · oft aufgegeben";
+  color: var(--badge-beta);
+  font-size: 0.8rem;
+}
+
 fieldset {
   margin: 0;
   padding: 0;
