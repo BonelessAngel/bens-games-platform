@@ -81,7 +81,7 @@ final class Leaderboards
         $page = max(1, (int) ($query['page'] ?? 1));
 
         $statement = $this->pdo->prepare(
-            'SELECT u.display_name, l.score, l.achieved_at, l.user_id
+            'SELECT u.display_name, u.avatar, u.avatar_color, l.score, l.achieved_at, l.user_id
              FROM leaderboard_entries l JOIN users u ON u.id = l.user_id
              WHERE ' . self::VISIBLE . ' AND l.app_id = ? AND l.board = ? AND l.period = ?
              ORDER BY l.score DESC, l.achieved_at ASC, l.id ASC
@@ -95,6 +95,8 @@ final class Leaderboards
             $entries[] = [
                 'rank' => $offset + $index + 1,
                 'display_name' => $row['display_name'],
+                'avatar' => $row['avatar'],
+                'avatar_color' => $row['avatar_color'],
                 'score' => (int) $row['score'],
                 'achieved_at' => $row['achieved_at'],
                 'me' => $me !== null && (int) $row['user_id'] === $me,
@@ -109,6 +111,7 @@ final class Leaderboards
             'week' => $this->currentWeek(),
             'page' => $page,
             'entries' => $entries,
+            'record' => $board === '' ? null : $this->record($appId, $board),
             'me' => $me === null || $board === '' ? null : $this->rankOf($appId, $board, $period, $me),
         ]);
     }
@@ -166,6 +169,26 @@ final class Leaderboards
         }
         $this->audit->log($hidden ? 'admin.score_hidden' : 'admin.score_shown', $request, actorUserId: (int) $session['id'], targetType: 'score', targetId: (string) $id, details: $reason !== '' ? ['reason' => $reason] : null);
         return new Response(200, ['hidden' => $hidden]);
+    }
+
+    /** Rekord aller Zeiten einer Rangliste (bester sichtbarer Eintrag „gesamt“). @return array<string, mixed>|null */
+    private function record(string $appId, string $board): ?array
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT u.display_name, u.avatar, u.avatar_color, l.score, l.achieved_at
+             FROM leaderboard_entries l JOIN users u ON u.id = l.user_id
+             WHERE " . self::VISIBLE . " AND l.app_id = ? AND l.board = ? AND l.period = 'all'
+             ORDER BY l.score DESC, l.achieved_at ASC, l.id ASC LIMIT 1"
+        );
+        $statement->execute([$appId, $board]);
+        $row = $statement->fetch();
+        return $row ? [
+            'display_name' => $row['display_name'],
+            'avatar' => $row['avatar'],
+            'avatar_color' => $row['avatar_color'],
+            'score' => (int) $row['score'],
+            'achieved_at' => $row['achieved_at'],
+        ] : null;
     }
 
     private const VISIBLE = "l.hidden_at IS NULL AND u.status = 'active' AND u.leaderboard_opt_out = 0";

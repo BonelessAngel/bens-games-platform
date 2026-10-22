@@ -55,7 +55,7 @@ final class Sessions
             return null;
         }
         $statement = $this->pdo->prepare(
-            "SELECT s.id AS session_id, s.csrf_token, u.id, u.email, u.display_name, u.email_verified_at, u.status, u.password_hash,
+            "SELECT s.id AS session_id, s.csrf_token, u.id, u.email, u.display_name, u.avatar, u.avatar_color, u.email_verified_at, u.status, u.password_hash,
                     u.totp_secret, u.totp_enabled_at, u.totp_last_step, u.stats_opt_out, u.leaderboard_opt_out
              FROM sessions s JOIN users u ON u.id = s.user_id
              WHERE s.token_hash = ? AND s.scope = ? AND s.revoked_at IS NULL AND s.expires_at > ? AND u.status = 'active'"

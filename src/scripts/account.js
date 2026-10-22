@@ -1,6 +1,8 @@
 // Kontoseiten: Registrieren, Anmelden, E-Mail bestätigen, Mein Konto.
 // Spricht mit der API unter /api/ auf derselben Adresse; das Sitzungs-Cookie setzt und liest nur der Server.
 import { safeReturnPath } from '../../lib/return-path.js';
+import { avatarSvg, AVATARS, AVATAR_COLORS } from '../../lib/avatars.js';
+import { renderNavUser } from './nav.js';
 
 const MESSAGES = {
   invalid_credentials: 'E-Mail oder Passwort ist falsch.',
@@ -265,6 +267,8 @@ const pages = {
       });
     });
 
+    setupProfile(root, data.user, csrf);
+    setupTabs(root);
     setupTwoFactor(root, data.user, csrf, () => loadSessions());
     loadGames(root, csrf);
     loadStats(root, csrf);
@@ -364,6 +368,91 @@ async function loadGames(root, csrf) {
     item.append(text, button);
     list.append(item);
   }
+}
+
+// Reiter auf „Mein Konto“; der gewählte Reiter steht in der Adresse (#sicherheit usw.).
+function setupTabs(root) {
+  const tabs = [...root.querySelectorAll('[data-tab-target]')];
+  const show = (name) => {
+    const target = tabs.some((t) => t.dataset.tabTarget === name) ? name : 'profil';
+    for (const tab of tabs) tab.setAttribute('aria-selected', String(tab.dataset.tabTarget === target));
+    for (const group of root.querySelectorAll('[data-group]')) group.hidden = group.dataset.group !== target;
+  };
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => {
+      history.replaceState(null, '', `#${tab.dataset.tabTarget}`);
+      show(tab.dataset.tabTarget);
+    });
+  }
+  show(window.location.hash.slice(1));
+}
+
+// Profilkarte, Avatar-Auswahl und Anzeigename.
+function setupProfile(root, user, csrf) {
+  let current = { ...user };
+  let choice = { avatar: user.avatar ?? AVATARS[0].id, color: user.avatar_color ?? AVATAR_COLORS[0].id };
+
+  const renderCard = () => {
+    root.querySelector('[data-profile-avatar]').innerHTML = avatarSvg({ avatar: current.avatar, color: current.avatar_color, name: current.display_name }, 88);
+    root.querySelector('[data-name]').textContent = current.display_name;
+    const badges = [current.email_verified ? 'E-Mail bestätigt' : 'E-Mail unbestätigt', current.two_factor ? 'Zwei-Faktor an' : 'Zwei-Faktor aus'];
+    root.querySelector('[data-badges]').replaceChildren(...badges.map((text) => Object.assign(document.createElement('span'), { className: 'pill', textContent: text })));
+    renderNavUser(current);
+  };
+
+  const avatarGrid = root.querySelector('[data-avatar-grid]');
+  const colorGrid = root.querySelector('[data-color-grid]');
+  const renderPicker = () => {
+    avatarGrid.replaceChildren(...AVATARS.map((avatar) => {
+      const button = Object.assign(document.createElement('button'), { type: 'button', className: 'avatar-option', title: avatar.name });
+      button.setAttribute('role', 'radio');
+      button.setAttribute('aria-checked', String(choice.avatar === avatar.id));
+      button.setAttribute('aria-label', avatar.name);
+      button.innerHTML = avatarSvg({ avatar: avatar.id, color: choice.color }, 52);
+      button.onclick = () => { choice.avatar = avatar.id; renderPicker(); };
+      return button;
+    }));
+    colorGrid.replaceChildren(...AVATAR_COLORS.map((color) => {
+      const button = Object.assign(document.createElement('button'), { type: 'button', className: 'color-option', title: color.name });
+      button.style.background = color.value;
+      button.setAttribute('role', 'radio');
+      button.setAttribute('aria-checked', String(choice.color === color.id));
+      button.setAttribute('aria-label', color.name);
+      button.onclick = () => { choice.color = color.id; renderPicker(); };
+      return button;
+    }));
+  };
+
+  const notice = (name) => root.querySelector(`[data-notice="${name}"]`);
+  const saveProfile = async (body, noticeName, success) => {
+    const { ok, data } = await api('account/profile', { method: 'POST', body, csrf });
+    if (ok) {
+      current = data.user;
+      renderCard();
+      show(notice(noticeName), success, 'success');
+    } else if (data.error !== 'validation') {
+      show(notice(noticeName), MESSAGES[data.error] ?? FALLBACK);
+    }
+    return { ok, data };
+  };
+
+  root.querySelector('[data-save-avatar]').addEventListener('click', () =>
+    saveProfile({ avatar: choice.avatar, avatar_color: choice.color }, 'avatar', 'Dein Profilbild ist gespeichert.'));
+  root.querySelector('[data-clear-avatar]').addEventListener('click', () =>
+    saveProfile({ avatar: null }, 'avatar', 'Es wird wieder dein Anfangsbuchstabe angezeigt.'));
+
+  const nameForm = root.querySelector('[data-form="name"]');
+  nameForm.elements.display_name.value = user.display_name;
+  nameForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    busy(nameForm, async () => {
+      const { data } = await saveProfile({ display_name: nameForm.elements.display_name.value }, 'name', 'Dein neuer Name ist gespeichert.');
+      fieldErrors(nameForm, data.fields);
+    });
+  });
+
+  renderCard();
+  renderPicker();
 }
 
 function formatDuration(seconds) {

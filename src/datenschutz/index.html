@@ -67,7 +67,9 @@
       Spiele speichern Spielstände und Einstellungen im lokalen Speicher deines Browsers (Local Storage) und legen
       für den Offline-Betrieb einen Zwischenspeicher an. Royal Blocks speichert seine Daten ausschließlich auf deinem
       Gerät und überträgt sie nicht; die Schlüssel beginnen mit <code>royal-blocks:</code>. Spiele mit Kontosicherung
-      können deinen Spielstand zusätzlich in deinem Konto sichern (siehe Abschnitt 5). Du kannst lokale Daten jederzeit
+      können deinen Spielstand zusätzlich in deinem Konto sichern (siehe Abschnitt 5). Außerdem merkt sich dein Browser,
+      ob du die kurze Einführung auf der Startseite schon gesehen hast (Schlüssel <code>bg-intro-v1</code>), damit sie nicht
+      bei jedem Besuch erscheint. Du kannst lokale Daten jederzeit
       über die Einstellungen deines Browsers löschen
       (Rechtsgrundlage: § 25 Abs. 2 Nr. 2 TDDDG, da für den von dir gewünschten Dienst unbedingt erforderlich).
     </p>
@@ -82,7 +84,8 @@
       Ein Konto ist freiwillig. Wenn du eines anlegst, speichern wir:
     </p>
     <ul>
-      <li>deinen Namen (für andere sichtbar, z. B. später in Bestenlisten) und deine E-Mail-Adresse,</li>
+      <li>deinen Namen und dein gewähltes Profilbild (für andere sichtbar, z. B. in Ranglisten) und deine E-Mail-Adresse
+        – Profilbilder sind fertige Motive zum Auswählen, es werden keine eigenen Bilder hochgeladen,</li>
       <li>dein Passwort nur als nicht umkehrbaren Fingerabdruck (Hash) – niemand kann es lesen, auch wir nicht,</li>
       <li>wann du dich registriert, deine E-Mail-Adresse bestätigt und zuletzt angemeldet hast,</li>
       <li>falls du die Zwei-Faktor-Anmeldung einschaltest: den Schlüssel deiner Authenticator-App verschlüsselt
@@ -200,5 +203,6 @@
       </nav>
     </div>
   </footer>
+  <script type="module" src="../scripts/nav.js"></script>
 </body>
 </html>
