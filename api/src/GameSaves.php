@@ -111,13 +111,16 @@ final class GameSaves
              WHERE s.user_id = ? ORDER BY s.updated_at DESC'
         );
         $statement->execute([$session['id']]);
-        $games = array_map(static fn (array $row): array => [
+        $userId = (int) $session['id'];
+        $games = array_map(fn (array $row): array => [
             'id' => $row['id'],
             'name' => $row['name'],
             'path' => $row['path'],
             'updated_at' => $row['updated_at'],
             'size' => (int) $row['size'],
             'achievements' => (int) $row['achievements'],
+            // IDs für die Abzeichen in „Mein Konto“
+            'achievement_ids' => $this->achievements($userId, $row['id']),
         ], $statement->fetchAll());
         return new Response(200, ['games' => $games]);
     }

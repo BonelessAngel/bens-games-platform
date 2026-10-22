@@ -25,6 +25,7 @@
         <a href="#konten" data-tab="konten" data-needs="users.view">Konten</a>
         <a href="#moderation" data-tab="moderation" data-needs="moderation">Moderation</a>
         <a href="#apps" data-tab="apps" data-needs="app.*.manage">Apps</a>
+        <a href="#ankuendigungen" data-tab="ankuendigungen" data-needs="announcements.manage">Ankündigungen</a>
         <a href="#protokoll" data-tab="protokoll" data-needs="audit.view">Protokoll</a>
         <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
       </nav>
@@ -152,6 +153,57 @@
       <h1>Apps</h1>
       <p class="hint">Status und Sichtbarkeit gelten sofort. „Wartung“ zeigt die App in der Bibliothek ausgegraut und ohne Link. Freigaben gelten für „ausgewählte Nutzer“ und private Apps.</p>
       <div data-apps></div>
+    </section>
+
+    <section data-view="ankuendigungen" hidden>
+      <h1>Ankündigungen</h1>
+      <p class="hint">Erscheinen als Leiste oben auf der Webseite (und in Spielen, die sie abfragen). Besucher können sie wegklicken. Nur Text, keine Bilder; Links nur auf diese Webseite (/…) oder mit https://.</p>
+
+      <form class="panel form" data-form="announcement" novalidate>
+        <h2 data-announcement-heading>Neue Ankündigung</h2>
+        <input type="hidden" name="id">
+        <div class="field">
+          <label for="a-title">Titel</label>
+          <input id="a-title" name="title" maxlength="80" required>
+        </div>
+        <div class="field">
+          <label for="a-body">Text (optional)</label>
+          <textarea id="a-body" name="body" maxlength="500" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label for="a-link">Link (optional)</label>
+          <input id="a-link" name="link" placeholder="/ranglisten/ oder https://…">
+        </div>
+        <div class="admin-search">
+          <select name="level" aria-label="Art">
+            <option value="info">Info (blau)</option>
+            <option value="success">Neuigkeit (grün)</option>
+            <option value="warning">Wichtig (orange)</option>
+          </select>
+          <select name="audience" aria-label="Zielgruppe">
+            <option value="all">Alle Besucher</option>
+            <option value="signed_in">Nur angemeldete</option>
+            <option value="app">Nur in einem Spiel</option>
+          </select>
+          <select name="app_id" aria-label="Spiel" hidden></select>
+        </div>
+        <div class="admin-search">
+          <label>Beginn <input type="datetime-local" name="starts_at"></label>
+          <label>Ende (optional) <input type="datetime-local" name="ends_at"></label>
+        </div>
+        <p class="hint">Ohne Beginn erscheint sie sofort, ohne Ende bleibt sie, bis du sie löschst.</p>
+        <div class="button-row">
+          <button class="button" type="submit">Speichern</button>
+          <button class="button button--secondary" type="button" data-announcement-reset>Neu / Abbrechen</button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Titel</th><th>Für</th><th>Zeitraum</th><th>Status</th><th>Von</th><th></th></tr></thead>
+          <tbody data-announcements></tbody>
+        </table>
+      </div>
     </section>
 
     <section data-view="protokoll" hidden>

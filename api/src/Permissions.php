@@ -20,6 +20,7 @@ final class Permissions
         'users.manage' => 'Konten sperren und Sitzungen beenden',
         'moderation' => 'Community-Inhalte, Namen und Meldungen moderieren',
         'audit.view' => 'Protokoll und Sicherheit ansehen',
+        'announcements.manage' => 'Ankündigungen auf der Webseite und in den Spielen veröffentlichen',
         'roles.manage' => 'Rechte vergeben (nur Besitzer)',
     ];
 
@@ -30,12 +31,12 @@ final class Permissions
         'tester' => ['name' => 'Tester', 'permissions' => []],
         'moderator' => ['name' => 'Moderator', 'permissions' => ['users.view', 'moderation']],
         'developer' => ['name' => 'Entwickler', 'permissions' => ['stats.view', 'audit.view']],
-        'admin' => ['name' => 'Admin', 'permissions' => ['stats.view', 'users.view', 'users.view_email', 'users.manage', 'moderation', 'audit.view']],
+        'admin' => ['name' => 'Admin', 'permissions' => ['stats.view', 'users.view', 'users.view_email', 'users.manage', 'moderation', 'audit.view', 'announcements.manage']],
         'owner' => ['name' => 'Besitzer', 'permissions' => ['*']],
     ];
 
     /** Mit mindestens einem dieser Rechte darf man die Zentrale betreten. */
-    public const PANEL = ['stats.view', 'users.view', 'moderation', 'audit.view', 'roles.manage'];
+    public const PANEL = ['stats.view', 'users.view', 'moderation', 'audit.view', 'announcements.manage', 'roles.manage'];
 
     /** Diese Rollen und Rechte werden nie über die Zentrale vergeben. */
     public const NOT_GRANTABLE_ROLES = ['owner'];

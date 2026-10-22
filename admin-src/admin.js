@@ -46,7 +46,9 @@ const ACTIONS = {
   'admin.app_updated': 'Zentrale: App geändert',
   'admin.app_access_granted': 'Zentrale: App freigeschaltet',
   'admin.app_access_revoked': 'Zentrale: App-Freigabe entfernt',
-  'user.leaderboard_opt_out': 'Aus Ranglisten herausgenommen',
+  'admin.announcement_saved': 'Zentrale: Ankündigung gespeichert',
+  'admin.announcement_deleted': 'Zentrale: Ankündigung gelöscht',
+  'user.leaderboard_opt_out':'Aus Ranglisten herausgenommen',
   'user.leaderboard_opt_in': 'In Ranglisten aufgenommen',
   'user.stats_opt_out': 'Statistik-Zuordnung abgeschaltet',
   'user.stats_opt_in': 'Statistik-Zuordnung eingeschaltet',
@@ -181,6 +183,7 @@ function showTab(name) {
     konten: () => loadUsers(1),
     moderation: loadModeration,
     apps: loadApps,
+    ankuendigungen: loadAnnouncements,
     protokoll: () => loadAudit(1),
   })[tab]?.();
 }
@@ -527,6 +530,92 @@ async function loadApps() {
 
     panel.append(form, Object.assign(document.createElement('h3'), { textContent: 'Freigaben' }), access, grant);
     return panel;
+  }));
+}
+
+// --- Ankündigungen ---------------------------------------------------------
+
+const AUDIENCE_LABELS = { all: 'Alle', signed_in: 'Angemeldete' };
+const STATE_LABELS = { active: 'Sichtbar', planned: 'Geplant', ended: 'Beendet' };
+const announcementForm = $('[data-form="announcement"]');
+
+// datetime-local (Ortszeit) ↔ UTC der API
+const toUtc = (local) => (local ? new Date(local).toISOString().slice(0, 19) + 'Z' : '');
+function toLocal(utc) {
+  if (!utc) return '';
+  const date = new Date(`${utc.replace(' ', 'T')}Z`);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+function resetAnnouncement(item = null) {
+  announcementForm.reset();
+  const f = announcementForm.elements;
+  f.id.value = item?.id ?? '';
+  if (item) {
+    f.title.value = item.title;
+    f.body.value = item.body;
+    f.link.value = item.link ?? '';
+    f.level.value = item.level;
+    f.audience.value = item.audience;
+    f.app_id.value = item.app_id ?? '';
+    f.starts_at.value = toLocal(item.starts_at);
+    f.ends_at.value = toLocal(item.ends_at);
+  }
+  f.app_id.hidden = f.audience.value !== 'app';
+  $('[data-announcement-heading]').textContent = item ? 'Ankündigung bearbeiten' : 'Neue Ankündigung';
+}
+
+announcementForm.elements.audience.addEventListener('change', () => {
+  announcementForm.elements.app_id.hidden = announcementForm.elements.audience.value !== 'app';
+});
+$('[data-announcement-reset]').addEventListener('click', () => resetAnnouncement());
+
+announcementForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const f = announcementForm.elements;
+  const body = {
+    title: f.title.value, body: f.body.value, link: f.link.value, level: f.level.value, audience: f.audience.value,
+    app_id: f.app_id.value, starts_at: toUtc(f.starts_at.value), ends_at: toUtc(f.ends_at.value),
+  };
+  if (f.id.value) body.id = Number(f.id.value);
+  const result = await api('admin/announcements/save', { method: 'POST', body });
+  if (!result.ok) {
+    const fields = Object.values(result.data.fields ?? {});
+    return notify(fields.length ? fields.join(' ') : MESSAGES[result.data.error] ?? FALLBACK);
+  }
+  notify('Ankündigung gespeichert.', 'success');
+  resetAnnouncement();
+  loadAnnouncements();
+});
+
+async function loadAnnouncements() {
+  const { ok, data } = await api('admin/announcements');
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  const select = announcementForm.elements.app_id;
+  const chosen = select.value;
+  select.replaceChildren(...data.apps.map((app) => new Option(app.name, app.id, false, app.id === chosen)));
+  const appName = (id) => data.apps.find((app) => app.id === id)?.name ?? id;
+  $('[data-announcements]').replaceChildren(...data.announcements.map((item) => {
+    const row = document.createElement('tr');
+    const actions = document.createElement('td');
+    actions.append(
+      button('Bearbeiten', () => { resetAnnouncement(item); announcementForm.scrollIntoView({ behavior: 'smooth' }); }),
+      button('Löschen', async () => {
+        if (!window.confirm(`„${item.title}“ löschen?`)) return;
+        const result = await api('admin/announcements/delete', { method: 'POST', body: { id: item.id } });
+        if (!result.ok) return notify(MESSAGES[result.data.error] ?? FALLBACK);
+        loadAnnouncements();
+      }, 'danger'),
+    );
+    row.append(
+      cell(item.title),
+      cell(item.audience === 'app' ? `Spiel: ${appName(item.app_id)}` : AUDIENCE_LABELS[item.audience] ?? item.audience),
+      cell(`${formatDate(item.starts_at)} – ${item.ends_at ? formatDate(item.ends_at) : 'offen'}`),
+      cell(STATE_LABELS[item.state] ?? item.state),
+      cell(item.author ?? '–'),
+      actions,
+    );
+    return row;
   }));
 }
 

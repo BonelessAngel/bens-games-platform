@@ -47,6 +47,19 @@ Pro Rangliste zählt der **höchste** Wert (mehr Punkte = besser).
 - Im Dev-/Testmodus des Spiels **keine** Punkte melden.
 - Nur echte, im Spiel erreichte Werte melden. Unplausible Werte kann die Moderation in der Zentrale ausblenden.
 
+## Links, Teilen und Ankündigungen
+
+- **Direktlink auf eine Rangliste:** `/ranglisten/?spiel=<id>&liste=<board>` (z. B. `/ranglisten/?spiel=nova-bastion&liste=3`).
+- **Spielerprofil:** `/spieler/?name=<Anzeigename>` (URL-kodiert). Zeigt Bestwerte mit Platz und Erfolge.
+- **Teilen im Spiel:** `navigator.share({ title, text, url })`, ohne Teilen-Menü `navigator.clipboard.writeText(...)`.
+  Als `url` den Direktlink auf die Rangliste verwenden. Keine Dienste Dritter (keine Share-Widgets).
+- **Ankündigungen im Spiel (optional):** `GET /api/announcements?app=<id>` → `{ "announcements": [{ "id", "title", "body", "link", "level" }] }`
+  (`level` = `info` | `success` | `warning`). Nur als Text anzeigen (`textContent`, nie `innerHTML`);
+  `link` ist entweder ein Pfad dieser Webseite (`/…`) oder `https://…`. Weggeklickte IDs nur lokal merken.
+- **Erfolge mit Namen (optional):** Das Spiel kann eine `achievements.json` im Build-Ordner mitliefern,
+  z. B. `{ "stars30": { "name": "30 Sterne", "icon": "⭐" } }` (`icon` = ein Emoji). Die Datei muss in
+  `lib/games.js` unter `files` stehen. Ohne Datei zeigt die Webseite die ID lesbar an (`stars30` → „Stars 30“).
+
 ## Datenschutz
 
 Öffentlich sind Anzeigename, Punkte und Datum. Die Datenschutzerklärung der Plattform beschreibt das. Weitere Daten

@@ -16,8 +16,9 @@
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* Helles Schema: automatisch nach Gerät („Auto“) oder fest über den Umschalter (data-theme am <html>). */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="dark"]) {
     --bg: #f6f7fb;
     --bg-elevated: #ffffff;
     --bg-hover: #f0f2fa;
@@ -29,7 +30,45 @@
     --badge-beta: #a87300;
     --badge-maintenance: #c2501f;
     --shadow: 0 10px 30px -14px rgb(30 40 80 / 0.25);
+    color-scheme: light;
   }
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f7fb;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f0f2fa;
+  --border: #e1e4ef;
+  --text: #151826;
+  --text-muted: #5b6280;
+  --accent: #4c5bf0;
+  --accent-2: #138a7e;
+  --badge-beta: #a87300;
+  --badge-maintenance: #c2501f;
+  --shadow: 0 10px 30px -14px rgb(30 40 80 / 0.25);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  background: var(--bg-hover);
 }
 
 *,
@@ -163,6 +202,23 @@ a {
 
 @media (max-width: 520px) {
   .nav-user span {
+    display: none;
+  }
+
+  .site-header nav {
+    align-items: center;
+    gap: 12px;
+  }
+
+  .theme-toggle {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Sehr schmale Handys: nur das Logo, damit alle Links in die Kopfzeile passen. */
+@media (max-width: 420px) {
+  .site-header .brand span {
     display: none;
   }
 }
@@ -1237,5 +1293,248 @@ a.card:focus-visible .card__cta {
   .card,
   .card__cta {
     transition: none;
+  }
+}
+
+/* Ankündigungen aus der Zentrale */
+.announcements {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.announcement {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--announcement) 45%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--announcement) 12%, var(--bg-elevated));
+  --announcement: var(--accent);
+}
+
+.announcement--success { --announcement: var(--accent-2); }
+.announcement--warning { --announcement: var(--badge-maintenance); }
+
+.announcement__text {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.announcement__text span {
+  color: var(--text-muted);
+}
+
+.announcement__text a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.announcement__close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.announcement__close:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* Weiterspielen */
+.continue {
+  margin-top: 8px;
+}
+
+.continue__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.continue__card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(110deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%),
+    var(--bg-elevated);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.continue__card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.continue__card img {
+  flex: none;
+  border-radius: 12px;
+}
+
+.continue__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.continue__text span {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.continue__play {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+/* Teilen */
+.ranks__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.share-button {
+  white-space: nowrap;
+}
+
+a.ranks__name,
+a.podium__name {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.ranks__name:hover,
+a.podium__name:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* Spielerprofil */
+.profile-card__link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.player__game-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player__game-title img {
+  border-radius: 8px;
+}
+
+.player__boards {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.player__board {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.player__board-name {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.player__board-name:hover {
+  color: var(--accent);
+}
+
+.player__score {
+  font-variant-numeric: tabular-nums;
+}
+
+.player__rank {
+  min-width: 4.2rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-align: right;
+}
+
+.player__rank--1 { color: #d9a520; }
+.player__rank--2 { color: #8a94ad; }
+.player__rank--3 { color: #c87a3c; }
+
+/* Erfolge als Abzeichen */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.achievement {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border: 1px solid color-mix(in srgb, #f6c453 40%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, #f6c453 10%, var(--bg-elevated));
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.achievement__icon {
+  font-size: 1rem;
+}
+
+@media (max-width: 340px) {
+  .player__board {
+    grid-template-columns: 1fr auto;
+  }
+
+  .player__rank {
+    grid-column: 2;
+    min-width: 0;
   }
 }

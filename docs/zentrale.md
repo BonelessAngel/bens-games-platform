@@ -49,5 +49,6 @@ Danach in der Zentrale anmelden (vorher auf der Webseite unter „Mein Konto“ 
 
 Rollen sind Pakete aus Rechten (`api/src/Permissions.php`): Tester, Moderator, Entwickler, Admin, Besitzer.
 Einzelrechte: `stats.view`, `users.view`, `users.view_email`, `users.manage`, `moderation`, `audit.view`,
+`announcements.manage` (Reiter „Ankündigungen“; in der Rolle Admin enthalten),
 sowie pro App `app.<id>.beta` und `app.<id>.manage`. `roles.manage` hat nur der Besitzer.
 Niemand kann eigene Rechte ändern, und das Konto des Besitzers ist in der Zentrale nicht änderbar.

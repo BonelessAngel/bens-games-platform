@@ -1,5 +1,7 @@
 // Kopfzeile: Nach der Anmeldung steht statt „Anmelden“ das Profilbild mit Namen (Link zu „Mein Konto“).
 import { avatarSvg } from '../../lib/avatars.js';
+import './theme.js';
+import './announcements.js';
 
 export async function currentUser() {
   if (!document.querySelector('meta[name="bg-accounts"]')) return null;
