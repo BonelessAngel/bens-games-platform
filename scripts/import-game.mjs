@@ -9,10 +9,10 @@
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FORBIDDEN_HOSTS, GAMES, normalizeServiceWorker } from '../lib/games.js';
+import { FORBIDDEN_HOSTS, GAMES, normalizeServiceWorker, unlistedFiles } from '../lib/games.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -71,6 +71,11 @@ if (game.buildCommand) {
 const source = join(repo, game.buildDir);
 for (const file of game.files) {
   if (!existsSync(join(source, file))) fail(`${file} fehlt in ${source}. Wurde das Spiel gebaut?`);
+}
+const extra = unlistedFiles(game, readdirSync(source, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name));
+if (extra.length) {
+  fail(`Neue Dateien im Build, die nicht in lib/games.js stehen: ${extra.join(', ')}.\n` +
+    'Ohne sie würde das Spiel auf der Webseite fehlen. Bitte in die Dateiliste (files) oder bewusst in ignore eintragen.');
 }
 const iconSource = game.libraryIcon && join(repo, game.libraryIcon);
 if (iconSource && !existsSync(iconSource)) fail(`Bibliotheks-Symbol fehlt: ${iconSource}`);

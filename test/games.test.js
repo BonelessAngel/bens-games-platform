@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { FORBIDDEN_HOSTS, GAMES, normalizeServiceWorker } from '../lib/games.js';
+import { FORBIDDEN_HOSTS, GAMES, normalizeServiceWorker, unlistedFiles } from '../lib/games.js';
 
 const apps = JSON.parse(readFileSync(new URL('../src/data/apps.json', import.meta.url), 'utf8'));
 const gameDir = (id) => new URL(`../public/games/${id}/`, import.meta.url);
@@ -19,6 +19,23 @@ test('Royal Blocks wird für den Import reproduzierbar neu gebaut', () => {
   assert.equal(GAMES['royal-blocks'].libraryIcon, 'src/icon-512.png');
   assert.equal(GAMES['royal-blocks'].serviceWorker, undefined);
 });
+
+test('neue Dateien im Build werden erkannt', () => {
+  const game = { files: ['index.html', 'main.js'], ignore: ['_headers'] };
+  assert.deepEqual(unlistedFiles(game, ['index.html', 'main.js', '_headers']), []);
+  assert.deepEqual(unlistedFiles(game, ['index.html', 'main.js', 'platform.js', 'neu.css']), ['neu.css', 'platform.js']);
+});
+
+for (const id of Object.keys(GAMES)) {
+  test(`${id}: alle importierten JS-Module des Spiels sind übernommen`, { skip: !existsSync(new URL('VERSION.json', gameDir(id))) && 'noch nicht übernommen' }, () => {
+    for (const file of GAMES[id].files.filter((f) => f.endsWith('.js'))) {
+      const code = readFileSync(new URL(file, gameDir(id)), 'utf8');
+      for (const [, imported] of code.matchAll(/(?:from|import\()\s*['"]\.\/([\w.-]+\.js)['"]/g)) {
+        assert.ok(GAMES[id].files.includes(imported), `${file} lädt ${imported}, das nicht übernommen wird`);
+      }
+    }
+  });
+}
 
 for (const id of Object.keys(GAMES)) {
   const versionFile = new URL('VERSION.json', gameDir(id));

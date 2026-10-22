@@ -555,6 +555,9 @@ button { font: inherit; color: inherit; }
 .stats { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 4px 0 10px; text-align: left; }
 .stats dt { color: var(--muted); }
 .stats dd { margin: 0; font-weight: 800; text-align: right; }
+.leaderboard-result { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.leaderboard-result[hidden] { display: none; }
+.leaderboard-result a { color: var(--gold); font-weight: 800; }
 
 /* ---------- Animationen ---------- */
 @keyframes pop-in { from { transform: scale(0.6); } 70% { transform: scale(1.08); } to { transform: scale(1); } }
