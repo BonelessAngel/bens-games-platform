@@ -30,9 +30,10 @@
     <h1>Ranglisten</h1>
     <p class="auth__lead">Die besten Ergebnisse – diese Woche und insgesamt. Mit Konto erscheinst du hier automatisch.</p>
 
-    <div class="ranks__controls">
-      <label>Spiel <select data-rank-game></select></label>
-      <label>Rangliste <select data-rank-board></select></label>
+    <div class="game-tabs" data-rank-games role="tablist" aria-label="Spiel"></div>
+
+    <div class="ranks__toolbar">
+      <div class="chips" data-rank-boards role="tablist" aria-label="Rangliste"></div>
       <div class="segmented" role="group" aria-label="Zeitraum">
         <button type="button" data-rank-period="week" aria-pressed="true">Diese Woche</button>
         <button type="button" data-rank-period="all" aria-pressed="false">Gesamt</button>
