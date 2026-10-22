@@ -23,20 +23,55 @@
     </div>
   </header>
 
-  <main class="container auth auth--wide" data-page="konto">
-    <h1>Mein Konto</h1>
-
+  <main class="container auth auth--wide konto" data-page="konto">
     <div data-details hidden>
-      <section class="panel">
-        <dl class="details">
-          <dt>Name</dt>
-          <dd data-name></dd>
-          <dt>E-Mail-Adresse</dt>
-          <dd data-email></dd>
-        </dl>
-        <button class="button button--secondary" type="button" data-logout>Abmelden</button>
+      <section class="profile-card">
+        <span class="profile-card__avatar" data-profile-avatar></span>
+        <div class="profile-card__text">
+          <h1 data-name></h1>
+          <p data-email></p>
+          <p class="profile-card__badges" data-badges></p>
+        </div>
+        <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
       </section>
 
+      <nav class="tabs" role="tablist" aria-label="Einstellungen">
+        <button type="button" role="tab" data-tab-target="profil">Profil</button>
+        <button type="button" role="tab" data-tab-target="spiele">Spiele</button>
+        <button type="button" role="tab" data-tab-target="sicherheit">Sicherheit</button>
+        <button type="button" role="tab" data-tab-target="konto">Konto</button>
+      </nav>
+
+      <div data-group="profil" role="tabpanel">
+        <section class="panel" aria-labelledby="titel-profil">
+          <h2 id="titel-profil">Profilbild</h2>
+          <p class="auth__lead">Erscheint oben in der Kopfzeile und in den Ranglisten.</p>
+          <div class="avatar-picker" data-avatar-grid role="radiogroup" aria-label="Motiv"></div>
+          <h3 class="picker-title">Farbe</h3>
+          <div class="color-picker" data-color-grid role="radiogroup" aria-label="Farbe"></div>
+          <div class="button-row">
+            <button class="button" type="button" data-save-avatar>Profilbild speichern</button>
+            <button class="button button--secondary" type="button" data-clear-avatar>Anfangsbuchstabe verwenden</button>
+          </div>
+          <p data-notice="avatar" hidden></p>
+        </section>
+
+        <section class="panel" aria-labelledby="titel-name">
+          <h2 id="titel-name">Anzeigename</h2>
+          <p data-notice="name" hidden></p>
+          <form class="form" data-form="name" novalidate>
+            <div class="field">
+              <label for="display_name">Name</label>
+              <input id="display_name" name="display_name" autocomplete="nickname" minlength="3" maxlength="24" required>
+              <p class="field__hint">So sehen dich andere, z. B. in Ranglisten. 3 bis 24 Zeichen, höchstens dreimal am Tag änderbar.</p>
+              <p class="field__error" data-error-for="display_name" hidden></p>
+            </div>
+            <button class="button" type="submit">Name speichern</button>
+          </form>
+        </section>
+      </div>
+
+      <div data-group="spiele" role="tabpanel">
       <section class="panel" aria-labelledby="titel-spielstaende">
         <h2 id="titel-spielstaende">Spielstände</h2>
         <p class="auth__lead" data-games-empty>Noch keine Spielstände im Konto. Sobald du angemeldet spielst, wird dein Fortschritt hier gesichert.</p>
@@ -59,7 +94,9 @@
           <span>In den <a href="/ranglisten/">Ranglisten</a> erscheinen <small>(mit deinem Namen und deinen Bestwerten)</small></span>
         </label>
       </section>
+      </div>
 
+      <div data-group="sicherheit" role="tabpanel">
       <section class="panel" aria-labelledby="titel-passwort">
         <h2 id="titel-passwort">Passwort ändern</h2>
         <p data-notice="password" hidden></p>
@@ -145,6 +182,16 @@
         <ul class="sessions" data-sessions></ul>
         <button class="button button--secondary" type="button" data-revoke-others>Alle anderen Geräte abmelden</button>
       </section>
+      </div>
+
+      <div data-group="konto" role="tabpanel">
+      <section class="panel" aria-labelledby="titel-daten">
+        <h2 id="titel-daten">Deine Daten</h2>
+        <p class="auth__lead">
+          Was wir speichern und wie lange, steht in der <a href="/datenschutz/">Datenschutzerklärung</a>.
+          Spielstatistik und Ranglisten kannst du unter „Spiele“ abschalten.
+        </p>
+      </section>
 
       <section class="panel panel--danger" aria-labelledby="titel-loeschen">
         <h2 id="titel-loeschen">Konto löschen</h2>
@@ -163,6 +210,7 @@
           <button class="button button--danger" type="submit">Konto löschen</button>
         </form>
       </section>
+      </div>
     </div>
   </main>
 

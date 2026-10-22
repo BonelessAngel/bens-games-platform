@@ -3,7 +3,7 @@
     "id": "nova-bastion",
     "name": "Nova Bastion",
     "type": "game",
-    "description": "Tower-Defense mit Taktik-Auswertung am Ende jedes Levels.",
+    "description": "Tower-Defense im Retro-Look: Baue Türme, setze Helden ein und finde die beste Taktik für jedes Level.",
     "icon": "/app-icons/nova-bastion.svg",
     "status": "public",
     "visibility": "all",

@@ -80,6 +80,7 @@ final class Api
             'auth/reset-password' => ['POST', false, fn (): Response => $this->accounts()->resetPassword($request->json(), $request)],
             'auth/logout' => ['POST', true, fn (array $session): Response => $this->accounts()->logout($session, $request)],
             'account/me' => ['GET', true, fn (array $session): Response => $this->accounts()->me($session)],
+            'account/profile' => ['POST', true, fn (array $session): Response => $this->accounts()->updateProfile($session, $request->json(), $request)],
             'account/password' => ['POST', true, fn (array $session): Response => $this->accounts()->changePassword($session, $request->json(), $request)],
             'account/sessions' => ['GET', true, fn (array $session): Response => $this->accounts()->listSessions($session)],
             'account/sessions/revoke' => ['POST', true, fn (array $session): Response => $this->accounts()->revokeSession($session, $request->json(), $request)],

@@ -2,6 +2,8 @@
 // Wo Konten aktiv sind, wird die Liste durch die passende Liste für den angemeldeten Nutzer ersetzt –
 // inklusive Beta- und freigegebener Apps.
 import { renderLibrary } from '../../lib/library.js';
+import './nav.js';
+import './intro.js';
 
 const container = document.querySelector('[data-library]');
 

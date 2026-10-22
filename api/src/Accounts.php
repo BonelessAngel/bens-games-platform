@@ -403,9 +403,58 @@ final class Accounts
             'id' => (int) $user['id'],
             'email' => $user['email'],
             'display_name' => $user['display_name'],
+            'avatar' => $user['avatar'] ?? null,
+            'avatar_color' => $user['avatar_color'] ?? null,
             'email_verified' => $user['email_verified_at'] !== null,
             'two_factor' => TwoFactor::enabled($user),
         ];
+    }
+
+    /**
+     * Profil ändern: Profilbild und/oder Anzeigename (eindeutig, nicht reserviert, höchstens 3 Änderungen pro Tag).
+     * @param array<string, mixed> $session
+     * @param array<string, mixed> $input {avatar?, avatar_color?, display_name?}
+     */
+    public function updateProfile(array $session, array $input, Request $request): Response
+    {
+        $userId = (int) $session['id'];
+        $changes = [];
+
+        if (array_key_exists('avatar', $input)) {
+            $changes += Avatars::validate($input['avatar'], $input['avatar_color'] ?? null);
+        }
+
+        if (array_key_exists('display_name', $input)) {
+            $name = trim((string) $input['display_name']);
+            if ($name !== $session['display_name']) {
+                $error = Names::formatError($name);
+                if ($error === null && mb_strtolower($name) !== mb_strtolower((string) $session['display_name']) && $this->nameTaken($name)) {
+                    $error = 'Dieser Name ist schon vergeben.';
+                }
+                if ($error !== null) {
+                    throw new HttpError(422, 'validation', ['fields' => ['display_name' => $error]]);
+                }
+                $this->limit('rename:user', (string) $userId, 3, 86400);
+                $changes['display_name'] = $name;
+            }
+        }
+
+        if ($changes !== []) {
+            $set = implode(', ', array_map(static fn (string $column): string => "$column = ?", array_keys($changes)));
+            try {
+                $this->pdo->prepare("UPDATE users SET $set WHERE id = ?")->execute([...array_values($changes), $userId]);
+            } catch (PDOException $e) {
+                if ($e->getCode() === '23000') {
+                    throw new HttpError(422, 'validation', ['fields' => ['display_name' => 'Dieser Name ist schon vergeben.']]);
+                }
+                throw $e;
+            }
+            $this->audit->log('user.profile_changed', $request, actorUserId: $userId, targetType: 'user', targetId: (string) $userId, details: ['fields' => implode(',', array_keys($changes))]);
+        }
+
+        $statement = $this->pdo->prepare('SELECT * FROM users WHERE id = ?');
+        $statement->execute([$userId]);
+        return new Response(200, ['user' => self::publicUser($statement->fetch())]);
     }
 
     private static function passwordError(string $password): ?string
