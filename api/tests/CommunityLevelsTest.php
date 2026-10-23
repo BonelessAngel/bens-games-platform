@@ -40,6 +40,11 @@ test('Nova-Bastion-Level: nur bekannte Felder, Werte begrenzt, Texte bereinigt',
     same(null, NovaBastionLevel::sanitize(['paths' => []]));
     same(null, NovaBastionLevel::sanitize(['paths' => [[[0, 0]]]]), 'Weg mit nur einem Punkt');
     same(null, NovaBastionLevel::sanitize('kein Level'));
+
+    // Ausrüstung: Held und Skills bleiben erhalten, Unsinn wird ersetzt
+    same(['vega', 'full'], [NovaBastionLevel::sanitize(sampleLevel(['hero' => 'vega', 'skills' => 'full']))['hero'], NovaBastionLevel::sanitize(sampleLevel(['hero' => 'vega', 'skills' => 'full']))['skills']]);
+    same([null, 'mid'], [$lv['hero'], $lv['skills']], 'Standard: frei wählbar, Mittel');
+    same([null, 'mid'], [NovaBastionLevel::sanitize(sampleLevel(['hero' => '<b>', 'skills' => 'alles']))['hero'], NovaBastionLevel::sanitize(sampleLevel(['hero' => '<b>', 'skills' => 'alles']))['skills']]);
 });
 
 dbTest('Community-Level: hochladen nur mit Konto, Grenzen, Liste und Abruf', function (): void {
