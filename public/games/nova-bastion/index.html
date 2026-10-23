@@ -434,6 +434,19 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .cbsimple{display:none}#edpanel.simple .cbsimple{display:block}
 #eMode{display:none}#edui.comm #eMode{display:inline-block}#edui.comm:not(.simple) #eMode{background:var(--vi);border-color:var(--vi);color:#fff}
 #cbNewScr{background:#05060fd8;z-index:8}
+#eqScr{background:#05060fd8;z-index:8}
+.eqp{max-width:44em}.eqhint{margin:.2em 0 .8em;color:#9fb0e6}
+.eqlab{font-family:'Press Start 2P',monospace;font-size:.55em;color:var(--cy);text-align:left;margin:.6em 0 .4em}
+.eqtw{display:grid;grid-template-columns:repeat(6,1fr);gap:.4em}
+.eqtw button,.eqhero button{position:relative;display:flex;flex-direction:column;align-items:center;gap:.25em;padding:.4em .2em;background:#111936;
+  border:.15em solid var(--line);color:#8890aa;font-family:'Press Start 2P',monospace;font-size:.5em;cursor:pointer}
+.eqtw button canvas{width:2.6em;height:auto;image-rendering:pixelated}
+.eqtw button.on{border-color:var(--c);color:#fff;background:#18224a;box-shadow:0 0 .6em var(--c)}
+.eqtw button.off{opacity:.3;cursor:not-allowed}
+.eqhero{display:grid;grid-template-columns:repeat(4,1fr);gap:.5em;margin-bottom:1em}
+.eqhero button{font-size:.6em;padding:.7em .3em}.eqhero button b{font-weight:400;font-family:'VT323',monospace;font-size:1.6em;color:#9fb0e6}
+.eqhero button.on{border-color:var(--c);color:#fff;box-shadow:0 0 .6em var(--c)}
+.eqhero button.off{opacity:.3;cursor:not-allowed}
 #cbDraft span{display:block;font-size:.6em;margin-top:.4em;opacity:.8}
 .cbnewhint{margin:.9em 0 .6em;color:#9fb0e6}
 .cbtpl{display:grid;grid-template-columns:repeat(3,1fr);gap:.6em;margin-bottom:.9em}
@@ -1049,6 +1062,10 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
       <div class="esum">Wie stark die Gegner grundsätzlich sind, wie in Welt 1 bis 5.</div>
       <div class="cbstars" id="cbStars"></div>
       <div class="btns"><button class="big mg" id="cbBoss">MUTTERSCHIFF AM ENDE: NEIN</button></div>
+      <h4>AUSRÜSTUNG DER SPIELER</h4>
+      <div class="esum">Alle spielen dein Level mit derselben Ausrüstung: alle Türme zur Wahl, Skills wie hier eingestellt.</div>
+      <div class="btns"><button class="big alt" id="cbSkills">SKILLS: MITTEL</button></div>
+      <div class="btns"><button class="big alt" id="cbHero">HELD: FREI WÄHLBAR</button></div>
      </div>
      <div class="tune"><button class="big alt" id="evEasier">- LEICHTER</button><div id="evTuneL"></div><button class="big" id="evHarder">SCHWERER +</button></div>
      <div class="esum cbsimple">Mit LEICHTER und SCHWERER stellst du alles auf einmal ein. Einzelne Regler gibt es im Modus PROFI.</div>
@@ -1300,6 +1317,18 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
      <div class="orow" id="oResetRow"><label>KAMPAGNE</label><button class="pb" id="bReset" style="color:#ff8a8a;border-color:#5a2a3a">ZURÜCKSETZEN</button></div>
     </div>
     <button class="big" id="optClose">FERTIG</button>
+   </div>
+  </div>
+
+  <div id="eqScr" class="screen">
+   <div class="panel eqp">
+    <h3>AUSRÜSTUNG</h3>
+    <p class="eqhint" id="eqHint"></p>
+    <div class="eqlab" id="eqTwLab"></div>
+    <div class="eqtw" id="eqTw"></div>
+    <div class="eqlab">HELD</div>
+    <div class="eqhero" id="eqHero"></div>
+    <div class="btns"><button class="big alt" id="eqBack">ZURÜCK</button><button class="big" id="eqGo">LOS!</button></div>
    </div>
   </div>
 
@@ -2338,7 +2367,7 @@ var TWORLD={mine:1,lance:2,hangar:3};
 function setLateUnlocks(){Object.keys(TWORLD).forEach(function(k){var w=TWORLD[k];TUNLOCK[k]=w<WORLDS.length?WORLDS[w].ks[0]:99;});}
 setLateUnlocks();
 var ARS=5,SPECS=['a','b','c'],SPCOL={a:'#3de8ff',b:'#ff4fa3',c:'#ffe14d'};
-function towerOpen(k){return DEV||unlocked(TUNLOCK[k]);}
+function towerOpen(k){return DEV||!!STDL||unlocked(TUNLOCK[k]);}
 var SELL=0.6,KILLGOLD=0.72,EARLY=0.3;
 var TMODES=['ERSTER','STÄRKSTER','SCHWÄCHSTER','LUFT ZUERST'];
 
@@ -2458,7 +2487,7 @@ var HTAL={
         [{n:'Hinrichtung',d:'Doppelter Wirbelschaden gegen Gegner unter 30% Leben.'},{n:'Giftklingen',d:'Wirbel-Treffer setzen Gegner 3 Sekunden in Brand.'}]]
 };
 var TALCOST=[60,120,200];
-function tal(r,k){var h=PR.heroes[k];return h&&(h['u'+r]||DEV)?(h['t'+r]||'a'):'';}
+function tal(r,k){if(STDL)return STDL.lv==='full'?'a':'';var h=PR.heroes[k];return h&&(h['u'+r]||DEV)?(h['t'+r]||'a'):'';}
 
 /* =============== Skins und tägliche Regeln =============== */
 var SKINS=[
@@ -2840,9 +2869,13 @@ function cloudInit(){
   }).catch(function(){Cloud.status='error';if(scene==='title')refreshTitle();});
 }
 
-function rk(id){return PR.skills[id]||0;}
-function hsel(){return PR.heroSel||'vega';}
-function hr(id,k){return PR.heroes[k||hsel()][id]||0;}
+/* Feste Ausrüstung in Creator-Leveln (Test und Spiel): gilt nur während des Levels, ändert nie den Spielstand. */
+var STDL=null;
+function stdLv(lv){var v=lv&&lv.skills;return v==='none'||v==='full'?v:'mid';}
+function stdRk(id){var n=SKBY[id];if(!n||STDL.lv==='none')return 0;if(STDL.lv==='full')return n.max;return n.key?0:Math.ceil(n.max/2);}
+function rk(id){return STDL?stdRk(id):PR.skills[id]||0;}
+function hsel(){return STDL?STDL.hero:PR.heroSel||'vega';}
+function hr(id,k){if(STDL)return STDL.lv==='full'?HMAX:STDL.lv==='mid'?2:0;return PR.heroes[k||hsel()][id]||0;}
 function crys(){return DEV?99999:PR.crystals;}
 
 /* Spielerlevel */
@@ -3013,11 +3046,12 @@ function modStat(type,b){
   return s;
 }
 var MST=[0,150,400,900,1800,3500,6000,10000,16000,25000];
-function mLv(type){var v=PR.mastery[type]||0,l=0;while(l<MST.length-1&&v>=MST[l+1])l++;return l;}
+function mLv(type){if(STDL)return STDL.lv==='full'?MST.length-1:STDL.lv==='mid'?4:0;var v=PR.mastery[type]||0,l=0;while(l<MST.length-1&&v>=MST[l+1])l++;return l;}
 function mSlots(type){var l=mLv(type);return 1+(l>=4?1:0)+(l>=8?1:0);}
 function modById(id){for(var i=0;i<PR.mods.length;i++)if(PR.mods[i].id===id)return PR.mods[i];return null;}
 function modBonus(type){
   var b={dmg:0,range:0,rate:0,crit:0};
+  if(STDL)return b;
   (PR.equip[type]||[]).slice(0,mSlots(type)).forEach(function(id){var m=modById(id);if(m)b[m.s]+=m.v/100;});
   return b;
 }
@@ -3663,8 +3697,8 @@ var ABX={
    up:[['Überspannung','+30% Schaden pro Stufe'],['Dauer','+1,5 Sekunden pro Stufe'],['Abklingzeit','-10% Abklingzeit pro Stufe']]}
 };
 var ABK=['orbital','troops','frost','grav','gold','air','emp'],ABMAX=3,ABUPC=[25,50,90];
-function abOpen(k){return DEV||plInfo().lv>=ABX[k].lv;}
-function abUp(k,i){var u=PR.abil.up[k];return u?u[i]||0:0;}
+function abOpen(k){return DEV||!!STDL||plInfo().lv>=ABX[k].lv;}
+function abUp(k,i){if(STDL)return STDL.lv==='full'?3:STDL.lv==='mid'?1:0;var u=PR.abil.up[k];return u?u[i]||0:0;}
 function abSel(){return (PR.abil.sel||ABK).filter(abOpen).slice(0,ABMAX);}
 function abCd(k){return ABX[k].cd*(1-0.1*abUp(k,2));}
 /* Aktive Helden-Fähigkeit, aufwertbar mit Heldenpunkten */
@@ -3675,7 +3709,7 @@ var HABIL={
  kaira:{n:'Phasensprung',short:'SPRUNG',cd:30,d:'Springt zum vordersten Gegner, betäubt alle Bodengegner dort und trifft sie hart.',per:'+0,3 s Betäubung, +20% Schaden, 2 s kürzere Abklingzeit'}
 };
 var HALMAX=5;
-function hal(k){var h=PR.heroes[k];return Math.max(1,(h&&h.al)||1);}
+function hal(k){if(STDL)return STDL.lv==='full'?HALMAX:STDL.lv==='mid'?3:1;var h=PR.heroes[k];return Math.max(1,(h&&h.al)||1);}
 function habCd(k){return HABIL[k].cd-2*(hal(k)-1);}
 function hpTotal(){if(DEV)return 999;var s=0;LEVELS.forEach(function(L){if(PR.stars[L.k]>0)s+=L.boss?3:1;});return s;}
 function hpSpent(){var s=0;HKEYS.forEach(function(k){for(var l=1;l<hal(k);l++)s+=l;});return s;}
@@ -3768,6 +3802,7 @@ function radio(t){
 function disp(id,on,how){$(id).style.display=on?(how||'flex'):'none';}
 function show(s){
   scene=s;
+  if(s!=='play'&&STDL){STDL=null;buildStats();}
   Mus.mode=s==='play'?'play':'map';if(G)Mus.world=Math.max(0,['moon','ice','lava','station','crystal'].indexOf(G.L.theme.kind));
   disp('title',s==='title');
   disp('mapui',s==='map','block');
@@ -6433,6 +6468,7 @@ function refreshMapUI(){
   $('bDaily').classList.toggle('done',dd);
 }
 function arsenalList(){
+  if(STDL)return STDL.towers.slice();
   var open=ORDER.filter(towerOpen);
   if(open.length<=ARS)return open;
   var a=PR.arsenal.filter(function(k){return open.indexOf(k)>=0;});
@@ -7058,6 +7094,7 @@ function edSave(){
 }
 function edTest(){
   var d=edData(),L=d.levels[d.worlds[ED.w].ks[ED.l]];
+  if(ED.comm){eqOpen(edLv(),function(){startLevel(-1,'test',L);});return;}
   startLevel(-1,'test',L);
 }
 
@@ -8864,7 +8901,7 @@ function commPlay(m){
     if(!d||!d.level){toast('LEVEL NICHT GEFUNDEN','#ff5d5d');return;}
     var lv=d.level;lv.id='c'+m.id;
     var L=commBuildL(lv,m.star,m.boss,m.style);L.cauthor=m.author;
-    startLevel(-1,'comm',L);G.comm={id:m.id,name:m.name,author:m.author,star:m.star,boss:m.boss,style:m.style,lv:lv};
+    eqOpen(lv,function(){startLevel(-1,'comm',L);G.comm={id:m.id,name:m.name,author:m.author,star:m.star,boss:m.boss,style:m.style,lv:lv};});
   }).catch(function(){toast('KEINE VERBINDUNG','#ff5d5d');});
 }
 function commResult(win){
@@ -8907,6 +8944,47 @@ function cbNewOpen(){
   });
   disp('cbNewScr',true);
 }
+var SKILL_NAMES={none:'KEINE',mid:'MITTEL',full:'VOLL'};
+function eqOpen(lv,onGo){
+  var allowT=Array.isArray(lv.towers)&&lv.towers.length?ORDER.filter(function(k){return lv.towers.indexOf(k)>=0;}):ORDER.slice();
+  var saved={};try{saved=JSON.parse(localStorage.getItem('novabastion.cbeq')||'{}')||{};}catch(e){}
+  var sel=(Array.isArray(saved.towers)?saved.towers:PR.arsenal||[]).filter(function(k){return allowT.indexOf(k)>=0;}).slice(0,ARS);
+  if(allowT.length<=ARS)sel=allowT.slice();else if(!sel.length)sel=allowT.slice(0,ARS);
+  var fixed=lv.hero&&HEROES[lv.hero]?lv.hero:null,hero=fixed||(HEROES[saved.hero]?saved.hero:PR.heroSel||'vega'),lvSk=stdLv(lv);
+  $('eqHint').textContent='Alle spielen dieses Level gleich ausgerüstet. Skills: '+SKILL_NAMES[lvSk]+' (vom Ersteller festgelegt), Module aus. Dein eigener Fortschritt bleibt unverändert.';
+  function render(){
+    $('eqTwLab').textContent='TÜRME  '+sel.length+'/'+Math.min(ARS,allowT.length)+(allowT.length>ARS?'  ·  antippen zum Tauschen':'');
+    var box=$('eqTw');box.innerHTML='';
+    ORDER.forEach(function(k){
+      var T=TOWERS[k],ok=allowT.indexOf(k)>=0,on=sel.indexOf(k)>=0,b=document.createElement('button');b.type='button';
+      b.className=(on?'on':'')+(ok?'':' off');b.style.setProperty('--c',T.color);b.title=T.name;
+      b.appendChild(iconCanvas({k:'tower',type:k}));var sp=document.createElement('span');sp.textContent=T.short;b.appendChild(sp);
+      b.addEventListener('click',function(){
+        if(!ok){Snd.play('no');toast('DIESER TURM IST IN DIESEM LEVEL NICHT ERLAUBT');return;}
+        if(on){if(sel.length<=1){Snd.play('no');return;}sel.splice(sel.indexOf(k),1);}
+        else{if(sel.length>=ARS){Snd.play('no');toast('HÖCHSTENS '+ARS+' TÜRME – ERST EINEN ABWÄHLEN');return;}sel.push(k);}
+        Snd.play('tick');render();
+      });
+      box.appendChild(b);
+    });
+    var hb=$('eqHero');hb.innerHTML='';
+    HKEYS.forEach(function(k){
+      var H=HEROES[k],ok=!fixed||fixed===k,b=document.createElement('button');b.type='button';
+      b.className=(hero===k?'on':'')+(ok?'':' off');b.style.setProperty('--c',H.col);
+      b.textContent=H.name;var sub=document.createElement('b');sub.textContent=fixed===k?'vom Ersteller gewählt':HABIL[k].short;b.appendChild(sub);
+      b.addEventListener('click',function(){if(!ok){Snd.play('no');toast('IN DIESEM LEVEL SPIELT MAN MIT '+HEROES[fixed].name.toUpperCase());return;}hero=k;Snd.play('tick');render();});
+      hb.appendChild(b);
+    });
+  }
+  render();
+  $('eqGo').onclick=function(){
+    try{localStorage.setItem('novabastion.cbeq',JSON.stringify({towers:sel,hero:fixed?saved.hero:hero}));}catch(e){}
+    disp('eqScr',false);Snd.init();Snd.play('tick');
+    STDL={lv:lvSk,hero:hero,towers:sel.slice()};buildStats();onGo();
+  };
+  $('eqBack').onclick=function(){disp('eqScr',false);Snd.play('tick');};
+  disp('eqScr',true);
+}
 function cbLoadDraft(){try{var d=JSON.parse(localStorage.getItem('novabastion.commdraft')||'null');if(d&&d.lv&&Array.isArray(d.lv.paths))return d;}catch(e){}return null;}
 function cbState(){return {lv:clone(edLv()),star:CB.star,boss:CB.boss,style:edCW().style};}
 function cbCoreJ(){return JSON.stringify(cbState());}
@@ -8937,6 +9015,8 @@ function cbUI(){
     b.addEventListener('click',function(){cbChange(function(st){st.star=s;});});box.appendChild(b);})(i);
   Array.prototype.forEach.call(box.children,function(b,i){b.classList.toggle('on',i+1===CB.star);});
   $('cbBoss').textContent='MUTTERSCHIFF AM ENDE: '+(CB.boss?'JA':'NEIN');
+  var clv=edLv();$('cbSkills').textContent='SKILLS: '+SKILL_NAMES[stdLv(clv)];
+  $('cbHero').textContent='HELD: '+(clv.hero&&HEROES[clv.hero]?HEROES[clv.hero].name.toUpperCase():'FREI WÄHLBAR');
   var ok=ED.clearedJ===cbCoreJ();
   $('eSave').textContent=ok?'HOCHLADEN':'HOCHLADEN 🔒';$('eSave').classList.toggle('go',ok);
   $('eLName').textContent='DEIN LEVEL';
@@ -8991,6 +9071,8 @@ $('bCommBack').addEventListener('click',function(){Snd.play('tick');var back=COM
 Array.prototype.forEach.call(document.querySelectorAll('#commTabs .pb'),function(b){b.addEventListener('click',function(){COMM.tab=b.dataset.t;Snd.play('tick');commOpen();});});
 $('bCommBuild').addEventListener('click',function(){Snd.play('tick');cbNewOpen();});
 $('cbNewClose').addEventListener('click',function(){Snd.play('tick');disp('cbNewScr',false);});
+$('cbSkills').addEventListener('click',function(){cbChange(function(st){var o=['none','mid','full'];st.lv.skills=o[(o.indexOf(stdLv(st.lv))+1)%3];});toast('SKILLS FÜR ALLE SPIELER: '+SKILL_NAMES[stdLv(edLv())],'#c08cff');});
+$('cbHero').addEventListener('click',function(){cbChange(function(st){var o=[null].concat(HKEYS),i=o.indexOf(st.lv.hero&&HEROES[st.lv.hero]?st.lv.hero:null);st.lv.hero=o[(i+1)%o.length];});});
 $('eHelp').addEventListener('click',function(){Snd.play('tick');disp('cbHelp',true);});
 $('cbHelpOk').addEventListener('click',function(){Snd.play('tick');disp('cbHelp',false);});
 $('cbBoss').addEventListener('click',function(){cbChange(function(st){st.boss=!st.boss;});});
