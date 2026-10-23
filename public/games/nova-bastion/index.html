@@ -109,6 +109,8 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 
 /* Screens */
 .screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+/* Fenster über dem Startbildschirm liegen über Ankündigungen (z 12), aber unter dem Update-Hinweis (z 15) */
+#resetScr,#syncScr{z-index:13}
 #title h1{font-family:'Press Start 2P',monospace;font-weight:400;margin:0 0 .5em;font-size:3.1em;line-height:1.25;letter-spacing:.04em;color:#eaf8ff;
   text-shadow:.08em .08em 0 var(--mg),.16em .16em 0 #2b1458}
 #title p{font-size:1.7em;margin:0 0 1.4em;color:#a8baf0;max-width:24em}
@@ -119,14 +121,16 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 #title .lvl a{color:var(--cy);text-decoration:underline;text-underline-offset:.15em}
 .hubhome{display:none;position:absolute;left:1em;top:1em;padding:.75em .9em;background:#0b1024e8;border:.16em solid var(--cy);box-shadow:.2em .2em 0 #000;
   color:var(--cy);font-family:'Press Start 2P',monospace;font-size:.58em;text-decoration:none;z-index:3}
-#bReset{top:4.7em!important}
-.hubcard{display:none;position:absolute;right:1em;bottom:5.2em;width:21em;padding:.55em;background:#0b1024ee;border:.16em solid #2c3566;
-  box-shadow:.25em .25em 0 #000;text-align:left;z-index:3}
+/* Konto-Plakette oben rechts: angemeldet Profilbild + Name, sonst „ANMELDEN“ */
+.hubcard{display:none;position:absolute;right:1em;top:1em;max-width:19em;padding:.35em .7em .35em .35em;background:#0b1024e8;border:.16em solid #2c3566;
+  box-shadow:.2em .2em 0 #000;text-align:left;z-index:3;text-decoration:none;color:#fff}
+.hubcard:hover,.hubcard:focus-visible{border-color:var(--cy)}
+.hubcard .hubmain{gap:.5em}.hubcard .hubavatar{width:2.4em;height:2.4em;font-size:.85em}.hubcard .hubname{font-size:.62em}
+.hubcard.out{padding:.75em .9em;border-color:var(--am);color:var(--am)}.hubcard.out .hubavatar{display:none}.hubcard.out .hubname{color:var(--am);font-size:.58em}
 .hubmain{display:flex;gap:.6em;align-items:center}.hubavatar{width:3.2em;height:3.2em;flex:none;border-radius:50%;border:.16em solid var(--cy);background:#182044;
   display:flex;align-items:center;justify-content:center;color:var(--am);font-family:'Press Start 2P',monospace;font-size:1.1em;overflow:hidden}
 .hubavatar img{width:100%;height:100%;object-fit:cover}.hubcopy{min-width:0;flex:1}.hubname{font-family:'Press Start 2P',monospace;font-size:.52em;color:#fff;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hubstatus,.hubbest{font-size:1.05em;line-height:1.05;color:#a8baf0}.hubbest{color:var(--am);margin-top:.15em}.hubactions{display:flex;gap:.35em;margin-top:.45em}
-.hubactions a{flex:1;padding:.45em .3em;background:#111936;border:.12em solid var(--cy);color:var(--cy);font-family:'Press Start 2P',monospace;font-size:.42em;line-height:1.35;text-align:center;text-decoration:none}
+.hubbest{font-size:1em;line-height:1.05;color:var(--am);margin-top:.15em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .noticestack{position:absolute;left:50%;top:.7em;transform:translateX(-50%);width:min(34em,68%);display:flex;flex-direction:column;gap:.35em;z-index:12;pointer-events:none}
 .notice{display:none;align-items:center;gap:.5em;padding:.5em .65em;background:#0b1024f5;border:.16em solid var(--cy);box-shadow:.22em .22em 0 #000;text-align:left;pointer-events:auto}
 .notice.success{border-color:var(--grn)}.notice.warning{border-color:var(--am)}.notice .ntx{min-width:0;flex:1}.notice b{display:block;font-family:'Press Start 2P',monospace;font-size:.5em;color:#fff;line-height:1.45}
@@ -352,7 +356,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .cmc .bt .pb.lk.on{background:var(--mg);border-color:var(--mg);color:#fff}
 .cmc .best{font-size:.95em;color:#6be07a;line-height:1;min-height:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #cbHelp{background:#05060fd8;z-index:8}
-#optScr{background:#05060fe0;z-index:9}
+#optScr{background:#05060fe0;z-index:13}
 #ruleTip{position:absolute;display:none;z-index:20;max-width:22em;padding:.5em .7em;background:#0b1024;border:.15em solid var(--am);box-shadow:.2em .2em 0 #000;
   color:#eaf8ff;font-size:1.2em;line-height:1.1;text-align:left;white-space:pre-line;pointer-events:none}
 .tipb{cursor:help;-webkit-tap-highlight-color:transparent}
@@ -1064,11 +1068,10 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
     <button class="big dev" id="bPlayDev">DEV MODUS</button>
    </div>
    <span class="lvl"><span id="tLv"></span><br><span id="tCloud"></span></span>
-   <div id="hubCard" class="hubcard"><div class="hubmain"><div id="hubAvatar" class="hubavatar"></div><div class="hubcopy"><div id="hubName" class="hubname"></div><div id="hubStatus" class="hubstatus"></div><div id="hubBest" class="hubbest"></div></div></div><div id="hubActions" class="hubactions"></div></div>
+   <a id="hubCard" class="hubcard" href="/konto/"><div class="hubmain"><div id="hubAvatar" class="hubavatar"></div><div class="hubcopy"><div id="hubName" class="hubname"></div><div id="hubBest" class="hubbest"></div></div></div></a>
    <button class="small" id="bSndT" style="display:none">TON AN</button>
    <button class="small" id="bMusT" style="display:none">MUSIK AN</button>
    <button class="small" id="bOptT">⚙ EINSTELLUNGEN</button>
-   <button class="small" id="bReset" style="right:auto;left:1em;bottom:auto;top:1em;color:#ff8a8a;border-color:#5a2a3a">KAMPAGNE ZURÜCKSETZEN</button>
   </div>
   <div id="updateNotice" class="notice updateglobal">NEUE VERSION VERFÜGBAR – <button id="updateReload">NEU LADEN</button></div>
 
@@ -1233,6 +1236,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
      <div class="ophd">SPIELSTAND</div>
      <div class="orow"><label>AUF ANDERES GERÄT</label><button class="pb" id="oMove">LINK ERSTELLEN</button></div>
      <div class="omove" id="oMoveBox"><p>Öffne diesen Link auf dem anderen Gerät, dann wird dein Fortschritt dort übernommen:</p><input type="text" id="oMoveLink" readonly><div class="btns"><button class="pb" id="oMoveCopy">KOPIEREN</button><button class="pb" id="oMoveShare">TEILEN</button></div></div>
+     <div class="orow" id="oResetRow"><label>KAMPAGNE</label><button class="pb" id="bReset" style="color:#ff8a8a;border-color:#5a2a3a">ZURÜCKSETZEN</button></div>
     </div>
     <button class="big" id="optClose">FERTIG</button>
    </div>
@@ -2707,19 +2711,22 @@ function hubAnnouncement(){
 }
 function hubRender(){
   var d=HUB.data;if(!d||!platformHosted()){disp('hubCard',false);disp('announce',false);return;}
-  var user=d.user&&typeof d.user==='object'?d.user:null,avatar=$('hubAvatar'),actions=$('hubActions');hubClear(avatar);hubClear(actions);$('hubBest').textContent='';
+  var user=d.user&&typeof d.user==='object'?d.user:null,card=$('hubCard'),avatar=$('hubAvatar');hubClear(avatar);$('hubBest').textContent='';
   if(user){
     var img=typeof user.avatar_url==='string'&&/^\/avatars\/[A-Za-z0-9_-]+\.(?:svg|png|webp)$/.test(user.avatar_url)?document.createElement('img'):null;
     if(img){img.src=user.avatar_url;img.alt='';avatar.appendChild(img);}else avatar.textContent=typeof user.initial==='string'?user.initial.slice(0,2):'?';
-    $('hubName').textContent=typeof user.display_name==='string'?'ANGEMELDET ALS '+user.display_name:'ANGEMELDET';$('hubStatus').textContent='Fortschritt wird gesichert';
+    $('hubName').textContent=typeof user.display_name==='string'?user.display_name:'ANGEMELDET';
     var best=(Array.isArray(d.best)?d.best:[]).find(function(b){return b&&Number.isInteger(b.rank)&&b.rank>0;});
-    if(best)$('hubBest').textContent='🏆 Platz '+best.rank+' in '+hubBoardName(best.board);
-    hubAction(actions,'RANGLISTE',d.links&&d.links.rankings);hubAction(actions,'MEIN PROFIL',user.profile_url);
+    if(best)$('hubBest').textContent='🏆 Platz '+best.rank+' · '+hubBoardName(best.board);
+    card.className='hubcard';card.href=hubSafePath(user.profile_url)||hubSafePath(d.links&&d.links.account)||'/konto/';
+    card.title='Mein Profil';
   }else{
-    avatar.textContent='?';$('hubName').textContent='NICHT ANGEMELDET';$('hubStatus').textContent='Mit Konto auf allen Geräten weiterspielen und in Ranglisten erscheinen.';
-    hubAction(actions,'ANMELDEN',d.links&&d.links.login);hubAction(actions,'KONTO ERSTELLEN',d.links&&d.links.register);
+    $('hubName').textContent='ANMELDEN';card.className='hubcard out';
+    card.href=hubSafePath(d.links&&d.links.login)||'/konto/anmelden/?zurueck=/games/nova-bastion/';
+    card.title='Mit Konto auf allen Geräten weiterspielen und in Ranglisten erscheinen';
   }
   disp('hubCard',true,'block');hubAnnouncement();
+  if(scene==='title')disp('bPlayDev',devOK(),'inline-block');
 }
 function hubModeChanged(){var on=platformHosted();disp('bHome',on,'block');if(on&&HUB.data)hubRender();else{disp('hubCard',false);disp('announce',false);}}
 function hubInit(){
@@ -9524,13 +9531,14 @@ window.addEventListener('pointerdown',function(e){if(scene!=='story'||!SY.on)ret
 $('bPlay').addEventListener('click',function(){enter(false);});
 $('syncLocal').addEventListener('click',function(){Snd.play('tick');chooseAccountSave(false);});
 $('syncAccount').addEventListener('click',function(){Snd.play('tick');chooseAccountSave(true);});
-/* Dev-Zugang: im Claude-Artifact nur für den Besitzer, lokal immer, auf einer eigenen Webseite nur mit Passwort (7x aufs Logo tippen).
+/* Dev-Zugang: im Claude-Artifact nur für den Besitzer, lokal immer, auf bens-games.de nur für Konten mit dem Recht
+   app.nova-bastion.manage (meldet die Startbildschirm-API als user.dev), auf der alten Webseite nur mit Passwort (7x aufs Logo tippen).
    Das Passwort prüft allein der Server, im Spiel steht kein Prüfwert. Alles, was für andere Spieler zählt
    (Level speichern, Community-Level löschen), verlangt auf dem Server ohnehin jedes Mal das Passwort. */
 var DEVKEY='novabastion.devok',DEVVAL='server-ok';
 function devOK(){
   if(!Owner.local)return !!Owner.is;
-  if(platformSite())return false;
+  if(platformSite())return !!(HUB.data&&HUB.data.user&&HUB.data.user.dev===true);
   var hn=location.hostname;if(hn==='localhost'||hn==='127.0.0.1'||hn==='')return true;
   try{return localStorage.getItem(DEVKEY)===DEVVAL;}catch(e){return false;}
 }
@@ -9548,7 +9556,7 @@ $('title').querySelector('h1').addEventListener('click',function(){
 $('bPlayDev').addEventListener('click',function(){if(!devOK()){Snd.play('no');return;}enter(true);});
 /* Kampagnen-Fortschritt zurücksetzen (mit doppelter Bestätigung) */
 var rsArm=0;
-$('bReset').addEventListener('click',function(){Snd.init();Snd.play('tick');rsArm=0;$('rsYes').textContent='JA, ALLES LÖSCHEN';disp('resetScr',true);});
+$('bReset').addEventListener('click',function(){Snd.init();Snd.play('tick');rsArm=0;disp('optScr',false);$('rsYes').textContent='JA, ALLES LÖSCHEN';disp('resetScr',true);});
 $('rsNo').addEventListener('click',function(){Snd.play('tick');disp('resetScr',false);});
 $('rsYes').addEventListener('click',function(){
   var b=$('rsYes');
@@ -9648,7 +9656,7 @@ function optUI(){
   tg('oVib',o.vib);tg('oShake',o.shake);tg('oHints',!!PR.hintsOn);
   Array.prototype.forEach.call(document.querySelectorAll('#oText .pb'),function(b){b.classList.toggle('on',+b.dataset.v===o.ts);});
 }
-function openOpt(){Snd.play('tick');optUI();disp('optScr',true);}
+function openOpt(){Snd.play('tick');optUI();disp('oResetRow',scene==='title'||scene==='map','flex');disp('optScr',true);}
 $('oMus').addEventListener('input',function(){SAVE.opt.mus=+this.value/100;applyOpt();optUI();});
 $('oSfx').addEventListener('input',function(){SAVE.opt.sfx=+this.value/100;applyOpt();optUI();});
 $('oSfx').addEventListener('change',function(){Snd.init();Snd.play('coin');});
