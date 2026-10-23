@@ -19,6 +19,24 @@ export function levelFromXp(xp) {
   return { level, into: rest, need: xpToNext(level) };
 }
 
+export const ACHIEVEMENTS = {
+  royal_flush: { name: 'Königliche Hand', icon: '👑' },
+  jackpots_10: { name: 'Jackpot-Legende', icon: '💰' },
+  level_25: { name: 'Casino-Profi', icon: '🏆' },
+  gift_7: { name: 'Sieben Tage Glück', icon: '🎁' },
+  pro_25000: { name: 'Profi mit 25.000', icon: '🔥' },
+};
+
+export function earnedAchievements({ stats = {}, xp = 0, gift = null, proBest = 0 } = {}) {
+  const earned = [];
+  if (Number(stats.hands?.[9]) > 0) earned.push('royal_flush');
+  if (Number(stats.jackpots) >= 10) earned.push('jackpots_10');
+  if (levelFromXp(Math.max(0, Number(xp) || 0)).level >= 25) earned.push('level_25');
+  if (Number(gift?.streak) >= 7) earned.push('gift_7');
+  if (Number(proBest) >= 25_000) earned.push('pro_25000');
+  return earned;
+}
+
 // Belohnung beim Erreichen eines Levels. Jedes 5. Level schaltet ein Design frei (wenn noch eins fehlt).
 export function levelReward(level) {
   return { chips: 50 + level * 10, design: level % 5 === 0 };

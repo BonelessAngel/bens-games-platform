@@ -54,6 +54,7 @@ function parse(rows) {
 }
 
 export const SHAPES = SHAPE_DEFS.map((def, id) => ({ id, weight: def.weight, ...parse(def.rows) }));
+const HARD_SHAPES = SHAPES.filter((shape) => shape.cells.length >= 4 && shape.w > 1 && shape.h > 1);
 
 export function randomShape(rng) {
   let pick = rng() * SHAPES.reduce((sum, s) => sum + s.weight, 0);
@@ -62,6 +63,10 @@ export function randomShape(rng) {
     if (pick < 0) return shape;
   }
   return SHAPES[SHAPES.length - 1];
+}
+
+export function randomHardShape(rng) {
+  return HARD_SHAPES[Math.floor(rng() * HARD_SHAPES.length)];
 }
 
 // Volles Deck 2..Ass, jeder Wert gleich wahrscheinlich.
