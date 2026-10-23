@@ -16,7 +16,7 @@ final class Community
 {
     public const RECENT = 4;
 
-    public function __construct(private PDO $pdo, private Leaderboards $leaderboards)
+    public function __construct(private PDO $pdo, private Leaderboards $leaderboards, private ?Permissions $permissions = null)
     {
     }
 
@@ -150,6 +150,9 @@ final class Community
                 'avatar_url' => $session['avatar'] !== null ? "/avatars/{$session['avatar']}-{$session['avatar_color']}.svg" : null,
                 'listed' => $listed,
                 'profile_url' => $listed ? '/spieler/?name=' . rawurlencode((string) $session['display_name']) : null,
+                // Entwickler-Werkzeuge im Spiel nur für Konten mit app.<id>.manage (Besitzer immer). Betrifft nur das Spiel
+                // auf diesem Gerät – alles, was für andere zählt (Kampagne veröffentlichen, Level löschen), läuft über die Zentrale.
+                'dev' => $this->permissions?->has($userId, "app.$appId.manage") ?? false,
             ];
             $entries = $this->pdo->prepare("SELECT board, score FROM leaderboard_entries WHERE user_id = ? AND app_id = ? AND period = 'all' AND hidden_at IS NULL");
             $entries->execute([$userId, $appId]);

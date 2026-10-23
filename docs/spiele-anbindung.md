@@ -36,7 +36,8 @@ Eine Anfrage liefert alles, was der Startbildschirm braucht (ohne Anmeldung mög
     "initial": "A",
     "avatar_url": "/avatars/fox-amber.svg",
     "listed": true,
-    "profile_url": "/spieler/?name=Anna"
+    "profile_url": "/spieler/?name=Anna",
+    "dev": false
   },
   "best": [ { "board": "2", "score": 9800, "rank": 1 } ],
   "announcements": [ { "id": 7, "title": "Neues Level!", "body": "…", "link": "/ranglisten/", "level": "success" } ],
@@ -52,6 +53,8 @@ Eine Anfrage liefert alles, was der Startbildschirm braucht (ohne Anmeldung mög
 
 - `user` ist `null`, wenn niemand angemeldet ist.
 - `avatar_url` ist ein fertiges rundes Bild (`<img>`, 96 × 96). Ist es `null`, einen Kreis mit `initial` zeichnen.
+- `dev` ist `true` nur für Konten mit dem Recht `app.<id>.manage` (Besitzer immer). Damit darf das Spiel seine
+  Entwickler-Werkzeuge freischalten – nur lokal auf diesem Gerät, in einem getrennten Spielstand, ohne Statistik und Ranglisten.
 - `profile_url` ist `null`, wenn das Konto nicht in Ranglisten erscheint – dann keinen Profil-Link zeigen.
 - `best`: höchstens drei Bestwerte dieses Spiels, beste Plätze zuerst. `rank` kann `null` sein.
 - `404` = unbekanntes Spiel (z. B. lokal), dann den Bereich einfach weglassen.
