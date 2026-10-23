@@ -80,6 +80,9 @@ final class NovaBastionLevel
         $o['boss'] = is_string($lv['boss'] ?? null) && preg_match('/^[a-z]{2,12}$/', $lv['boss']) ? $lv['boss'] : 'classic';
         $o['obj'] = in_array($lv['obj'] ?? null, self::OBJ, true) ? $lv['obj'] : null;
         $o['focus'] = self::focus($lv['focus'] ?? null);
+        // Ausrüstung der Spieler (ab Nova Bastion v1.7.0): fester Held oder frei, Skills Keine/Mittel/Voll
+        $o['hero'] = is_string($lv['hero'] ?? null) && preg_match('/^[a-z]{2,12}$/', $lv['hero']) ? $lv['hero'] : null;
+        $o['skills'] = in_array($lv['skills'] ?? null, ['none', 'mid', 'full'], true) ? $lv['skills'] : 'mid';
         $o['goal'] = null;
         $o['msg'] = self::clean($lv['msg'] ?? '', 180);
         $o['rules'] = self::words($lv['rules'] ?? null, 6) ?? [];
