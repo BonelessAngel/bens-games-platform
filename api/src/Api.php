@@ -255,7 +255,7 @@ final class Api
 
     private function community(): Community
     {
-        return new Community($this->pdo(), $this->leaderboards());
+        return new Community($this->pdo(), $this->leaderboards(), new Permissions($this->pdo()));
     }
 
     /** Prüft ein Recht in der Zentrale (bricht sonst mit 403 ab). @param array<string, mixed> $session */

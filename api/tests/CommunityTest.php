@@ -144,4 +144,12 @@ dbTest('Startbildschirm: alles für das Spiel in einer Anfrage', function (): vo
     same(null, $hidden['user']['profile_url']);
     same(false, $hidden['user']['listed']);
     same([null, null, null], array_column($hidden['best'], 'rank'));
+
+    // Dev-Modus im Spiel nur mit app.<id>.manage oder als Besitzer
+    same(false, $hub['user']['dev']);
+    $app->pdo->prepare('INSERT INTO user_permissions (user_id, permission, granted_at) VALUES (?, ?, NOW())')->execute([$app->userId('anna@example.org'), 'app.nova-bastion.manage']);
+    same(true, siteGet($app, 'games/nova-bastion/hub', [], $anna['cookies'])->body['user']['dev']);
+    same(false, siteGet($app, 'games/royal-blocks/hub', [], $anna['cookies'])->body['user']['dev'], 'nur für dieses Spiel');
+    $app->grantRole('max@example.org', 'owner');
+    same(true, siteGet($app, 'games/royal-blocks/hub', [], $max['cookies'])->body['user']['dev'], 'Besitzer');
 });
