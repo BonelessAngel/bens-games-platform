@@ -2,7 +2,7 @@
 // Der Zustand ist reines JSON (auch der Zufall) und kann direkt gespeichert werden.
 
 import { HANDS, SUITS, evaluateHand, flushSuit, nearMiss } from './poker.js';
-import { SHAPES, nextRandom, randomPiece, rngOf } from './pieces.js';
+import { SHAPES, nextRandom, randomHardShape, randomPiece, rngOf } from './pieces.js';
 
 export const SIZE = 8;
 export const CELL_POINTS = 10; // Punkte pro Kästchen einer abgeräumten Reihe, mal Faktor der Pokerhand
@@ -20,6 +20,12 @@ export const REQUIREMENTS = [
   { lines: 0, level: 1 }, // Paar
   { lines: 10, level: 2 }, // Zwei Paare
 ];
+export const PRO_REQUIREMENTS = [
+  { lines: 0, level: 2 }, // Zwei Paare
+  { lines: 5, level: 3 }, // Drilling
+  { lines: 12, level: 4 }, // Straße
+  { lines: 22, level: 5 }, // Flush
+];
 
 // Gesperrte Reihen zerbröseln nach so vielen Zügen von selbst (ohne Punkte) – ein Fehler ist nie tödlich.
 export const LOCK_MOVES = 5;
@@ -29,19 +35,66 @@ export const RULES = { comboCarry: true };
 
 // Spezialzüge kosten Chips (die Chips selbst verwaltet die Anzeige, sie gelten über alle Runden).
 // Eine Runde bringt laut Simulation etwa 250–350 Chips.
-export const POWER_COSTS = { fold: 60, blast: 120, recolor: 40 };
+export const POWER_COSTS = {
+  fold: [90, 120, 160, 210],
+  recolor: [60, 85, 115],
+  blast: [180],
+  undo: [180],
+};
+export const POWER_LIMITS = {
+  free: { fold: 3, recolor: 3, blast: 1, undo: 1 },
+  daily: { fold: 3, recolor: 3, blast: 1, undo: 1 },
+  pro: { fold: 1, recolor: 1, blast: 0, undo: 0 },
+};
 
-export function requirementFor(lines) {
-  let current = REQUIREMENTS[0];
-  for (const step of REQUIREMENTS) if (lines >= step.lines) current = step;
-  const next = REQUIREMENTS[REQUIREMENTS.indexOf(current) + 1] ?? null;
+export function requirementFor(lines, mode = 'free') {
+  const requirements = mode === 'pro' ? PRO_REQUIREMENTS : REQUIREMENTS;
+  let current = requirements[0];
+  for (const step of requirements) if (lines >= step.lines) current = step;
+  const next = requirements[requirements.indexOf(current) + 1] ?? null;
   return { level: current.level, next };
+}
+
+export const leaderboardBoard = (mode) => (mode === 'daily' ? 'taeglich' : mode === 'pro' ? 'profi' : 'standard');
+
+export function upgradeGameState(state) {
+  if (!['free', 'daily', 'pro'].includes(state.mode)) state.mode = 'free';
+  state.powers ??= {};
+  for (const kind of Object.keys(POWER_LIMITS.free)) {
+    state.powers[kind] = Math.max(0, Math.floor(Number(state.powers[kind]) || 0));
+  }
+  state.startBonus = state.mode === 'free' && state.startBonus === true;
+  state.undo ??= null;
+  state.undoMeta ??= null;
+  return state;
+}
+
+export function powerLimit(state, kind) {
+  const base = POWER_LIMITS[state.mode]?.[kind] ?? 0;
+  return kind === 'fold' && state.mode === 'free' && state.startBonus ? base + 1 : base;
+}
+
+export function powerRemaining(state, kind) {
+  upgradeGameState(state);
+  return Math.max(0, powerLimit(state, kind) - state.powers[kind]);
+}
+
+export function powerCost(state, kind) {
+  upgradeGameState(state);
+  const costs = POWER_COSTS[kind] ?? [];
+  return costs[Math.min(state.powers[kind], costs.length - 1)] ?? 0;
+}
+
+export function usePowerCharge(state, kind) {
+  if (powerRemaining(state, kind) <= 0) return false;
+  state.powers[kind]++;
+  return true;
 }
 
 export const idx = (x, y) => y * SIZE + x;
 
 // mode: 'free' (freies Spiel) oder 'daily' (Tages-Challenge, gleicher seed für alle).
-export function createGame(seed, mode = 'free', day = null) {
+export function createGame(seed, mode = 'free', day = null, { startBonus = false } = {}) {
   const state = {
     mode,
     day,
@@ -61,9 +114,12 @@ export function createGame(seed, mode = 'free', day = null) {
     freeContinue: true, // einmal pro Runde gratis weiterspielen
     rewarded: false, // Truhe am Rundenende schon geöffnet
     fever: 0, // verbleibende Fieber-Züge
+    powers: { fold: 0, recolor: 0, blast: 0, undo: 0 },
+    startBonus: mode === 'free' && startBonus,
+    undo: null,
     over: false,
   };
-  state.tray = dealTray(state.board, rngOf(state));
+  state.tray = dealTray(state.board, rngOf(state), requirementFor(0, mode).level, mode);
   state.mission = newMission(state);
   return state;
 }
@@ -148,28 +204,29 @@ export function comboShape(board) {
 }
 
 // Drei neue Teile; mindestens eins davon soll passen (wenn das in einigen Versuchen gelingt).
-export function dealTray(board, rng, requiredLevel = 0) {
-  const combo = rng() < HELP.comboPiece ? comboShape(board) : null;
+export function dealTray(board, rng, requiredLevel = 0, mode = 'free') {
+  const combo = rng() < (mode === 'pro' ? HELP.comboPiece / 3 : HELP.comboPiece) ? comboShape(board) : null;
   if (combo) {
-    const tray = dealTrayRandomOrHelpful(board, rng, requiredLevel);
+    const tray = dealTrayRandomOrHelpful(board, rng, requiredLevel, mode);
     const hints = lineHints(board);
     tray[Math.floor(rng() * 3)] = randomPiece(rng, hints, combo.shape);
     return tray;
   }
-  return dealTrayRandomOrHelpful(board, rng, requiredLevel);
+  return dealTrayRandomOrHelpful(board, rng, requiredLevel, mode);
 }
 
-function dealTrayRandomOrHelpful(board, rng, requiredLevel) {
+function dealTrayRandomOrHelpful(board, rng, requiredLevel, mode) {
   const hints = lineHints(board);
+  const piece = () => randomPiece(rng, hints, mode === 'pro' && rng() < 0.65 ? randomHardShape(rng) : null);
   const randomTray = () => {
     let tray;
     for (let attempt = 0; attempt < DEAL_ATTEMPTS; attempt++) {
-      tray = [randomPiece(rng, hints), randomPiece(rng, hints), randomPiece(rng, hints)];
+      tray = [piece(), piece(), piece()];
       if (tray.some((piece) => fitsAnywhere(board, piece))) break;
     }
     return tray;
   };
-  if (rng() >= HELP.chance || board.every((c) => c === null)) return randomTray();
+  if (rng() >= (mode === 'pro' ? HELP.chance / 3 : HELP.chance) || board.every((c) => c === null)) return randomTray();
 
   let best = null;
   for (let k = 0; k < HELP.candidates; k++) {
@@ -273,7 +330,7 @@ export function previewPlacement(state, piece, x, y) {
     next[i] = piece.cards[k];
     return i;
   });
-  const lines = linesThrough(next, cells, requirementFor(state.lines).level);
+  const lines = linesThrough(next, cells, requirementFor(state.lines, state.mode).level);
   if (RULES.comboCarry && lines.some((l) => l.ok)) for (const l of lines) l.ok = true;
   return lines;
 }
@@ -285,8 +342,11 @@ function clearedCount(lines) {
 }
 
 export function placePiece(state, slot, x, y) {
+  upgradeGameState(state);
   const piece = state.tray[slot];
   if (state.over || !piece || !canPlace(state.board, piece, x, y)) return null;
+  const undo = JSON.parse(JSON.stringify(state));
+  undo.undo = null;
 
   const placed = piece.cells.map(([dx, dy], k) => {
     const i = idx(x + dx, y + dy);
@@ -296,7 +356,7 @@ export function placePiece(state, slot, x, y) {
   state.tray[slot] = null;
   state.moves++;
 
-  const required = requirementFor(state.lines).level;
+  const required = requirementFor(state.lines, state.mode).level;
   const full = linesThrough(state.board, placed, required);
   // Kombo-Regel: Schafft mindestens eine der neuen Reihen die Mindesthand, verschwinden alle (große Kombos bleiben ganz)
   const anyOk = full.some((line) => line.ok);
@@ -359,17 +419,18 @@ export function placePiece(state, slot, x, y) {
 
   const crumbled = syncLocked(state, true);
 
-  const levelUp = requirementFor(state.lines).level > required;
+  const levelUp = requirementFor(state.lines, state.mode).level > required;
   // "Fast!" – nur zeigen, wenn die verpasste Hand stärker gewesen wäre als alles, was dieser Zug geschafft hat
   const bestLevel = Math.max(-1, ...lines.map((l) => l.hand.level));
   const near = full.map((l) => l.near).filter((h) => h && h.level > bestLevel).sort((a, b) => b.level - a.level)[0] ?? null;
 
   let dealt = false;
   if (state.tray.every((p) => p === null)) {
-    state.tray = dealTray(state.board, rngOf(state), requirementFor(state.lines).level);
+    state.tray = dealTray(state.board, rngOf(state), requirementFor(state.lines, state.mode).level, state.mode);
     dealt = true;
   }
   updateOver(state);
+  state.undo = undo;
 
   return {
     placed, lines, blocked, removed, combo, streak: state.streak, streakMult, tableClear, points, chips,
@@ -413,7 +474,9 @@ export function useFreeContinue(state) {
 
 // Spezialzug "Passen": drei neue Teile.
 export function foldTray(state) {
-  state.tray = dealTray(state.board, rngOf(state), requirementFor(state.lines).level);
+  state.undo = null;
+  state.undoMeta = null;
+  state.tray = dealTray(state.board, rngOf(state), requirementFor(state.lines, state.mode).level, state.mode);
   updateOver(state);
   return true;
 }
@@ -422,6 +485,8 @@ export function foldTray(state) {
 export function blastAt(state, cell) {
   const lines = findFullLines(state.board).filter((line) => line.cells.includes(cell));
   if (!lines.length) return null;
+  state.undo = null;
+  state.undoMeta = null;
   const removed = new Map();
   for (const line of lines) for (const i of line.cells) removed.set(i, state.board[i]);
   for (const i of removed.keys()) state.board[i] = null;
@@ -434,6 +499,8 @@ export function blastAt(state, cell) {
 export function recolorPiece(state, slot, suit) {
   const piece = state.tray[slot];
   if (!piece || piece.s === suit) return false;
+  state.undo = null;
+  state.undoMeta = null;
   piece.s = suit;
   piece.cards = piece.cards.map((c) => (c.j ? c : { ...c, s: suit }));
   updateOver(state);
@@ -441,3 +508,20 @@ export function recolorPiece(state, slot, suit) {
 }
 
 export const hasLockedLines = (state) => findFullLines(state.board).length > 0;
+
+export function undoLastMove(state) {
+  upgradeGameState(state);
+  if (!state.undo || powerRemaining(state, 'undo') <= 0) return null;
+  const snapshot = JSON.parse(JSON.stringify(state.undo));
+  const meta = state.undoMeta;
+  const earnedChips = Math.max(0, (state.chips ?? 0) - (snapshot.chips ?? 0));
+  const undoUses = state.powers.undo + 1;
+  for (const key of Object.keys(state)) delete state[key];
+  Object.assign(state, snapshot);
+  upgradeGameState(state);
+  state.powers.undo = undoUses;
+  state.undo = null;
+  state.undoMeta = null;
+  updateOver(state);
+  return { earnedChips, meta };
+}

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-version="1.5.0" data-theme="neon" data-tiles="standard">
+<html lang="de" data-version="1.6.0" data-theme="neon" data-tiles="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -61,6 +61,7 @@
       <button class="power" data-power="fold" type="button"><span class="p-icon">⟳</span>Passen <b data-cost="fold"></b></button>
       <button class="power" data-power="recolor" type="button"><span class="p-icon">◐</span>Farbe <b data-cost="recolor"></b></button>
       <button class="power" data-power="blast" type="button"><span class="p-icon">✸</span>Sprengen <b data-cost="blast"></b></button>
+      <button class="power" data-power="undo" type="button"><span class="p-icon">↶</span>Zurück <b data-cost="undo"></b></button>
     </div>
 
     <footer id="tray" class="tray" aria-label="Teile">
@@ -135,12 +136,17 @@
 
   <div id="shop" class="overlay" hidden>
     <div class="panel scroll">
-      <h2>Designs</h2>
+      <h2>Casino-Shop</h2>
       <div class="wallet center"><span class="chip-icon"></span><span id="shop-chips">0</span></div>
-      <h3>Farbwelten</h3>
-      <div id="shop-themes" class="shop-grid"></div>
-      <h3>Kachel-Stile</h3>
-      <div id="shop-tiles" class="shop-grid"></div>
+      <div id="shop-tabs" class="shop-tabs" role="tablist" aria-label="Shop-Bereiche">
+        <button data-shop-tab="theme" type="button">Designs</button>
+        <button data-shop-tab="tiles" type="button">Kacheln</button>
+        <button data-shop-tab="effects" type="button">Effekte</button>
+        <button data-shop-tab="backgrounds" type="button">Hintergründe</button>
+        <button data-shop-tab="cards" type="button">Karten</button>
+        <button data-shop-tab="extras" type="button">Extras</button>
+      </div>
+      <div id="shop-items" class="shop-grid"></div>
       <button class="btn primary" data-action="back" type="button">Zurück</button>
     </div>
   </div>
@@ -218,9 +224,11 @@
         <div><b id="start-best">0</b><small>Rekord</small></div>
       </div>
       <button class="btn primary big" data-action="play" type="button" id="start-play">Spielen</button>
+      <button class="btn pro" data-action="play-pro" type="button" id="start-pro">🔒 Profi · ab Level 10</button>
       <button class="btn gold" data-action="play-daily" type="button" id="start-daily">Tages-Challenge</button>
-      <div class="three-buttons">
+      <div class="four-buttons">
         <button class="btn small-btn" data-action="shop" type="button">Designs</button>
+        <button class="btn small-btn" data-action="achievements" type="button">Erfolge</button>
         <button class="btn small-btn" data-action="stats" type="button">Statistik</button>
         <button class="btn small-btn" data-action="help" type="button">Regeln</button>
       </div>
@@ -238,6 +246,24 @@
         <button class="btn" data-action="share" type="button">Teilen</button>
         <button class="btn primary" data-action="back" type="button">Zurück</button>
       </div>
+    </div>
+  </div>
+
+  <div id="achievements" class="overlay" hidden>
+    <div class="panel scroll">
+      <h2>Erfolge</h2>
+      <p class="small">Deine königlichen Meilensteine</p>
+      <div id="achievement-list" class="achievement-grid"></div>
+      <button class="btn primary" data-action="back" type="button">Zurück</button>
+    </div>
+  </div>
+
+  <div id="save-conflict" class="overlay" hidden>
+    <div class="panel">
+      <h2>Welcher Spielstand?</h2>
+      <p>Auf diesem Gerät und im Konto liegen unterschiedliche Fortschritte. Nichts wird ohne deine Wahl überschrieben.</p>
+      <button id="choose-local" class="btn" data-action="choose-local-save" type="button"></button>
+      <button id="choose-cloud" class="btn gold" data-action="choose-cloud-save" type="button"></button>
     </div>
   </div>
 

@@ -6,6 +6,7 @@ const DATA_KEY_RE = /^[a-z0-9_]{1,32}$/;
 const DATA_ID_RE = /^[a-z0-9_-]{1,32}$/;
 const RESULTS = new Set(['win', 'lose', 'abort']);
 const RELEASE_RE = /^\d+\.\d+\.\d+$/;
+const ACHIEVEMENT_RE = /^[A-Za-z0-9_.-]{1,64}$/;
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 const integer = (value, max = Number.MAX_SAFE_INTEGER) => Math.min(max, Math.max(0, Math.floor(Number(value) || 0)));
@@ -173,7 +174,7 @@ export function createPlatformClient({
   }
 
   async function prepareAccount() {
-    if (!enabled) return null;
+    if (!hosted) return null;
     if (!accountPromise) accountPromise = (async () => {
       try {
         const response = await request('/api/account/me', { credentials: 'same-origin' });
@@ -195,6 +196,34 @@ export function createPlatformClient({
     try {
       const response = await request(`/api/games/${encodeURIComponent(app)}/hub`, { credentials: 'same-origin' });
       return response?.ok ? await response.json() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadCloudSave() {
+    if (!hosted || !(await prepareAccount())) return null;
+    try {
+      const response = await request(`/api/games/${encodeURIComponent(app)}/save`, { credentials: 'same-origin' });
+      return response?.ok ? await response.json() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function putCloudSave(data, t, achievements = [], { keepalive = false } = {}) {
+    if (!hosted || typeof data !== 'string' || data.length > 512_000 || !(await prepareAccount())) return null;
+    const ids = [...new Set(achievements.filter((id) => typeof id === 'string' && ACHIEVEMENT_RE.test(id)))];
+    try {
+      const response = await request(`/api/games/${encodeURIComponent(app)}/save/put`, {
+        method: 'POST', credentials: 'same-origin', keepalive,
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({ data, t: integer(t), achievements: ids }),
+      });
+      const body = await response?.json?.().catch(() => null);
+      if (response?.ok) return { ok: true, ...body };
+      if (response?.status === 409 && body?.save) return { ok: false, conflict: true, ...body };
+      return null;
     } catch {
       return null;
     }
@@ -223,7 +252,8 @@ export function createPlatformClient({
   }
 
   return {
-    hosted, enabled, visit, start, stop, beginLevel, endLevel, heartbeat, flush, fetchHub, prepareAccount, submitScore,
+    hosted, enabled, visit, start, stop, beginLevel, endLevel, heartbeat, flush, fetchHub, prepareAccount,
+    loadCloudSave, putCloudSave, submitScore,
     pending: () => queue.map((event) => ({ ...event })),
   };
 }

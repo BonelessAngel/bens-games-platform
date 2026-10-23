@@ -1,21 +1,23 @@
 // Anzeige und Bedienung von Royal Blocks.
 
 import {
-  POWER_COSTS, SIZE, STREAK_GRACE, blastAt, canPlace, createGame, findFullLines, fitsAnywhere, foldTray, hasLockedLines, idx,
-  missionText, placePiece, previewPlacement, recolorPiece, requirementFor, streakMultiplier, updateOver, useFreeContinue,
+  SIZE, STREAK_GRACE, blastAt, canPlace, createGame, findFullLines, fitsAnywhere, foldTray, hasLockedLines, idx,
+  leaderboardBoard, missionText, placePiece, powerCost, powerRemaining, previewPlacement, recolorPiece, requirementFor, streakMultiplier,
+  undoLastMove, updateOver, upgradeGameState, useFreeContinue, usePowerCharge,
 } from './game.js';
 import {
-  GIFT_DAYS, JACKPOT_GROWTH, JACKPOT_START, SCRATCH_EVERY, chestReward, dailyGift, emptyStats, jackpotWin, levelFromXp, levelReward,
-  praiseFor, recordMove, recordRound, scratchPrize, xpForRound,
+  ACHIEVEMENTS, GIFT_DAYS, JACKPOT_GROWTH, JACKPOT_START, SCRATCH_EVERY, chestReward, dailyGift, earnedAchievements,
+  emptyStats, jackpotWin, levelFromXp, levelReward, praiseFor, recordMove, recordRound, scratchPrize, xpForRound,
 } from './progress.js';
 import { createScratchCard } from './scratch.js';
+import { SHOP_ITEMS, SHOP_SETTING, THEMES } from './shop.js';
 import { HANDS, SUITS, rankLabel } from './poker.js';
 import {
   setMusicEnabled, setMusicIntensity, setSoundEnabled, setVibrationEnabled, sounds, startMusic, stopMusic, unlockAudio, vibrate,
 } from './audio.js';
-import { burst, chips as chipBurst, initFx, suitColor } from './fx.js';
+import { burst, chips as chipBurst, initFx, setFxStyle, suitColor } from './fx.js';
 import { createPlatformClient, leaderboardPath } from './platform.js';
-import { load, save } from './storage.js';
+import { exportSnapshot, hasProgress, importSnapshot, load, onSave, save, snapshotSummary } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
@@ -46,24 +48,11 @@ const els = {
   powers: [...document.querySelectorAll('.powers .power')],
 };
 
-// Designs: Farbwelten (CSS-Variablen) und Kachel-Stile; Preise in Chips.
-const THEMES = [
-  { id: 'neon', name: 'Neon', price: 0, color: '#0d0420' },
-  { id: 'gold', name: 'Gold-Casino', price: 1500, color: '#041a12' },
-  { id: 'ice', name: 'Eis', price: 3000, color: '#06182a' },
-  { id: 'retro', name: 'Retro-Arcade', price: 5000, color: '#000000' },
-];
-const TILE_STYLES = [
-  { id: 'standard', name: 'Standard', price: 0 },
-  { id: 'glass', name: 'Glas', price: 1000 },
-  { id: 'pixel', name: 'Pixel', price: 2000 },
-  { id: 'chip', name: 'Chip', price: 4000 },
-];
-
 // ---------- Gespeicherte Daten ----------
 
 const settings = {
   sound: true, music: true, vibration: true, seenHelp: false, theme: 'neon', tiles: 'standard', mode: 'free',
+  effect: 'effect-classic', background: 'bg-classic', cards: 'card-classic',
   ...load('settings', {}),
 };
 const saveSettings = () => save('settings', settings);
@@ -74,7 +63,9 @@ const stats = { ...emptyStats(), ...load('stats', {}) };
 let scratchReady = Boolean(load('scratch-ready', false));
 let returnTo = 'menu'; // wohin "Zurück" aus Designs/Statistik führt
 const owned = new Set(load('owned', ['neon', 'standard']));
-owned.add('neon').add('standard');
+owned.add('neon').add('standard').add('effect-classic').add('bg-classic').add('card-classic');
+let startBonusReady = Boolean(load('start-bonus', false));
+const achievements = new Set(load('achievements', []).filter((id) => id in ACHIEVEMENTS));
 
 setSoundEnabled(settings.sound);
 setVibrationEnabled(settings.vibration);
@@ -99,10 +90,16 @@ function randomSeed() {
   }
 }
 
-const saveKey = (mode) => (mode === 'daily' ? 'daily' : 'game');
+const saveKey = (value) => (value === 'daily' ? 'daily' : value === 'pro' ? 'pro' : 'game');
 
-function freshGame(mode) {
-  return mode === 'daily' ? createGame(daySeed(today()), 'daily', today()) : createGame(randomSeed(), 'free');
+function freshGame(value) {
+  if (value === 'daily') return createGame(daySeed(today()), 'daily', today());
+  const bonus = value === 'free' && startBonusReady;
+  if (bonus) {
+    startBonusReady = false;
+    save('start-bonus', false);
+  }
+  return createGame(randomSeed(), value, null, { startBonus: bonus });
 }
 
 function loadGame(mode) {
@@ -111,6 +108,7 @@ function loadGame(mode) {
     saved && Array.isArray(saved.board) && saved.board.length === SIZE * SIZE && Array.isArray(saved.tray) &&
     typeof saved.rng === 'number' && saved.mission && (mode !== 'daily' || saved.day === today());
   if (!valid) return null;
+  upgradeGameState(saved);
   updateOver(saved);
   return saved;
 }
@@ -120,14 +118,14 @@ function getBest(mode) {
     const d = load('daily-best', null);
     return d && d.day === today() ? d.score : 0;
   }
-  return Number(load('best', 0)) || 0;
+  return Number(load(mode === 'pro' ? 'best-pro' : 'best', 0)) || 0;
 }
 function setBest(mode, score) {
   if (mode === 'daily') save('daily-best', { day: today(), score });
-  else save('best', score);
+  else save(mode === 'pro' ? 'best-pro' : 'best', score);
 }
 
-let mode = settings.mode === 'daily' ? 'daily' : 'free';
+let mode = ['free', 'daily', 'pro'].includes(settings.mode) ? settings.mode : 'free';
 let state = loadGame(mode) ?? freshGame(mode);
 let best = getBest(mode);
 let bestAtStart = best;
@@ -135,7 +133,6 @@ let shownScore = state.score;
 
 // Eine Royal-Blocks-Runde entspricht für Statistik und Rangliste einem Level.
 // Die Zähler gelten für diesen Seitenbesuch; beim Verlassen endet die Sitzung als "abort".
-const boardForMode = (value) => (value === 'daily' ? 'taeglich' : 'klassisch');
 let platformRound = null;
 let gameplayActive = false;
 let waitingWorker = null;
@@ -167,7 +164,7 @@ function startPlatformRound() {
   gameplayActive = true;
   renderUpdateNotice();
   if (platformRound) return;
-  const board = boardForMode(mode);
+  const board = leaderboardBoard(mode);
   if (!platform.beginLevel(board)) return;
   platformRound = { board, lines: 0, hands: new Array(HANDS.length).fill(0) };
   hideLeaderboard();
@@ -336,7 +333,7 @@ function renderStreak() {
 const fmt = (n) => n.toLocaleString('de-DE');
 
 function renderScore() {
-  els.bestLabel.textContent = mode === 'daily' ? `Tagesrekord ${dayLabel(today())}` : 'Rekord';
+  els.bestLabel.textContent = mode === 'daily' ? `Tagesrekord ${dayLabel(today())}` : mode === 'pro' ? 'Profi-Rekord' : 'Rekord';
   els.best.textContent = fmt(best);
   const from = shownScore;
   const to = state.score;
@@ -358,7 +355,7 @@ function renderScore() {
 }
 
 function renderReq() {
-  const { level, next } = requirementFor(state.lines);
+  const { level, next } = requirementFor(state.lines, state.mode);
   els.reqHand.textContent = HANDS[level].name;
   const left = next ? next.lines - state.lines : 0;
   els.reqNext.textContent = next ? `noch ${left} ${left === 1 ? 'Reihe' : 'Reihen'} bis ${HANDS[next.level].name}` : '';
@@ -374,9 +371,13 @@ function renderWallet() {
   $('shop-chips').textContent = fmt(wallet);
   for (const btn of document.querySelectorAll('[data-power]')) {
     const kind = btn.dataset.power;
-    const affordable = wallet >= POWER_COSTS[kind];
-    const usable = kind !== 'blast' || hasLockedLines(state);
-    btn.disabled = !affordable || !usable;
+    const cost = powerCost(state, kind);
+    const remaining = powerRemaining(state, kind);
+    const targetReady = kind === 'blast' ? hasLockedLines(state) : kind !== 'undo' || Boolean(state.undo);
+    const funds = kind === 'undo' ? state.undoMeta?.wallet ?? wallet : wallet;
+    btn.disabled = remaining <= 0 || funds < cost || !targetReady;
+    const costLabel = btn.querySelector('[data-cost]');
+    if (costLabel) costLabel.textContent = remaining > 0 ? `${fmt(cost)} · noch ${remaining}` : 'aufgebraucht';
     btn.classList.toggle('active', powerMode === kind);
   }
 }
@@ -588,13 +589,15 @@ function queueBanner(fn, minDelay = 0) {
 }
 
 function place(slot, x, y) {
+  const undoMeta = { wallet, jackpot, stats: structuredClone(stats), best };
   const res = placePiece(state, slot, x, y);
   if (!res) return;
+  state.undoMeta = undoMeta;
   trackPlatformMove(res);
   sounds.place();
   vibrate(8);
 
-  const required = requirementFor(state.lines - res.lines.length).level;
+  const required = requirementFor(state.lines - res.lines.length, state.mode).level;
   if (res.lines.length) clearEffects(res);
   if (res.crumbled) {
     flyOut(res.crumbled.removed, new Set(), 0.6);
@@ -638,6 +641,7 @@ function place(slot, x, y) {
     setBest(mode, best);
   }
   renderScore();
+  refreshAchievements();
   persist();
 
   if (res.over) setTimeout(gameOver, Math.max(700, bannerAt - performance.now()));
@@ -911,9 +915,31 @@ function usePower(kind) {
     cancelPower();
     return;
   }
-  if (wallet < POWER_COSTS[kind]) return;
+  const cost = powerCost(state, kind);
+  const funds = kind === 'undo' ? state.undoMeta?.wallet ?? wallet : wallet;
+  if (powerRemaining(state, kind) <= 0 || funds < cost) return;
+  if (kind === 'undo') {
+    const result = undoLastMove(state);
+    if (!result?.meta) return;
+    wallet = result.meta.wallet - cost;
+    jackpot = result.meta.jackpot;
+    for (const key of Object.keys(stats)) delete stats[key];
+    Object.assign(stats, result.meta.stats);
+    best = result.meta.best;
+    save('chips', wallet);
+    save('jackpot', jackpot);
+    save('stats', stats);
+    setBest(mode, best);
+    sounds.power();
+    shownScore = state.score;
+    renderAll();
+    renderTray(true);
+    persist();
+    toast('Letzter Zug rückgängig');
+    return;
+  }
   if (kind === 'fold') {
-    if (!spendChips(POWER_COSTS.fold)) return;
+    if (!spendChips(cost) || !usePowerCharge(state, kind)) return;
     foldTray(state);
     sounds.power();
     closeOverlays();
@@ -938,7 +964,8 @@ function onBoardDown(e) {
     sounds.invalid();
     return;
   }
-  spendChips(POWER_COSTS.blast);
+  const cost = powerCost(state, 'blast');
+  if (!spendChips(cost) || !usePowerCharge(state, 'blast')) return;
   sounds.power();
   setTimeout(() => sounds.clear(2, 0, res.lines.length), 120);
   vibrate([40, 30, 80]);
@@ -971,7 +998,8 @@ function openSuitPicker(slot) {
 }
 
 function chooseSuit(s) {
-  if (pickerSlot === null || !spendChips(POWER_COSTS.recolor)) return;
+  const cost = powerCost(state, 'recolor');
+  if (pickerSlot === null || !spendChips(cost) || !usePowerCharge(state, 'recolor')) return;
   recolorPiece(state, pickerSlot, s);
   pickerSlot = null;
   sounds.power();
@@ -984,10 +1012,14 @@ function chooseSuit(s) {
 
 // ---------- Designs ----------
 
-function applyDesign() {
-  root.dataset.theme = settings.theme;
-  root.dataset.tiles = settings.tiles;
-  const theme = THEMES.find((t) => t.id === settings.theme);
+function applyDesign(preview = {}) {
+  root.dataset.theme = preview.theme ?? settings.theme;
+  root.dataset.tiles = preview.tiles ?? settings.tiles;
+  root.dataset.effect = preview.effects ?? settings.effect;
+  root.dataset.background = preview.backgrounds ?? settings.background;
+  root.dataset.cards = preview.cards ?? settings.cards;
+  setFxStyle(root.dataset.effect);
+  const theme = THEMES.find((t) => t.id === root.dataset.theme);
   document.querySelector('meta[name="theme-color"]').setAttribute('content', theme?.color ?? '#0d0420');
 }
 
@@ -996,42 +1028,67 @@ function shopItem(item, kind) {
   el.className = 'shop-item';
   const swatch = document.createElement('div');
   swatch.className = 'swatch';
-  swatch.dataset.theme = kind === 'theme' ? item.id : settings.theme;
-  const style = kind === 'tiles' ? item.id : settings.tiles;
-  [[14, 0], [13, 1], [12, 2], [11, 3]].forEach(([r, s]) => swatch.append(tile({ r, s }, style)));
+  swatch.dataset.style = item.id;
+  if (kind === 'theme' || kind === 'tiles') {
+    swatch.dataset.theme = kind === 'theme' ? item.id : settings.theme;
+    const style = kind === 'tiles' ? item.id : settings.tiles;
+    [[14, 0], [13, 1], [12, 2], [11, 3]].forEach(([r, s]) => swatch.append(tile({ r, s }, style)));
+  } else {
+    const icons = { effects: '✦ ✧ ✦', backgrounds: '▦ ✦ ▦', cards: 'A ♠ K', extras: '⟳ +1' };
+    swatch.textContent = icons[kind];
+  }
   const name = document.createElement('div');
   name.className = 'shop-name';
   name.textContent = item.name;
+  const price = document.createElement('small');
+  price.textContent = item.price ? `${fmt(item.price)} Chips` : 'Inklusive';
+  const actions = document.createElement('div');
+  actions.className = 'shop-actions';
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn small-btn';
-  const active = kind === 'theme' ? settings.theme === item.id : settings.tiles === item.id;
+  const setting = SHOP_SETTING[kind];
+  const active = setting ? settings[setting] === item.id : kind === 'extras' && startBonusReady;
   if (active) {
-    btn.textContent = 'Aktiv';
+    btn.textContent = kind === 'extras' ? 'Bereit' : 'Aktiv';
     btn.disabled = true;
     el.classList.add('active');
   } else if (owned.has(item.id)) {
-    btn.textContent = 'Wählen';
+    btn.textContent = 'Gekauft · aktivieren';
     btn.dataset.use = `${kind}:${item.id}`;
   } else {
-    btn.textContent = `${fmt(item.price)} Chips`;
+    btn.textContent = 'Kaufen';
     btn.dataset.buy = `${kind}:${item.id}`;
     btn.disabled = wallet < item.price;
     btn.classList.add('gold');
   }
-  el.append(swatch, name, btn);
+  if (kind !== 'extras') {
+    const preview = document.createElement('button');
+    preview.type = 'button';
+    preview.className = 'btn small-btn';
+    preview.textContent = 'Ausprobieren';
+    preview.dataset.preview = `${kind}:${item.id}`;
+    actions.append(preview);
+  }
+  actions.append(btn);
+  el.append(swatch, name, price, actions);
   return el;
 }
 
+let shopTab = 'theme';
 function renderShop() {
-  $('shop-themes').replaceChildren(...THEMES.map((t) => shopItem(t, 'theme')));
-  $('shop-tiles').replaceChildren(...TILE_STYLES.map((t) => shopItem(t, 'tiles')));
+  $('shop-items').replaceChildren(...SHOP_ITEMS[shopTab].map((item) => shopItem(item, shopTab)));
+  for (const tab of document.querySelectorAll('[data-shop-tab]')) {
+    tab.classList.toggle('active', tab.dataset.shopTab === shopTab);
+    tab.setAttribute('aria-selected', String(tab.dataset.shopTab === shopTab));
+  }
   renderWallet();
 }
 
 function useDesign(kind, id) {
-  if (kind === 'theme') settings.theme = id;
-  else settings.tiles = id;
+  const setting = SHOP_SETTING[kind];
+  if (!setting || !owned.has(id)) return;
+  settings[setting] = id;
   saveSettings();
   applyDesign();
   renderShop();
@@ -1040,12 +1097,33 @@ function useDesign(kind, id) {
 }
 
 function buyDesign(kind, id) {
-  const item = (kind === 'theme' ? THEMES : TILE_STYLES).find((t) => t.id === id);
-  if (!item || owned.has(id) || !spendChips(item.price)) return;
+  const item = SHOP_ITEMS[kind]?.find((entry) => entry.id === id);
+  if (!item || (kind === 'extras' ? startBonusReady : owned.has(id)) || !spendChips(item.price)) return;
+  if (kind === 'extras') {
+    startBonusReady = true;
+    save('start-bonus', true);
+    sounds.chips(item.price);
+    renderShop();
+    return;
+  }
   owned.add(id);
   save('owned', [...owned]);
   sounds.record();
   useDesign(kind, id);
+}
+
+function previewDesign(kind, id) {
+  if (!SHOP_SETTING[kind] || !SHOP_ITEMS[kind]?.some((item) => item.id === id)) return;
+  clearTimeout(previewDesign.timer);
+  applyDesign({ [kind]: id });
+  renderBoard();
+  renderTray();
+  toast(`${SHOP_ITEMS[kind].find((item) => item.id === id).name} · Vorschau`);
+  previewDesign.timer = setTimeout(() => {
+    applyDesign();
+    renderBoard();
+    renderTray();
+  }, 4_000);
 }
 
 // ---------- Fenster ----------
@@ -1061,7 +1139,8 @@ function renderSettings() {
   $('sound-state').textContent = settings.sound ? 'an' : 'aus';
   $('music-state').textContent = settings.music ? 'an' : 'aus';
   $('vibration-state').textContent = settings.vibration ? 'an' : 'aus';
-  $('mode-btn').textContent = mode === 'daily' ? 'Freies Spiel' : `Tages-Challenge ${dayLabel(today())}`;
+  $('mode-btn').textContent = mode === 'pro' ? 'Freies Spiel' : levelFromXp(xp).level >= 10 ? 'Profi-Modus' : 'Profi · ab Level 10';
+  $('mode-btn').disabled = mode !== 'pro' && levelFromXp(xp).level < 10;
 }
 
 function startGame(newMode, fresh) {
@@ -1091,15 +1170,15 @@ function gameOver() {
   sounds.gameOver();
   vibrate([40, 60, 40]);
   $('final-score').textContent = fmt(state.score);
-  $('final-best-label').textContent = mode === 'daily' ? 'Tagesrekord' : 'Rekord';
+  $('final-best-label').textContent = mode === 'daily' ? 'Tagesrekord' : mode === 'pro' ? 'Profi-Rekord' : 'Rekord';
   $('final-best').textContent = fmt(best);
   $('final-hand').textContent = state.bestHand >= 0 ? HANDS[state.bestHand].name : '–';
   $('final-lines').textContent = fmt(state.lines);
   $('final-chips').textContent = fmt(state.chips);
   $('new-record').hidden = !(state.score > bestAtStart && state.score > 0);
   const canFree = state.freeContinue !== false;
-  const canFold = wallet >= POWER_COSTS.fold;
-  const canBlast = wallet >= POWER_COSTS.blast && hasLockedLines(state);
+  const canFold = powerRemaining(state, 'fold') > 0 && wallet >= powerCost(state, 'fold');
+  const canBlast = powerRemaining(state, 'blast') > 0 && wallet >= powerCost(state, 'blast') && hasLockedLines(state);
   $('free-continue').hidden = !canFree;
   $('rescue').hidden = !canFree && !canFold && !canBlast;
   $('go-decide').hidden = Boolean(state.rewarded);
@@ -1112,7 +1191,8 @@ function gameOver() {
 
 // Das nächste noch nicht freigeschaltete Design (günstigstes zuerst) – Geschenk für jedes 5. Level
 function nextLockedDesign() {
-  const all = [...THEMES.map((t) => ({ ...t, kind: 'theme' })), ...TILE_STYLES.map((t) => ({ ...t, kind: 'tiles' }))];
+  const all = Object.entries(SHOP_ITEMS).filter(([kind]) => kind !== 'extras')
+    .flatMap(([kind, items]) => items.map((item) => ({ ...item, kind })));
   return all.filter((d) => !owned.has(d.id)).sort((a, b) => a.price - b.price)[0] ?? null;
 }
 
@@ -1129,6 +1209,7 @@ function openChest() {
   // Runde zählt für Statistik, Jackpot wächst, jede 3. Runde gibt es ein Rubbellos
   recordRound(stats, state);
   save('stats', stats);
+  refreshAchievements();
   jackpot += JACKPOT_GROWTH;
   save('jackpot', jackpot);
   renderJackpot();
@@ -1231,6 +1312,7 @@ function claimGift() {
   const box = $('gift-chips').getBoundingClientRect();
   chipBurst(box.left + box.width / 2, box.top, 30);
   pendingGift = null;
+  refreshAchievements();
   if (giftReturn) openOverlay(giftReturn);
   else {
     closeOverlays();
@@ -1244,6 +1326,10 @@ const dismissedAnnouncements = new Set(
   load('dismissed-announcements', []).filter((id) => Number.isInteger(id) && id >= 0).slice(-50),
 );
 let visibleAnnouncementId = null;
+let cloudReady = false;
+let cloudSaved = false;
+let cloudTimer = null;
+let cloudConflict = null;
 
 function safePlatformLink(value, allowExternal = false) {
   if (typeof value !== 'string') return null;
@@ -1283,7 +1369,9 @@ function renderPlatformAccount(hub) {
     const copy = Object.assign(document.createElement('span'), { className: 'platform-account-copy' });
     copy.append(
       Object.assign(document.createElement('strong'), { textContent: `Angemeldet als ${String(user.display_name ?? '')}` }),
-      Object.assign(document.createElement('small'), { textContent: 'Fortschritt wird gesichert' }),
+      Object.assign(document.createElement('small'), {
+        id: 'cloud-status', textContent: cloudSaved ? 'Fortschritt im Konto gesichert' : 'Fortschritt wird gesichert',
+      }),
     );
     const best = user.listed !== false && Array.isArray(hub.best)
       ? hub.best.slice(0, 3).filter((item) => Number.isInteger(item?.rank) && item.rank > 0).sort((a, b) => a.rank - b.rank)[0]
@@ -1300,7 +1388,7 @@ function renderPlatformAccount(hub) {
   } else {
     const copy = Object.assign(document.createElement('span'), { className: 'platform-account-copy' });
     copy.append(
-      Object.assign(document.createElement('strong'), { textContent: 'Ohne Konto spielen' }),
+      Object.assign(document.createElement('strong'), { textContent: 'Nur auf diesem Gerät – Anmelden' }),
       Object.assign(document.createElement('small'), { textContent: 'Mit Konto werden Punkte und Platzierungen gesichert.' }),
     );
     const actions = Object.assign(document.createElement('span'), { className: 'platform-account-actions' });
@@ -1350,6 +1438,95 @@ $('announcement-dismiss').addEventListener('click', () => {
 
 void platform.fetchHub().then(renderPlatformHub);
 
+function parseCloudSnapshot(save) {
+  try {
+    const snapshot = JSON.parse(save?.data);
+    if (snapshot?.version !== 1 || typeof snapshot.values !== 'object' || Array.isArray(snapshot.values)) return null;
+    return { ...snapshot, t: Math.max(Number(save.t) || 0, Number(snapshot.t) || 0) };
+  } catch {
+    return null;
+  }
+}
+
+function sameProgress(a, b) {
+  const clean = (snapshot) => Object.fromEntries(Object.entries(snapshot?.values ?? {}).filter(([key]) => key !== 'sync-t').sort());
+  return JSON.stringify(clean(a)) === JSON.stringify(clean(b));
+}
+
+function saveDescription(label, snapshot) {
+  const summary = snapshotSummary(snapshot);
+  const date = summary.t ? new Date(summary.t).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : 'älterer Stand';
+  return `${label}: Level ${levelFromXp(summary.xp).level} · ${fmt(summary.chips)} Chips · ${date}`;
+}
+
+function showSaveConflict(local, remote) {
+  cloudConflict = { local, remote };
+  $('choose-local').textContent = saveDescription('Dieses Gerät', local);
+  $('choose-cloud').textContent = saveDescription('Konto', remote);
+  openOverlay('save-conflict');
+}
+
+function markCloudSaved() {
+  cloudSaved = true;
+  const status = $('cloud-status');
+  if (status) status.textContent = 'Fortschritt im Konto gesichert';
+}
+
+async function uploadCloudSave({ keepalive = false } = {}) {
+  if (!cloudReady || cloudConflict) return;
+  let snapshot = exportSnapshot();
+  if (!snapshot.t) {
+    save('sync-t', Date.now());
+    snapshot = exportSnapshot();
+  }
+  const data = JSON.stringify(snapshot);
+  const result = await platform.putCloudSave(data, snapshot.t, [...achievements], { keepalive: keepalive && data.length < 55_000 });
+  if (result?.conflict) {
+    const remote = parseCloudSnapshot(result.save);
+    if (remote && !sameProgress(snapshot, remote)) showSaveConflict(snapshot, remote);
+    return;
+  }
+  if (result?.ok) markCloudSaved();
+}
+
+function scheduleCloudSave() {
+  if (!cloudReady || cloudConflict || cloudTimer !== null) return;
+  cloudTimer = setTimeout(() => {
+    cloudTimer = null;
+    void uploadCloudSave();
+  }, 5_000);
+}
+
+function mergeCloudAchievements(ids) {
+  const added = Array.isArray(ids) ? ids.filter((id) => id in ACHIEVEMENTS && !achievements.has(id)) : [];
+  if (!added.length) return;
+  for (const id of added) achievements.add(id);
+  save('achievements', [...achievements]);
+}
+
+async function initCloudSave() {
+  const result = await platform.loadCloudSave();
+  if (!result) return;
+  mergeCloudAchievements(result.achievements);
+  const local = exportSnapshot();
+  const remote = parseCloudSnapshot(result.save);
+  if (!remote) {
+    cloudReady = true;
+    await uploadCloudSave();
+    return;
+  }
+  if (!hasProgress(local)) {
+    if (importSnapshot(remote)) location.reload();
+    return;
+  }
+  if (!sameProgress(local, remote)) {
+    showSaveConflict(local, remote);
+    return;
+  }
+  cloudReady = true;
+  markCloudSaved();
+}
+
 // Regeln in zwei kurzen Schritten; die Knöpfe unten bleiben immer sichtbar
 let helpPage = 1;
 function showHelp(page) {
@@ -1375,6 +1552,9 @@ function renderStart() {
   $('start-play').textContent = freeGame && freeGame.moves > 0 && !freeGame.over ? 'Weiterspielen' : 'Spielen';
   const dailyBest = getBest('daily');
   $('start-daily').textContent = `Tages-Challenge ${dayLabel(today())}${dailyBest ? ` · Rekord ${fmt(dailyBest)}` : ''}`;
+  const proLevel = levelFromXp(xp).level;
+  $('start-pro').disabled = proLevel < 10;
+  $('start-pro').textContent = proLevel < 10 ? `🔒 Profi · ab Level 10 (du: ${proLevel})` : `♛ Profi${getBest('pro') ? ` · Rekord ${fmt(getBest('pro'))}` : ''}`;
 }
 
 function showHome() {
@@ -1420,6 +1600,30 @@ function renderStats() {
   }
 }
 
+function refreshAchievements(announce = true) {
+  const unlocked = earnedAchievements({ stats, xp, gift: load('gift', null), proBest: getBest('pro') });
+  const added = unlocked.filter((id) => !achievements.has(id));
+  if (!added.length) return;
+  for (const id of added) achievements.add(id);
+  save('achievements', [...achievements]);
+  if (announce) toast(`${ACHIEVEMENTS[added[0]].icon} Erfolg: ${ACHIEVEMENTS[added[0]].name}`);
+}
+
+function renderAchievements() {
+  refreshAchievements(false);
+  $('achievement-list').replaceChildren(...Object.entries(ACHIEVEMENTS).map(([id, achievement]) => {
+    const unlocked = achievements.has(id);
+    const item = document.createElement('div');
+    item.className = `achievement${unlocked ? ' unlocked' : ''}`;
+    item.append(
+      Object.assign(document.createElement('span'), { className: 'achievement-icon', textContent: unlocked ? achievement.icon : '🔒' }),
+      Object.assign(document.createElement('strong'), { textContent: achievement.name }),
+      Object.assign(document.createElement('small'), { textContent: unlocked ? 'Freigeschaltet' : 'Noch offen' }),
+    );
+    return item;
+  }));
+}
+
 function toast(text) {
   const el = $('toast');
   el.textContent = text;
@@ -1433,7 +1637,7 @@ async function shareScore() {
   const score = state.over ? state.score : Math.max(stats.bestScore, best);
   const hand = state.bestHand >= 0 ? ` mit ${HANDS[state.bestHand].name}` : '';
   const url = platform.hosted
-    ? new URL(leaderboardPath(boardForMode(mode)), location.origin).href
+    ? new URL(leaderboardPath(leaderboardBoard(mode)), location.origin).href
     : new URL('./', location.href).href;
   const text = `Ich habe ${fmt(score)} Punkte bei Royal Blocks geschafft${hand}! Schaffst du mehr?`;
   try {
@@ -1476,7 +1680,7 @@ const actions = {
     if (!settings.seenHelp) {
       settings.seenHelp = true;
       saveSettings();
-      checkGift();
+      checkGift('start');
     }
     if (!visibleOverlay()) startPlatformRound();
   },
@@ -1500,10 +1704,35 @@ const actions = {
     else startPlatformRound();
   },
   'play-daily': () => startGame('daily', false),
+  'play-pro': () => {
+    if (levelFromXp(xp).level < 10) return toast('Profi wird ab Level 10 freigeschaltet');
+    startGame('pro', false);
+  },
+  async 'choose-local-save'() {
+    if (!cloudConflict) return;
+    cloudConflict = null;
+    save('sync-t', Date.now());
+    cloudReady = true;
+    showHome();
+    await uploadCloudSave();
+  },
+  'choose-cloud-save'() {
+    if (!cloudConflict) return;
+    const remote = cloudConflict.remote;
+    cloudConflict = null;
+    if (!importSnapshot(remote)) return toast('Kontostand konnte nicht geladen werden');
+    save('achievements', [...achievements]);
+    location.reload();
+  },
   stats() {
     returnTo = visibleOverlay() ?? 'menu';
     renderStats();
     openOverlay('stats');
+  },
+  achievements() {
+    returnTo = visibleOverlay() ?? 'start';
+    renderAchievements();
+    openOverlay('achievements');
   },
   share: shareScore,
   scratch: openScratch,
@@ -1538,7 +1767,7 @@ const actions = {
     renderSettings();
     vibrate(20);
   },
-  'switch-mode': () => startGame(mode === 'daily' ? 'free' : 'daily', false),
+  'switch-mode': () => startGame(mode === 'pro' ? 'free' : 'pro', false),
   new: () => openOverlay('confirm-new'),
   'new-confirm': () => startGame(mode, true),
   'cancel-power': cancelPower,
@@ -1582,7 +1811,6 @@ applyDesign();
 buildBoard();
 buildHandTable();
 initFx($('fx'));
-for (const el of document.querySelectorAll('[data-cost]')) el.textContent = POWER_COSTS[el.dataset.cost];
 $('version').textContent = version === 'dev' ? '(Entwicklung)' : `v${version}`;
 renderSettings();
 renderAll();
@@ -1603,7 +1831,7 @@ $('menu-btn').addEventListener('click', () => {
   openOverlay('menu');
 });
 document.addEventListener('click', (e) => {
-  const target = e.target.closest('[data-action], [data-power], [data-suit], [data-buy], [data-use]');
+  const target = e.target.closest('[data-action], [data-power], [data-suit], [data-buy], [data-use], [data-preview], [data-shop-tab]');
   if (!target || target.disabled) return;
   unlockAudio();
   if (target.dataset.action) actions[target.dataset.action]?.();
@@ -1611,6 +1839,11 @@ document.addEventListener('click', (e) => {
   else if (target.dataset.suit) chooseSuit(Number(target.dataset.suit));
   else if (target.dataset.buy) buyDesign(...target.dataset.buy.split(':'));
   else if (target.dataset.use) useDesign(...target.dataset.use.split(':'));
+  else if (target.dataset.preview) previewDesign(...target.dataset.preview.split(':'));
+  else if (target.dataset.shopTab) {
+    shopTab = target.dataset.shopTab;
+    renderShop();
+  }
 });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
@@ -1622,6 +1855,7 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     persist();
+    void uploadCloudSave({ keepalive: true });
     stopMusic();
   } else if (settings.music) {
     startMusic();
@@ -1631,6 +1865,7 @@ document.addEventListener('visibilitychange', () => {
 let endedByPageHide = false;
 window.addEventListener('pagehide', () => {
   if (platformRound) finishPlatformRound(state.over ? 'lose' : 'abort', { keepalive: true });
+  void uploadCloudSave({ keepalive: true });
   endedByPageHide = true;
 });
 window.addEventListener('pageshow', () => {
@@ -1647,6 +1882,8 @@ else {
   showHome();
   checkGift('start');
 }
+onSave(scheduleCloudSave);
+void initCloudSave();
 
 // Offline-Betrieb (nur im gebauten Spiel; beim Entwickeln würde der Cache stören)
 if (version !== 'dev' && 'serviceWorker' in navigator) {

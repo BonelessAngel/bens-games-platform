@@ -9,7 +9,12 @@ let ctx;
 let particles = [];
 let running = false;
 let dpr = 1;
+let fxStyle = 'effect-classic';
 const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+export function setFxStyle(style) {
+  fxStyle = style;
+}
 
 export function initFx(el) {
   canvas = el;
@@ -27,7 +32,8 @@ function resize() {
 // Funken an einer Bildschirmposition. power 1 = normal, größer = mehr und weiter.
 export function burst(x, y, color, power = 1) {
   if (reduceMotion) return;
-  const count = Math.round(7 * power);
+  const multiplier = fxStyle === 'effect-fireworks' ? 2.2 : fxStyle === 'effect-confetti' ? 1.7 : 1;
+  const count = Math.round(7 * power * multiplier);
   for (let k = 0; k < count; k++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = (1.5 + Math.random() * 4) * Math.sqrt(power);
@@ -38,8 +44,8 @@ export function burst(x, y, color, power = 1) {
       life: 1,
       decay: 0.018 + Math.random() * 0.02,
       size: 2 + Math.random() * 3.5,
-      color: Math.random() < 0.15 ? '#ffffff' : color,
-      kind: 'spark',
+      color: fxStyle === 'effect-sparks' ? cssColor('--gold') : Math.random() < 0.15 ? '#ffffff' : color,
+      kind: fxStyle,
     });
   }
   start();
@@ -79,7 +85,7 @@ function frame() {
   for (const p of particles) {
     p.x += p.vx;
     p.y += p.vy;
-    p.vy += p.kind === 'chip' ? 0.35 : 0.12;
+    p.vy += p.kind === 'chip' ? 0.35 : p.kind === 'effect-confetti' ? 0.2 : 0.12;
     p.vx *= 0.98;
     p.life -= p.decay;
     ctx.globalAlpha = Math.max(p.life, 0);
@@ -99,6 +105,9 @@ function frame() {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.globalCompositeOperation = 'lighter';
+    } else if (p.kind === 'effect-pixel' || p.kind === 'effect-confetti') {
+      const size = p.size * (p.kind === 'effect-confetti' ? 1.8 : 1.2);
+      ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
     } else {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size * (0.4 + p.life * 0.6), 0, Math.PI * 2);
