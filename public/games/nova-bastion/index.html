@@ -207,6 +207,12 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .mbot{position:absolute;left:.7em;right:.7em;bottom:.7em;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
 .mbot .mid{display:flex;gap:.6em}
 .mbot .pb{font-size:.85em}
+/* Basis: Skills, Held, Fähigkeiten und Werkstatt an einem Ort */
+#baseScr{background:#05060fd8;z-index:7}
+.basep{max-width:40em}.basehint{margin:.2em 0 1em;color:#9fb0e6}
+.basegrid{display:grid;grid-template-columns:1fr 1fr;gap:.8em;margin-bottom:1em}
+.basetile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:.5em;padding:1em;text-align:left;min-height:5.5em}
+.basetile b{font-weight:400;font-size:.95em}.basetile span{font-family:'VT323',monospace;font-size:1.35em;line-height:1;text-transform:none;opacity:.85}
 .arrow.lock,.pb.lock{opacity:.5}
 #bEndless.lock{background:var(--panel);border-color:var(--line);color:#8890aa}
 #bDaily.done{background:var(--panel);border-color:var(--grn);color:var(--grn)}
@@ -410,6 +416,31 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 #edui.comm #eWPrev,#edui.comm #eWNext,#edui.comm #eWName,#edui.comm #eLPrev,#edui.comm #eLNext,#edui.comm #eAddL,#edui.comm #eCopy,#edui.comm #eAddW,#edui.comm #eDel,#edui.comm #eMap{display:none!important}
 #edpanel.comm .dev-only,#edpanel.comm #evGoal,#edpanel.comm #evGoalM,#edpanel.comm #evGoalP,#edpanel.comm #evDefault,#edpanel.comm .wrow{display:none!important}
 .cbonly{display:none}
+/* Creator: Schritt-Leiste, Werkzeug-Hinweis, Einfach-Modus, Vorlagen */
+#cbSteps{display:none;position:absolute;left:50%;top:4.2em;transform:translateX(-50%);gap:.3em;pointer-events:auto;z-index:2}
+#edui.comm #cbSteps{display:flex}
+#cbSteps button{display:flex;align-items:center;gap:.4em;height:2.6em;padding:0 .7em;background:#0b1024e0;border:.15em solid var(--line);color:#8890aa;
+  font-family:'Press Start 2P',monospace;font-size:.9em;cursor:pointer}
+#cbSteps button i{font-style:normal;display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;background:#1b2550;color:#cfdcff}
+#cbSteps button.ok{color:var(--grn);border-color:#2f6a40}#cbSteps button.ok i{background:var(--grn);color:#05200c}
+#cbSteps button.now{color:var(--am);border-color:var(--am)}#cbSteps button.now i{background:var(--am);color:#1a1200}
+#cbSteps button.warn{color:#ff8a8a;border-color:#7a2a3a}
+#eTip{display:none;position:absolute;left:50%;bottom:8.3em;transform:translateX(-50%);font-family:'VT323',monospace;font-size:1.7em;color:var(--am);
+  background:#0b1024e0;border:.08em solid #5a4a1a;padding:.05em .6em;white-space:nowrap;pointer-events:none}
+#edui.comm #eTip{display:block}
+#edui.side #eTip{left:31.5%;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+#edui.simple #eAuto,#edui.simple #eReal,#edui.simple #eWaves{display:none!important}
+#edpanel.simple .adv,#edpanel.simple .sdtab[data-t="foes"],#edpanel.simple .sdtab[data-t="rules"],#edpanel.simple .sdtab[data-t="extra"]{display:none!important}
+.cbsimple{display:none}#edpanel.simple .cbsimple{display:block}
+#eMode{display:none}#edui.comm #eMode{display:inline-block}#edui.comm:not(.simple) #eMode{background:var(--vi);border-color:var(--vi);color:#fff}
+#cbNewScr{background:#05060fd8;z-index:8}
+#cbDraft span{display:block;font-size:.6em;margin-top:.4em;opacity:.8}
+.cbnewhint{margin:.9em 0 .6em;color:#9fb0e6}
+.cbtpl{display:grid;grid-template-columns:repeat(3,1fr);gap:.6em;margin-bottom:.9em}
+.cbtpl button{display:flex;flex-direction:column;align-items:center;gap:.4em;padding:.6em .4em;background:#111936;border:.15em solid var(--line);color:#cfdcff;
+  font-family:'Press Start 2P',monospace;font-size:.6em;cursor:pointer}
+.cbtpl button:hover,.cbtpl button:focus-visible{border-color:var(--cy);color:#fff}
+.cbtpl canvas{width:100%;height:auto;image-rendering:pixelated;background:#0a1a12}
 #edui.comm #eExport{display:none!important}#eExport{display:none;white-space:nowrap;font-size:.72em}
 #edpanel.comm .cbonly{display:block}
 .cbstars{display:flex;gap:.3em}
@@ -446,6 +477,18 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .skn .ic{font-family:'Press Start 2P',monospace;font-size:.8em;color:var(--c)}
 .skn em{position:absolute;bottom:-1.1em;left:50%;transform:translateX(-50%);font-style:normal;font-family:'VT323',monospace;font-size:1em;color:#9fb0e6;background:#05060f;padding:0 .2em;white-space:nowrap}
 .skn.can,.skn.poor,.skn.lvl{opacity:.85}
+/* Skilltree-Zustände: Ring zeigt den Fortschritt, gesperrt ist dunkel mit Schloss */
+.sknet .skn{width:3.8em;height:3.8em;background:radial-gradient(circle,#10152b 60%,transparent 62%),conic-gradient(var(--c) var(--p,0%),#232b4d 0)}
+.sknet .skn.core{width:4.6em;height:4.6em}.sknet .skn.key{width:4.3em;height:4.3em}
+.sknet .skn .ic{font-size:1.15em}
+.sknet .skn.pre,.sknet .skn.lvl{opacity:.45;filter:saturate(.3)}
+.sknet .skn.poor{opacity:.8}
+.sknet .skn.can{opacity:1;box-shadow:0 0 .9em var(--c),0 0 0 .15em #05060f}
+.sknet .skn.got,.sknet .skn.max{box-shadow:0 0 .6em color-mix(in srgb,var(--c) 70%,transparent)}
+.sknet .skn.got:not(.max){background:radial-gradient(circle,#10152b 60%,transparent 62%),conic-gradient(var(--c) var(--p,0%),#232b4d 0)}
+.sknet .skn.max{background:radial-gradient(circle at 40% 35%,#ffffff66,var(--c) 85%)}
+.sknet .skn i{font-size:1.1em;text-shadow:.1em .1em 0 #000}
+.sklock{position:absolute;right:-.35em;top:-.35em;font-size:.9em;font-weight:400;filter:grayscale(1)}
 .skn.can{border-color:var(--c);animation:pulse3 1.2s steps(2) infinite}
 @keyframes pulse3{50%{box-shadow:0 0 0 .15em var(--c),.15em .15em 0 .15em #000}}
 .skn.got{opacity:1;border-color:var(--c);background:radial-gradient(circle at 40% 35%,#ffffff33,#1a2246 70%)}
@@ -514,7 +557,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .hu.hab .n{color:var(--mg)}
 .hu.hab .r i.f{background:var(--mg)}
 #lpFoes{white-space:pre-line}
-#loginScr{background:#05060fc8}
+#loginScr{background:#05060fc8;z-index:7}
 #commLogin{background:#05060fd8;z-index:14}.commlogin{max-width:31em}.commlogin a.big{display:block;text-decoration:none}.commlogin p{line-height:1.15}
 #shopScr,#unlockScr{background:#05060fc8;z-index:7}
 #statScr{background:#05060fe8;z-index:8}
@@ -896,24 +939,21 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
      <span class="st vt" id="mStars"></span>
      <span class="st vt" id="mCrys"></span>
      <div class="lvbox"><span id="mLv">LV 1</span><div class="xpbar"><i id="mXp"></i></div></div>
-     <button class="pb vi" id="bAbl">FÄHIGK.</button>
-     <button class="pb badge" id="bWs">WERKSTATT<em id="mMods"></em></button>
-     <button class="pb mg" id="bHero">HELD</button>
-     <button class="pb go badge" id="bSkills">SKILLS<em id="mPts"></em></button>
+     <button class="pb go badge" id="bBase">BASIS<em id="mBase"></em></button>
     </div>
    </div>
    <div class="mbot">
     <button class="pb arrow" id="bPrevW">&lt;</button>
     <div class="mid">
      <button class="pb go" id="bDaily">TÄGLICH</button>
+     <button class="pb mg" id="bEndless">ENDLOS</button>
      <button class="pb vi" id="bTower">TURM</button>
-     <button class="pb go" id="bComm">COMMUNITY</button>
+     <button class="pb go" id="bComm">CREATOR</button>
      <button class="pb mg" id="bFinale">FINALE</button>
      <div class="mmenu">
       <button class="pb badge" id="bMapMenu">MENÜ<em id="mMenuB"></em></button>
       <div class="mdrawer" id="mDrawer">
        <button class="pb vi badge" id="bAch">ERFOLGE<em id="mAch"></em></button>
-       <button class="pb mg" id="bEndless">ENDLOS</button>
        <button class="pb" id="bLex">LEXIKON</button>
        <button class="pb" id="bStory">STORY</button>
        <button class="pb" id="bOptM">EINSTELLUNGEN</button>
@@ -923,6 +963,20 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
      </div>
     </div>
     <button class="pb arrow" id="bNextW">&gt;</button>
+   </div>
+  </div>
+
+  <div id="baseScr" class="screen">
+   <div class="panel basep">
+    <h3>BASIS</h3>
+    <p class="basehint">Hier machst du deine Verteidigung dauerhaft stärker.</p>
+    <div class="basegrid">
+     <button class="pb go badge basetile" id="bSkills"><b>SKILLS</b><span>Dauerhafte Verbesserungen mit Skillpunkten</span><em id="mPts"></em></button>
+     <button class="pb mg basetile" id="bHero"><b>HELD</b><span>Helden wählen, verbessern und Talente lernen</span></button>
+     <button class="pb vi basetile" id="bAbl"><b>FÄHIGKEITEN</b><span>Spezialkräfte für den Kampf</span></button>
+     <button class="pb badge basetile" id="bWs"><b>WERKSTATT</b><span>Module für deine Türme</span><em id="mMods"></em></button>
+    </div>
+    <button class="big" id="bBaseClose">ZURÜCK ZUR KARTE</button>
    </div>
   </div>
 
@@ -950,12 +1004,15 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
     <button class="pb vi" id="eRand">ZUFALL</button>
     <button class="pb" id="eEnt">EINGÄNGE 1</button>
     <button class="pb" id="eAuto">PLÄTZE NEU</button>
-    <button class="pb" id="eReal">ANSICHT</button>
+    <button class="pb" id="eReal">VORSCHAU</button>
     <span class="sp"></span>
     <button class="pb" id="eMap">KARTE</button>
     <button class="pb" id="eWaves">WELLEN</button>
-    <button class="pb" id="eVals">LEISTE</button>
+    <button class="pb" id="eMode" title="Einfach: nur das Wichtigste. Profi: alle Einstellungen.">EINFACH</button>
+    <button class="pb" id="eVals">OPTIONEN</button>
    </div>
+   <div id="cbSteps"></div>
+   <div id="eTip"></div>
    <div id="edDeco"></div>
    <div id="eStatus"></div>
   </div>
@@ -994,6 +1051,8 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
       <div class="btns"><button class="big mg" id="cbBoss">MUTTERSCHIFF AM ENDE: NEIN</button></div>
      </div>
      <div class="tune"><button class="big alt" id="evEasier">- LEICHTER</button><div id="evTuneL"></div><button class="big" id="evHarder">SCHWERER +</button></div>
+     <div class="esum cbsimple">Mit LEICHTER und SCHWERER stellst du alles auf einmal ein. Einzelne Regler gibt es im Modus PROFI.</div>
+     <div class="adv">
      <h4>GEGNER UND WELLEN</h4>
      <div class="erow"><label>GEGNERSTÄRKE</label><input type="range" id="evHp" min="25" max="500" step="5"><b id="evHpV"></b></div>
      <div class="erow"><label>GEGNER-TEMPO</label><input type="range" id="evSpd" min="50" max="200" step="5"><b id="evSpdV"></b></div>
@@ -1010,6 +1069,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
      <div class="esum" id="evPow"></div>
      <div class="esum" id="evEcon"></div>
      <div class="btns"><button class="big" id="evBot">BOT-CHECK STARTEN</button></div>
+     </div>
     </section>
     <section data-sec="foes">
      <h4>GEGNER-POOL</h4>
@@ -1065,6 +1125,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
    <p id="tTag">Der Schwarm hat fünf Welten überrannt. Hol sie dir zurück.</p>
    <div class="btns">
     <button class="big" id="bPlay">KAMPAGNE</button>
+    <button class="big alt" id="bCreator">CREATOR</button>
     <button class="big dev" id="bPlayDev">DEV MODUS</button>
    </div>
    <span class="lvl"><span id="tLv"></span><br><span id="tCloud"></span></span>
@@ -1239,6 +1300,16 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
      <div class="orow" id="oResetRow"><label>KAMPAGNE</label><button class="pb" id="bReset" style="color:#ff8a8a;border-color:#5a2a3a">ZURÜCKSETZEN</button></div>
     </div>
     <button class="big" id="optClose">FERTIG</button>
+   </div>
+  </div>
+
+  <div id="cbNewScr" class="screen">
+   <div class="panel" style="max-width:40em">
+    <h3>NEUES LEVEL</h3>
+    <button class="big" id="cbDraft">WEITER AM ENTWURF<span id="cbDraftName"></span></button>
+    <p class="cbnewhint" id="cbNewHint"></p>
+    <div class="cbtpl" id="cbTpl"></div>
+    <button class="big alt" id="cbNewClose">ABBRECHEN</button>
    </div>
   </div>
 
@@ -3723,7 +3794,8 @@ function show(s){
   disp('bDev',DEV,'block');
   if(s!=='play'){disp('pause',false);disp('end',false);disp('dev',false);disp('radio',false);closeMenu();setHint('');}
   if(s!=='map')disp('lvpop',false);
-  if(s==='map'){refreshMapUI();checkAch();checkWeekly();checkLogin();checkUnlocks();}
+  if(s!=='map')disp('baseScr',false);
+  if(s==='map'){refreshMapUI();checkAch();checkWeekly();checkLogin();checkUnlocks();if(BASE_RET){BASE_RET=false;disp('baseScr',true);}}
   if(s!=='play'){disp('shopScr',false);disp('tutBox',false);}
   else disp('loginScr',false);
   if(s==='skills')renderSkills();
@@ -6344,6 +6416,7 @@ function refreshMapUI(){
   var ad=0;ACH.forEach(function(a){if(PR.ach[a.id])ad++;});
   var ea=$('mAch');ea.textContent=ad+'/'+ACH.length;ea.classList.add('on');
   var free=PR.mods.filter(function(m){return !equippedIn(m.id);}).length,mm=$('mMods');mm.textContent=free;mm.classList.toggle('on',free>0);
+  var mb=$('mBase'),todo=DEV?0:f+free;mb.textContent=todo>9?'9+':todo;mb.classList.toggle('on',todo>0);
   $('bPrevW').style.visibility=mapW>0?'visible':'hidden';
   $('bNextW').style.visibility=mapW<WORLDS.length-1?'visible':'hidden';
   $('bNextW').classList.toggle('lock',mapW<WORLDS.length-1&&!unlocked(wFirst(mapW+1)));
@@ -6353,7 +6426,7 @@ function refreshMapUI(){
   disp('bFinale',mapW===WORLDS.length-1&&(DEV||PR.stars[wLast(WORLDS.length-1)]>0),'');
   $('bFinale').textContent=PR.tower.finale?'FINALE ✓':'FINALE';
   var eo=endlessOpen(mapW),rec=PR.endless[mapW]||0;
-  $('bEndless').textContent=eo?'ENDLOS'+(rec?' · '+rec:''):'ENDLOS (GESPERRT)';
+  $('bEndless').textContent=eo?'ENDLOS'+(rec?' · '+rec:''):'ENDLOS';$('bEndless').title=eo?'':'Besiege zuerst das Mutterschiff dieser Welt';
   $('bEndless').classList.toggle('lock',!eo);
   var dd=PR.daily===today();
   $('bDaily').textContent=dd?'TÄGLICH ✓':'TÄGLICH';
@@ -6521,7 +6594,7 @@ function edTouch(){
 }
 function openEditor(){
   if(!DEV||!canEdit())return;
-  ED.comm=false;$('edui').classList.remove('comm');$('edpanel').classList.remove('comm');$('eSave').classList.add('go');
+  ED.comm=false;$('edui').classList.remove('comm','simple');$('edpanel').classList.remove('comm','simple');$('eSave').classList.add('go');
   var d=null;
   try{var s=localStorage.getItem('novabastion.campdraft');if(s)d=JSON.parse(s);}catch(e){}
   if(!d||!Array.isArray(d.worlds)||!d.worlds.length)d=null;
@@ -6531,8 +6604,9 @@ function openEditor(){
   show('edit');if(ED.side)edOpenVals();
   if(d)toast('ENTWURF GELADEN (NOCH NICHT GESPEICHERT)','#ff4fa3');
 }
-var TOOL_TIPS={path:'WEG: PUNKTE ZIEHEN. AUF DEN WEG TIPPEN FÜGT EINEN PUNKT EIN.',spot:'PLATZ: LOSLASSEN SETZT. ANTIPPEN WÄHLT AUS, RECHTS BEARBEITEN.',
-  deco:'DEKO: UNTEN EIN OBJEKT WÄHLEN, DANN AUF DIE KARTE TIPPEN ODER ZIEHEN.',erase:'RADIERER: TIPPE DEKO, BAUPLATZ ODER WEGPUNKT AN.'};
+var TOOL_TIPS={path:'WEG: Punkte ziehen. Auf den Weg tippen fügt einen Punkt ein. Der Weg endet an der Basis (gelb).',
+  spot:'PLATZ: Auf die Karte tippen setzt einen Bauplatz. Einen Platz antippen wählt ihn aus.',
+  deco:'DEKO: Unten ein Objekt wählen, dann auf die Karte tippen oder ziehen.',erase:'RADIERER: Deko, Bauplatz oder Wegpunkt antippen.'};
 function edRefresh(){
   if(scene!=='edit')return;
   var cw=edCW(),lv=edLv(),n=cw.levels.length,map=ED.view==='map';
@@ -6562,6 +6636,7 @@ function edRefresh(){
   $('eVals').classList.toggle('on',!!ED.side&&!map);
   if(ED.sel>=0&&(!lv.spots||!lv.spots[ED.sel]))ED.sel=-1;
   edSideShow();if(ED.side&&!map)edValsUI();
+  $('eTip').textContent=map?'':TOOL_TIPS[ED.tool]||'';
   if(ED.comm)cbUI();
 }
 /* Gültigkeit eines Bauplatzes: nicht auf dem Weg, nicht auf anderen Plätzen */
@@ -7006,6 +7081,7 @@ function edSideShow(){
   if(!tb.children.length)SDT.forEach(function(t){var b=document.createElement('button');b.className='sdtab';b.dataset.t=t[0];b.appendChild(sdIcon(t[0]));
     var s=document.createElement('span');s.textContent=t[1];b.appendChild(s);b.addEventListener('click',function(){ED.sec=t[0];Snd.play('tick');edSideShow();});tb.appendChild(b);});
   Array.prototype.forEach.call(tb.children,function(b){b.classList.toggle('on',b.dataset.t===ED.sec);});
+  if(ED.comm&&ED.sec==='diff'&&!CB.seenDiff){CB.seenDiff=true;cbSteps();}
   Array.prototype.forEach.call(document.querySelectorAll('#sdBody section'),function(s){s.classList.toggle('on',s.dataset.sec===ED.sec);});
 }
 function edOpenVals(sec){
@@ -7346,7 +7422,21 @@ $('eAuto').addEventListener('click',function(){
 });
 $('eReal').addEventListener('click',function(){ED.real=!ED.real;Snd.play('tick');edRefresh();});
 $('eMap').addEventListener('click',function(){ED.view=ED.view==='map'?'level':'map';Snd.play('tick');edRefresh();});
-$('eTest').addEventListener('click',function(){Snd.init();Snd.play('tick');edTest();});
+$('eTest').addEventListener('click',function(){
+  Snd.init();
+  if(ED.comm){var w=cbWarnings();if(w.length&&Date.now()-(ED.warnArm||0)>4000){ED.warnArm=Date.now();Snd.play('no');toast(w.join('  ·  ')+'  ·  NOCHMAL TESTEN = TROTZDEM STARTEN','#ffc23c');return;}}
+  ED.warnArm=0;Snd.play('tick');edTest();
+});
+$('eMode').addEventListener('click',function(){Snd.play('tick');var pro=!cbPro();cbSetMode(pro);if(ED.side)edOpenVals();edRefresh();toast(pro?'PROFI: ALLE EINSTELLUNGEN':'EINFACH: NUR DAS WICHTIGSTE','#c08cff');});
+/* Tastenkürzel im Baukasten (PC): W Weg, P Platz, D Deko, R Radierer, Strg+Z Rückgängig */
+document.addEventListener('keydown',function(e){
+  if(scene!=='edit'||ED.view!=='level'||e.altKey)return;
+  var t=e.target&&e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT')return;
+  if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z')){e.preventDefault();$('eUndo').click();return;}
+  if(e.ctrlKey||e.metaKey)return;
+  var tool={w:'path',p:'spot',d:'deco',r:'erase'}[String(e.key).toLowerCase()];
+  if(tool){ED.tool=tool;ED.hov=null;Snd.play('tick');edRefresh();}
+});
 $('eSave').addEventListener('click',edSave);
 /* Rückgängig: nur im Editor */
 $('eUndo').addEventListener('click',function(){
@@ -7452,7 +7542,8 @@ function skState(n){
   if(plInfo().lv<n.lv)return 'lvl';
   return ptsFree()>=n.cost?'can':'poor';
 }
-function skPos(n){return n.tw?[22+n.x*28,29+n.y*25]:[12+n.x/4*76,9+n.y/3.6*67];}
+var SKPOS={s1:[50,10],g1:[27,22],g2:[73,22],core:[50,37],g3:[22,55],g4:[78,55],g5:[50,69],g7:[30,78],g6:[70,78]};
+function skPos(n){return n.tw?[22+n.x*28,29+n.y*25]:SKPOS[n.id]||[12+n.x/4*76,9+n.y/3.6*67];}
 function skVisible(n){return SKV.tab==='g'?!n.tw:n.tw===SKV.tw;}
 function skTwSum(k){var a=0,m=0,can=false;(SKTW[k]||[]).forEach(function(id){var n=SKBY[id];a+=rk(id);m+=n.max;if(skState(n)==='can')can=true;});return {a:a,m:m,can:can};}
 function renderSkTowers(){
@@ -7498,9 +7589,10 @@ function renderSkills(){
     if(!skVisible(n))return;
     var s=skState(n),r=rk(n.id),e=document.createElement('button'),p=skPos(n);
     e.className='skn '+(s==='twl'?'pre':s)+(r>0?' got':'')+(n.key?' key':'')+(n.id==='core'?' core':'')+(skSel===n.id?' sel':'');
-    e.style.left=p[0]+'%';e.style.top=p[1]+'%';e.style.setProperty('--c',n.c);
+    e.style.left=p[0]+'%';e.style.top=p[1]+'%';e.style.setProperty('--c',n.c);e.style.setProperty('--p',Math.round(r/n.max*100)+'%');
     if(n.tw){var li=SKTW[n.tw].indexOf(n.id),ic=iconCanvas({k:'tower',type:n.tw,tier:li===0?0:li===3?2:1,spec:li===3?'a':null});e.appendChild(ic);}else{var sp=document.createElement('span');sp.className='ic';sp.textContent=n.ic;e.appendChild(sp);}
-    var rr=document.createElement('em');rr.textContent=r+'/'+n.max;e.appendChild(rr);
+    var rr=document.createElement('em');rr.textContent=s==='lvl'&&!r?'AB LV '+n.lv:r+'/'+n.max;e.appendChild(rr);
+    if((s==='pre'||s==='twl'||s==='lvl')&&!r){var lk=document.createElement('b');lk.className='sklock';lk.textContent='🔒';e.appendChild(lk);}
     var nm=document.createElement('i');nm.textContent=n.name;e.appendChild(nm);
     e.addEventListener('click',function(){
       if(skSel===n.id&&skState(n)==='can'){learn();return;}
@@ -7518,7 +7610,7 @@ function renderSkills(){
   }else{
     tx.querySelector('.t').textContent=tw?'TURM-BAUM: '+TOWERS[SKV.tw].name.toUpperCase():'ALLGEMEIN';
     tx.querySelector('.d').textContent=tw?'Oben der Einstieg, darunter zwei Äste, unten der Schlüssel. Ein gelber Punkt in der Liste zeigt, wo du etwas lernen kannst.':'Starte in der Mitte. Ein Knoten wird lernbar, wenn ein verbundener gelernt ist. Türme verbesserst du unter TÜRME.';
-    tx.querySelector('.s').textContent=DEV?'Dev-Modus: unbegrenzte Punkte, getrennt von der Kampagne.':'Noch '+(pi.need-pi.cur)+' XP bis LV '+(pi.lv+1)+'.';
+    tx.querySelector('.s').textContent=(DEV?'Dev-Modus: unbegrenzte Punkte, getrennt von der Kampagne.':'Noch '+(pi.need-pi.cur)+' XP bis LV '+(pi.lv+1)+'.')+'   Leuchtend = gelernt · Blinkend = jetzt lernbar · 🔒 = noch gesperrt';
     bl.disabled=true;
   }
 }
@@ -8445,10 +8537,10 @@ function abilIconFor(k,hk){
 /* =============== Freischalt-Fenster =============== */
 
 var UNLOCKS=[
- {id:'skills',c:function(){return plInfo().lv>=2;},t:'SKILL-NETZ',d:'Du bist aufgestiegen! Im Skill-Netz verteilst du Punkte für dauerhafte Verbesserungen. Pro Level gibt es einen Punkt.',b:'bSkills'},
- {id:'abil',c:function(){return plInfo().lv>=2;},t:'FÄHIGKEITEN',d:'Dein erster Orbitalschlag ist bereit. Unter FÄHIGK. wählst du, welche 3 Fähigkeiten du mitnimmst.',b:'bAbl'},
- {id:'hero',c:function(){return hpFree()>0;},t:'HELDENPUNKTE',d:'Für jedes geschaffte Level gibt es Heldenpunkte. Damit machst du die Fähigkeit deines Helden stärker.',b:'bHero'},
- {id:'ws',c:function(){return PR.mods.length>0;},t:'WERKSTATT',d:'Du hast dein erstes Modul eingesammelt! In der Werkstatt baust du es in einen Turm ein.',b:'bWs'},
+ {id:'skills',c:function(){return plInfo().lv>=2;},t:'SKILL-NETZ',d:'Du bist aufgestiegen! In der BASIS unter SKILLS verteilst du Punkte für dauerhafte Verbesserungen. Pro Level gibt es einen Punkt.',b:'bSkills'},
+ {id:'abil',c:function(){return plInfo().lv>=2;},t:'FÄHIGKEITEN',d:'Dein erster Orbitalschlag ist bereit. In der BASIS unter FÄHIGKEITEN wählst du, welche 3 Fähigkeiten du mitnimmst.',b:'bAbl'},
+ {id:'hero',c:function(){return hpFree()>0;},t:'HELDENPUNKTE',d:'Für jedes geschaffte Level gibt es Heldenpunkte. In der BASIS unter HELD machst du damit die Fähigkeit deines Helden stärker.',b:'bHero'},
+ {id:'ws',c:function(){return PR.mods.length>0;},t:'WERKSTATT',d:'Du hast dein erstes Modul eingesammelt! In der BASIS unter WERKSTATT baust du es in einen Turm ein.',b:'bWs'},
  {id:'daily',c:function(){return PR.stars[1]>0;},t:'TÄGLICHE HERAUSFORDERUNG',d:'Jeden Tag ein Level mit Sonderregel und Extra-Belohnung.',b:'bDaily'},
  {id:'tower',c:function(){return PR.stars[wLast(0)]>0;},t:'HERAUSFORDERUNGS-TURM',d:'Das erste Mutterschiff ist besiegt! Im Turm warten Etagen von Leicht bis Unmöglich und ein Endlos-Turm.',b:'bTower'},
  {id:'endless',c:function(){return PR.stars[wLast(0)]>0;},t:'ENDLOS-MODUS',d:'Wie lange hältst du durch? Im Endlos-Modus jeder Welt kämpfst du um deinen Rekord.',b:'bEndless'},
@@ -8464,7 +8556,7 @@ function checkUnlocks(){
     $('ulT').textContent=u.t;$('ulD').textContent=u.d;
     $('ulGo').onclick=function(){disp('unlockScr',false);Snd.play('tick');if(u.go){LX.tab='towers';LX.sel=u.go;LX.t=0;LX.s={};openLex();}else $(u.b).click();};
     disp('unlockScr',true);Snd.play('lvup');
-    var el=u.b?$(u.b):null;if(el){el.classList.add('tutglow');setTimeout(function(){el.classList.remove('tutglow');},6000);}
+    var el=u.b?$(['bSkills','bHero','bAbl','bWs'].indexOf(u.b)>=0?'bBase':u.b):null;if(el){el.classList.add('tutglow');setTimeout(function(){el.classList.remove('tutglow');},6000);}
     return;}
 }
 $('ulLater').addEventListener('click',function(){disp('unlockScr',false);Snd.play('tick');setTimeout(checkUnlocks,300);});
@@ -8786,6 +8878,35 @@ function cbNew(){
   return {lv:{id:'cdraft',name:'Mein Level',paths:[[[4,135],[150,135],[150,70],[320,70],[320,200],[450,200]]],spots:null,gates:false,diff:defDiff(),mini:false,boss:'classic',
     goal:null,obj:null,focus:null,msg:'',rules:[],deco:[],decoD:1,waveOv:null,pool:null,pathOnly:null,towers:null},star:2,boss:false,style:'moon'};
 }
+/* Vorlagen für neue Level: feste Grundformen plus Zufall (Koordinaten wie im Spiel, 480 x 270) */
+var CB_TPL=[
+ ['KURVE',function(){return [[[4,135],[150,135],[150,70],[320,70],[320,200],[450,200]]];}],
+ ['SCHLANGE',function(){return [[[4,55],[400,55],[400,135],[80,135],[80,215],[450,215]]];}],
+ ['ZICKZACK',function(){return [[[4,40],[110,40],[110,230],[230,230],[230,40],[350,40],[350,230],[450,230]]];}],
+ ['GERADE',function(){return [[[4,135],[450,135]]];}],
+ ['2 EINGÄNGE',function(){var p=[[[4,135],[150,135],[150,70],[320,70],[320,200],[450,200]]];addEntrance(p);return p;}],
+ ['ZUFALL',function(){return genPaths(0.35,Math.random()<0.5?1:2);}]
+];
+function cbTplLevel(paths){var d=cbNew();d.lv.paths=paths;return d;}
+function cbTplThumb(paths){
+  var c=canvas(96,54),g=c.getContext('2d');R(g,0,0,96,54,'#12261c');
+  paths.forEach(function(p){for(var k=1;k<p.length;k++)line(g,p[k-1][0]/5,p[k-1][1]/5,p[k][0]/5,p[k][1]/5,'#e8d8a0',3);R(g,p[0][0]/5-1,p[0][1]/5-2,3,4,'#b77aff');});
+  var b=paths[0][paths[0].length-1];R(g,b[0]/5-2,b[1]/5-2,5,5,'#ffc23c');
+  return c;
+}
+function cbNewOpen(){
+  var d=cbLoadDraft(),box=$('cbTpl');
+  disp('cbDraft',!!d,'block');$('cbNewHint').textContent=(d?'Oder fang neu':'Fang')+' mit einer Vorlage an – alles lässt sich danach ändern:';$('cbDraftName').textContent=d?'„'+(d.lv.name||'Mein Level')+'“':'';
+  $('cbDraft').onclick=function(){disp('cbNewScr',false);Snd.play('tick');cbOpen(d);};
+  box.innerHTML='';
+  CB_TPL.forEach(function(t){
+    var paths=t[1](),b=document.createElement('button');b.type='button';
+    b.appendChild(cbTplThumb(paths));var sp=document.createElement('span');sp.textContent=t[0];b.appendChild(sp);
+    b.addEventListener('click',function(){disp('cbNewScr',false);Snd.play('tick');cbOpen(cbTplLevel(clone(paths)));});
+    box.appendChild(b);
+  });
+  disp('cbNewScr',true);
+}
 function cbLoadDraft(){try{var d=JSON.parse(localStorage.getItem('novabastion.commdraft')||'null');if(d&&d.lv&&Array.isArray(d.lv.paths))return d;}catch(e){}return null;}
 function cbState(){return {lv:clone(edLv()),star:CB.star,boss:CB.boss,style:edCW().style};}
 function cbCoreJ(){return JSON.stringify(cbState());}
@@ -8794,13 +8915,20 @@ function cbLoad(d){
   var r=commCamp(d.lv,d.star,d.boss,d.style);CB.star=d.star;CB.boss=!!d.boss;
   ED.camp=r.camp;ED.w=r.w;ED.l=r.l;ED.data=null;ED.hist=[];ED.lastJ=JSON.stringify(ED.camp);ED.sel=-1;
 }
+function cbPro(){try{return localStorage.getItem('novabastion.cbpro')==='1';}catch(e){return false;}}
+function cbSetMode(pro){
+  try{localStorage.setItem('novabastion.cbpro',pro?'1':'0');}catch(e){}
+  $('edui').classList.toggle('simple',!pro);$('edpanel').classList.toggle('simple',!pro);
+  if(!pro&&['foes','rules','extra'].indexOf(ED.sec)>=0)ED.sec='diff';
+  $('eMode').textContent=pro?'PROFI':'EINFACH';
+}
 function cbOpen(d){
-  ED.comm=true;cbLoad(d);ED.dirty=false;ED.view='level';ED.drag=null;ED.real=false;ED.side=true;ED.sec='map';ED.tool='path';
-  $('edui').classList.add('comm');$('edpanel').classList.add('comm');
-  show('edit');edOpenVals();cbUI();
+  ED.comm=true;cbLoad(d);ED.dirty=false;ED.view='level';ED.drag=null;ED.real=false;ED.side=false;ED.sec='map';ED.tool='path';CB.seenDiff=false;
+  $('edui').classList.add('comm');$('edpanel').classList.add('comm');cbSetMode(cbPro());
+  show('edit');edRefresh();cbUI();
   var c=commPR();if(!c.help){c.help=1;persist();disp('cbHelp',true);}
 }
-function cbLeave(){cbSaveDraft();ED.comm=false;$('edui').classList.remove('comm');$('edpanel').classList.remove('comm');show('comm');}
+function cbLeave(){cbSaveDraft();ED.comm=false;$('edui').classList.remove('comm','simple');$('edpanel').classList.remove('comm','simple');show('comm');}
 function cbChange(fn){var st=cbState();fn(st);cbLoad(st);cbSaveDraft();Snd.play('tick');edRefresh();edOpenVals();cbUI();}
 function cbUI(){
   if(!ED.comm)return;
@@ -8812,6 +8940,37 @@ function cbUI(){
   var ok=ED.clearedJ===cbCoreJ();
   $('eSave').textContent=ok?'HOCHLADEN':'HOCHLADEN 🔒';$('eSave').classList.toggle('go',ok);
   $('eLName').textContent='DEIN LEVEL';
+  cbSteps();
+}
+/* Was vor dem Testen noch nicht passt (nur Hinweise, das Level bleibt spielbar) */
+function cbWarnings(){
+  var lv=edLv(),sp=edSpots(),bad=edBad().length,out=[],len=0;
+  lv.paths.forEach(function(p){for(var k=1;k<p.length;k++)len+=Math.hypot(p[k][0]-p[k-1][0],p[k][1]-p[k-1][1]);});
+  if(len/lv.paths.length<380)out.push('DER WEG IST SEHR KURZ');
+  if(sp.length<5)out.push('NUR '+sp.length+' BAUPLÄTZE (MINDESTENS 5)');
+  if(bad)out.push(bad+(bad>1?' PLÄTZE LIEGEN':' PLATZ LIEGT')+' ZU NAH AM WEG');
+  return out;
+}
+function cbSteps(){
+  var box=$('cbSteps');if(!ED.comm||!box)return;
+  var warn=cbWarnings(),spotsOk=!warn.some(function(w){return /PL(Ä|A)TZ/.test(w);}),wayOk=!warn.some(function(w){return /WEG IST/.test(w);}),
+    tested=ED.clearedJ===cbCoreJ();
+  var st=[
+    ['WEG',wayOk,function(){ED.tool='path';edRefresh();}],
+    ['PLÄTZE',spotsOk,function(){ED.tool='spot';edRefresh();}],
+    ['STÄRKE',CB.seenDiff,function(){edOpenVals('diff');edRefresh();}],
+    ['TESTEN',tested,function(){$('eTest').click();}],
+    ['HOCHLADEN',false,function(){$('eSave').click();}]
+  ],first=-1;
+  st.forEach(function(x,i){if(first<0&&!x[1])first=i;});
+  box.innerHTML='';
+  st.forEach(function(x,i){
+    var b=document.createElement('button');b.type='button';
+    b.className=(x[1]?'ok':'')+(i===first?' now':'')+(!x[1]&&i<2&&warn.length?' warn':'');
+    var n=document.createElement('i');n.textContent=x[1]?'✓':String(i+1);b.appendChild(n);
+    var t=document.createElement('span');t.textContent=x[0];b.appendChild(t);
+    b.addEventListener('click',function(){Snd.play('tick');x[2]();});box.appendChild(b);
+  });
 }
 function cbUpload(){
   if(!communityAvailable()){toast('HOCHLADEN GEHT NUR AUF DER WEBSEITE','#ff5d5d');return;}
@@ -8826,14 +8985,12 @@ function cbUpload(){
     toast(j.error==='limit'?'HÖCHSTENS 15 LEVEL PRO KONTO':j.error==='wait'?'BITTE EINE MINUTE WARTEN':j.error==='full'?'DIE COMMUNITY IST VOLL':j.error==='too_big'?'DAS LEVEL IST ZU GROSS':j.error==='bad_level'?'DAS LEVEL IST FEHLERHAFT':'HOCHLADEN FEHLGESCHLAGEN','#ff5d5d');
   }).catch(function(){toast('KEINE VERBINDUNG','#ff5d5d');});
 }
-$('bComm').addEventListener('click',function(){Snd.play('tick');show('comm');});
-$('bCommBack').addEventListener('click',function(){Snd.play('tick');show('map');});
+$('bComm').addEventListener('click',function(){Snd.play('tick');COMM.from='map';show('comm');});
+$('bCreator').addEventListener('click',function(){Snd.init();Snd.play('tick');COMM.from='title';show('comm');});
+$('bCommBack').addEventListener('click',function(){Snd.play('tick');var back=COMM.from==='title'?'title':'map';COMM.from='';if(back==='title'){show('title');refreshTitle();}else show('map');});
 Array.prototype.forEach.call(document.querySelectorAll('#commTabs .pb'),function(b){b.addEventListener('click',function(){COMM.tab=b.dataset.t;Snd.play('tick');commOpen();});});
-$('bCommBuild').addEventListener('click',function(){
-  Snd.play('tick');var d=cbLoadDraft();
-  if(d&&!window.confirm('Weiter an deinem Entwurf „'+(d.lv.name||'Mein Level')+'“ bauen?\n(Abbrechen = neues Level anfangen)'))d=null;
-  cbOpen(d||cbNew());
-});
+$('bCommBuild').addEventListener('click',function(){Snd.play('tick');cbNewOpen();});
+$('cbNewClose').addEventListener('click',function(){Snd.play('tick');disp('cbNewScr',false);});
 $('eHelp').addEventListener('click',function(){Snd.play('tick');disp('cbHelp',true);});
 $('cbHelpOk').addEventListener('click',function(){Snd.play('tick');disp('cbHelp',false);});
 $('cbBoss').addEventListener('click',function(){cbChange(function(st){st.boss=!st.boss;});});
@@ -9580,6 +9737,10 @@ $('bAchBack').addEventListener('click',function(){Snd.play('tick');show('map');}
 $('bLex').addEventListener('click',function(){Snd.play('tick');openLex();});
 $('bWs').addEventListener('click',function(){Snd.play('tick');show('ws');});
 $('bWsBack').addEventListener('click',function(){Snd.play('tick');show('map');});
+var BASE_RET=false;
+$('bBase').addEventListener('click',function(){Snd.play('tick');disp('baseScr',true);});
+$('bBaseClose').addEventListener('click',function(){Snd.play('tick');disp('baseScr',false);});
+['bSkills','bHero','bAbl','bWs'].forEach(function(id){$(id).addEventListener('click',function(){if(scene!=='map'){BASE_RET=true;disp('baseScr',false);}});});
 $('bPauseLex').addEventListener('click',function(){Snd.play('tick');openLex();});
 $('bLexBack').addEventListener('click',function(){
   Snd.play('tick');
@@ -9789,6 +9950,7 @@ $('updateReload').addEventListener('click',function(){
 function refreshTitle(){
   setMode(false);
   disp('bPlayDev',devOK(),'inline-block');
+  disp('bCreator',communityAvailable(),'inline-block');
   var pi=plInfo(),e=$('tCloud');
   $('tLv').textContent='KAMPAGNE: LV '+pi.lv+'  ·  ★ '+starSum()+'/'+(LEVELS.length*3)+'  ·  ◆ '+PR.crystals;
   if(Cloud.status==='cloud')e.innerHTML='<b>IM KONTO GESICHERT</b> · auf allen Geräten gleich';
