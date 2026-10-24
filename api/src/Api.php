@@ -97,7 +97,12 @@ final class Api
             'auth/forgot-password' =>['POST', false, fn (): Response => $this->accounts()->forgotPassword($request->json(), $request)],
             'auth/reset-password' => ['POST', false, fn (): Response => $this->accounts()->resetPassword($request->json(), $request)],
             'auth/logout' => ['POST', true, fn (array $session): Response => $this->accounts()->logout($session, $request)],
-            'account/me' => ['GET', true, fn (array $session): Response => $this->accounts()->me($session)],
+            'account/me' => ['GET', true, fn (array $session): Response => $this->accountMe($session)],
+            // Für die Webseite: immer 200, auch ohne Anmeldung (die Spiele nutzen weiter account/me mit 401).
+            'account/status' => ['GET', false, function () use ($request): Response {
+                $session = $this->sessions()->current($request);
+                return new Response(200, ['user' => $session === null ? null : Accounts::publicUser($session)]);
+            }],
             'account/profile' => ['POST', true, fn (array $session): Response => $this->accounts()->updateProfile($session, $request->json(), $request)],
             'account/password' => ['POST', true, fn (array $session): Response => $this->accounts()->changePassword($session, $request->json(), $request)],
             'account/sessions' => ['GET', true, fn (array $session): Response => $this->accounts()->listSessions($session)],
@@ -251,6 +256,15 @@ final class Api
             throw new HttpError(403, 'missing_permission', ['permission' => 'announcements.manage']);
         }
         return $this->announcements();
+    }
+
+    /** „Mein Konto“: zusätzlich, ob das Konto die Zentrale betreten darf (für den Knopf „Zur Zentrale“). @param array<string, mixed> $session */
+    private function accountMe(array $session): Response
+    {
+        $response = $this->accounts()->me($session);
+        $body = $response->body;
+        $body['user']['panel'] = (new Permissions($this->pdo()))->canEnterPanel((int) $session['id']);
+        return new Response($response->status, $body);
     }
 
     private function community(): Community

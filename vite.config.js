@@ -59,6 +59,8 @@ export default defineConfig(({ mode }) => {
     impressum: src('impressum/index.html'),
     datenschutz: src('datenschutz/index.html'),
     ranglisten: src('ranglisten/index.html'),
+    // Eigene Fehlerseite (ErrorDocument 404 im .htaccess-Block, siehe deploy/htaccess-site.conf)
+    notfound: src('404.html'),
   };
   if (accountsEnabled(mode)) {
     for (const [name, path] of Object.entries(ACCOUNT_PAGES)) input[name] = src(path);

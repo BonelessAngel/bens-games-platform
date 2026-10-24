@@ -41,3 +41,10 @@ test('Datenschutzerklärung nennt Profile, Farbschema und Ankündigungen', () =>
     assert.ok(html.includes(needle), `fehlt: ${needle}`);
   }
 });
+
+test('Link zur Zentrale passt zur Webseite', async () => {
+  const { adminUrl } = await import('../lib/admin-url.js');
+  assert.equal(adminUrl('bens-games.de'), 'https://admin.bens-games.de/');
+  assert.equal(adminUrl('www.bens-games.de'), 'https://admin.bens-games.de/');
+  assert.equal(adminUrl('staging.bens-games.de'), 'https://admin-staging.bens-games.de/');
+});

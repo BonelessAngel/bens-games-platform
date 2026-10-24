@@ -50,6 +50,7 @@ jobs:
           FTP_SERVER: ${{ secrets.STAGING_FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.STAGING_FTP_USERNAME }}
           LFTP_PASSWORD: ${{ secrets.STAGING_FTP_PASSWORD }}
+          HTACCESS_BLOCK: deploy/htaccess-site.conf
         run: bash scripts/deploy-ftp.sh
 
       # Sicherheitsnetz: Staging muss nach jedem Upload weiterhin passwortgeschützt sein.
@@ -62,6 +63,12 @@ jobs:
             exit 1
           fi
           echo "Verzeichnisschutz aktiv (401)."
+          # Sicherheits-Kopfzeilen aus deploy/htaccess-site.conf (gelten auch für die 401-Antwort)
+          if curl -sI https://staging.bens-games.de/ | grep -qi '^x-frame-options: *SAMEORIGIN'; then
+            echo "Sicherheits-Kopfzeilen aktiv."
+          else
+            echo "::warning::Sicherheits-Kopfzeilen fehlen auf staging.bens-games.de (mod_headers aktiv?)."
+          fi
 
       # Datenbank-Migrationen über den geschützten API-Endpunkt (ohne SSH).
       # Benötigt: STAGING_MIGRATION_TOKEN (gleich wie migration_token in der Server-config.php) sowie
@@ -92,6 +99,7 @@ jobs:
           FTP_USERNAME: ${{ secrets.STAGING_ADMIN_FTP_USERNAME }}
           LFTP_PASSWORD: ${{ secrets.STAGING_ADMIN_FTP_PASSWORD }}
           LOCAL_DIR: dist-admin/
+          HTACCESS_BLOCK: deploy/htaccess-admin.conf
         run: bash scripts/deploy-ftp.sh
 
       - name: Test-Zentrale geschützt?

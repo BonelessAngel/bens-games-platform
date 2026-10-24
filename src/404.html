@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seite nicht gefunden – Bens Games</title>
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex">
+  <!-- HEAD -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <!-- ENV_BANNER -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="/">
+        <img class="brand__logo" src="/favicon.svg" alt="" width="28" height="28">
+        <span>Bens Games</span>
+      </a>
+      <nav aria-label="Hauptnavigation">
+        <a href="/">Bibliothek</a>
+        <a href="/ranglisten/">Ranglisten</a>
+        <!-- ACCOUNT_NAV -->
+      </nav>
+    </div>
+  </header>
+
+  <main class="container notfound">
+    <p class="notfound__code" aria-hidden="true">404</p>
+    <h1>Diese Seite gibt es nicht</h1>
+    <p class="auth__lead">
+      Vielleicht hat sich ein Tippfehler in die Adresse geschlichen, oder die Seite ist umgezogen.
+      Alle Spiele findest du in der Bibliothek.
+    </p>
+    <div class="button-row notfound__actions">
+      <a class="button" href="/">Zur Bibliothek</a>
+      <a class="button button--secondary" href="/ranglisten/">Ranglisten</a>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <span>© <!-- YEAR --> Bens Games</span>
+      <nav aria-label="Rechtliches">
+        <a href="/impressum/">Impressum</a>
+        <a href="/datenschutz/">Datenschutz</a>
+      </nav>
+    </div>
+  </footer>
+  <script type="module" src="./scripts/nav.js"></script>
+</body>
+</html>
