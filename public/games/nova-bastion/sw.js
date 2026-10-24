@@ -1,6 +1,6 @@
 /* Nova Bastion: Offline-Start. Die Seite wird bevorzugt frisch geladen (damit Updates sofort ankommen),
    ohne Internet kommt sie aus dem Zwischenspeicher. Schriften und Symbole werden beim ersten Laden mitgespeichert. */
-var CACHE='nova-bastion-202610231801';
+var CACHE='nova-bastion-202610240254';
 var CACHE_PREFIX='nova-bastion-';
 var APP_PATH='/games/nova-bastion/';
 var CORE=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon-180.png','PressStart2P-Regular-latin.woff2','VT323-Regular-latin.woff2'];
