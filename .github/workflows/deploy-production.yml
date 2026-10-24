@@ -62,6 +62,7 @@ jobs:
           FTP_SERVER: ${{ secrets.PRODUCTION_FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.PRODUCTION_FTP_USERNAME }}
           LFTP_PASSWORD: ${{ secrets.PRODUCTION_FTP_PASSWORD }}
+          HTACCESS_BLOCK: deploy/htaccess-site.conf
         run: bash scripts/deploy-ftp.sh
 
       # Zentrale admin.bens-games.de (eigener FTP-Benutzer nur für /bens-games-admin/). Ohne Secrets übersprungen.
@@ -71,6 +72,7 @@ jobs:
           FTP_USERNAME: ${{ secrets.PRODUCTION_ADMIN_FTP_USERNAME }}
           LFTP_PASSWORD: ${{ secrets.PRODUCTION_ADMIN_FTP_PASSWORD }}
           LOCAL_DIR: dist-admin/
+          HTACCESS_BLOCK: deploy/htaccess-admin.conf
         run: |
           if [ -z "$FTP_USERNAME" ] || [ -z "$LFTP_PASSWORD" ]; then
             echo "::notice::PRODUCTION_ADMIN_FTP_* fehlen – Zentrale übersprungen."

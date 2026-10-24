@@ -50,3 +50,18 @@ dbTest('Rangliste: Rekord aller Zeiten und Profilbilder', function (): void {
     $all = $app->api->handle(new Request('GET', 'games/nova-bastion/leaderboard', [], '', [], '203.0.113.7', ['board' => '1', 'period' => 'all']));
     same('sky', $all->body['entries'][0]['avatar_color']);
 });
+
+dbTest('Webseite: account/status immer 200, Mein Konto kennt den Zugang zur Zentrale', function (): void {
+    $app = new TestApp();
+    $guest = $app->get('account/status');
+    same(200, $guest->status);
+    same(null, $guest->body['user']);
+    same(401, $app->get('account/me')->status, 'Spiele nutzen weiter 401');
+
+    $session = $app->signedIn('anna@example.org', 'ein sicheres Passwort', 'Anna');
+    same('Anna', $app->get('account/status', $session['cookies'])->body['user']['display_name']);
+    check(!isset($app->get('account/status', $session['cookies'])->body['csrf']), 'kein CSRF-Token in der Statusabfrage');
+    same(false, $app->get('account/me', $session['cookies'])->body['user']['panel']);
+    $app->grantRole('anna@example.org', 'moderator');
+    same(true, $app->get('account/me', $session['cookies'])->body['user']['panel']);
+});

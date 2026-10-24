@@ -6,7 +6,8 @@ import './announcements.js';
 export async function currentUser() {
   if (!document.querySelector('meta[name="bg-accounts"]')) return null;
   try {
-    const response = await fetch('/api/account/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    // account/status antwortet auch Gästen mit 200 – keine roten Fehler in der Konsole.
+    const response = await fetch('/api/account/status', { credentials: 'same-origin', headers: { Accept: 'application/json' } });
     return response.ok ? (await response.json()).user : null;
   } catch {
     return null;

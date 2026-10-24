@@ -2,6 +2,7 @@
 // Spricht mit der API unter /api/ auf derselben Adresse; das Sitzungs-Cookie setzt und liest nur der Server.
 import { safeReturnPath } from '../../lib/return-path.js';
 import { avatarSvg, AVATARS, AVATAR_COLORS } from '../../lib/avatars.js';
+import { adminUrl } from '../../lib/admin-url.js';
 import { badgeList } from './badges.js';
 import { renderNavUser } from './nav.js';
 
@@ -446,6 +447,10 @@ function setupProfile(root, user, csrf) {
     root.querySelector('[data-badges]').replaceChildren(...badges.map((text) => Object.assign(document.createElement('span'), { className: 'pill', textContent: text })));
     // Sichtbar nur, solange das Konto in Ranglisten erscheint (setzt loadStats).
     root.querySelector('[data-profile-link]').href = `/spieler/?name=${encodeURIComponent(current.display_name)}`;
+    // Nur für Konten mit Rechten: Link zur passenden Zentrale (Testseite → Test-Zentrale)
+    const admin = root.querySelector('[data-admin-link]');
+    admin.hidden = !user.panel;
+    admin.href = adminUrl(window.location.hostname);
     renderNavUser(current);
   };
 
