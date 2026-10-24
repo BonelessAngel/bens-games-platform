@@ -90,6 +90,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
   animation:gPulse 1.1s ease-in-out infinite;transition:left .25s,top .25s,width .25s,height .25s}
 #gSpot.round{border-radius:50%}
 #guide.dim #gSpot{display:block}
+#guide .gsh{position:absolute;display:none;pointer-events:auto}
 #guide.nodim{background:none}
 #guide.dimall{background:#05060fa6}
 @keyframes gPulse{50%{box-shadow:0 0 0 999em #05060fa6,0 0 2.2em var(--am)}}
@@ -99,6 +100,8 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
   background:#0b1024f5;border:.2em solid var(--cy);box-shadow:.3em .3em 0 #000;pointer-events:auto;text-align:left;animation:gIn .25s steps(4)}
 @keyframes gIn{from{opacity:0;transform:translateX(-50%) translateY(.6em)}}
 #gBox.top{top:.8em}#gBox.bottom{bottom:.8em}
+#gBox.nudge{animation:gNudge .3s steps(3)}
+@keyframes gNudge{33%{transform:translateX(-52%)}66%{transform:translateX(-48%)}}
 #gCv{width:3.6em;height:3.6em;flex:none;image-rendering:pixelated;border:.15em solid var(--cy);background:#101a33}
 .gtx{flex:1;min-width:0}.gtx b{display:block;font-family:'Press Start 2P',monospace;font-weight:400;font-size:.5em;color:var(--cy);margin-bottom:.4em}
 .gtx span{display:block;font-family:'VT323',monospace;font-size:1.45em;line-height:1.05;color:#eaf2ff}
@@ -282,7 +285,22 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .lexsub{font-family:'Press Start 2P',monospace;font-size:.5em;color:var(--am);margin-bottom:.4em}
 .lexinfo h3{font-family:'Press Start 2P',monospace;font-weight:400;font-size:.85em;margin:0 0 .4em;color:#eaf8ff}
 .lexinfo p{margin:0 0 .5em;font-size:1.25em;line-height:1.1;color:#dfe9ff}
-#lexStats div{font-size:1.15em;line-height:1.15;color:#cfdcff}
+#lexStats .lr{font-size:1.15em;line-height:1.15;color:#cfdcff}
+.lexb.lock{border-style:dashed;background:#0b0f20}
+.lexb.lock span{color:#5a648a}
+.lxcount{grid-column:1/-1;font-family:'Press Start 2P',monospace;font-size:.45em;color:#9fb0e6;text-align:left;padding:.2em 0 .3em}
+#lexStats .lxh{font-family:'Press Start 2P',monospace;font-size:.45em;color:var(--am);margin:1em 0 .5em;line-height:1.5}
+#lexStats .lxrow{display:flex;gap:.4em}
+#lexStats .lxc{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:.25em;background:#10152b;border:.14em solid #2c3566;padding:.45em .3em;box-shadow:.12em .12em 0 #000;text-align:center}
+#lexStats .lxs{display:flex;gap:.6em;align-items:flex-start;background:#10152b;border:.14em solid #2c3566;border-left:.45em solid var(--c);padding:.5em .6em;margin-bottom:.45em;box-shadow:.12em .12em 0 #000;text-align:left}
+#lexStats .lxc canvas,#lexStats .lxs canvas{height:2.8em;width:auto;image-rendering:pixelated;flex:none}
+#lexStats .lxc b,#lexStats .lxs b{display:block;font-family:'Press Start 2P',monospace;font-weight:400;font-size:.42em;line-height:1.5;color:#eaf8ff}
+#lexStats .lxs b{color:var(--c)}
+#lexStats .lxc span{display:block;font-size:1.05em;color:var(--am)}
+#lexStats .lxc em,#lexStats .lxs em{display:block;font-style:normal;font-size:.95em;line-height:1;color:#8f9cc8}
+#lexStats .lxst{min-width:0;flex:1}
+#lexStats .lxs span{display:block;font-size:1.15em;line-height:1.05;color:#dfe9ff;margin:.3em 0 .2em}
+#lexStats .lxs i{display:block;font-style:normal;font-size:1.1em;line-height:1.05;color:var(--grn);margin-bottom:.2em}
 #lexStats b{font-weight:400;color:var(--am)}
 #lexStats .g{color:var(--grn)} #lexStats .r{color:#ff8a8a}
 .wsmain{display:flex;gap:1em;flex:1;min-height:0}
@@ -415,7 +433,8 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 #stage #tutBox span{font-size:calc(1.45em*var(--ts,1))}
 #stage #info .d,#stage #skinfo .d{font-size:calc(1.2em*var(--ts,1))}
 #stage .lexinfo p{font-size:calc(1.25em*var(--ts,1))}
-#stage #lexStats div{font-size:calc(1.15em*var(--ts,1))}
+#stage #lexStats .lr{font-size:calc(1.15em*var(--ts,1))}
+#stage #lexStats .lxst,#stage #lexStats .lxc{font-size:calc(1em*var(--ts,1))}
 #stage #radio span{font-size:calc(1.25em*var(--ts,1))}
 #stage .abc p{font-size:calc(1.05em*var(--ts,1))}
 #stage .cbsteps span{font-size:calc(1.25em*var(--ts,1))}#syUI{position:absolute;inset:0;display:none;pointer-events:none;z-index:6}
@@ -629,13 +648,16 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .credroll p{font-size:1.5em;color:#cfdcff;margin:.3em 2em;line-height:1.1}
 @keyframes credup{to{transform:translateY(-100%) translateY(-38em)}}
 .lgrow{display:flex;gap:.45em}
-.lgd{width:5.4em;height:6.4em;background:#10152b;border:.18em solid #2c3566;box-shadow:.15em .15em 0 #000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em;color:#cfdcff}
+.lgd{width:5em;height:6.6em;padding:0 .2em;background:#10152b;border:.18em solid #2c3566;box-shadow:.15em .15em 0 #000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em;color:#cfdcff}
 .lgd b{font-family:'Press Start 2P',monospace;font-weight:400;font-size:.45em;color:#9fb0e6}
-.lgd span{font-size:1.1em;line-height:1;text-align:center}
+.lgd span{font-size:1em;line-height:1;text-align:center}
+.lgd i canvas{height:1.6em;width:auto;image-rendering:pixelated;display:block}
 .lgd i{font-style:normal;font-size:1.6em;color:var(--vi)}
 .lgd.done{border-color:var(--grn);opacity:.6}
 .lgd.today{border-color:var(--am);background:#2a2410;transform:scale(1.08);animation:pulse2 1s steps(2) infinite}
-.lgd.lgbig{border-color:var(--mg)}
+.lgd.lgbig{border-color:var(--mg);width:7.4em;background:#22102a}
+.lgd.lghero{border-color:#3de8c8}
+.lgd.lghero span{color:#3de8c8}
 .bstar{color:#3de8ff}
 
 /* Erfolge */
@@ -966,7 +988,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
   <div id="abil"></div>
   <div id="hint"></div>
 
-  <div id="guide"><div id="gSpot"></div><canvas id="gFinger" width="12" height="13"></canvas>
+  <div id="guide"><div id="gSpot"></div><canvas id="gFinger" width="12" height="13"></canvas><div class="gsh"></div><div class="gsh"></div><div class="gsh"></div><div class="gsh"></div>
    <div id="gBox"><canvas id="gCv" width="20" height="20"></canvas><div class="gtx"><b id="gWho">ADMIRALIN KORR</b><span id="gTx"></span></div>
     <div class="gbtn"><button class="pb" id="gSkip">ÜBERSPRINGEN</button><button class="pb go" id="gNext">WEITER</button></div></div></div>
   <div id="radio"><canvas id="radioCv" width="20" height="20"></canvas><div><b>ADMIRALIN KORR · FUNK</b><span id="radioTx"></span></div></div>
@@ -2557,7 +2579,7 @@ function normProfile(p){
   p.seen=obj(p.seen);p.tower=obj(p.tower);p.login=obj(p.login);if(typeof p.login.streak!=='number')p.login.streak=0;if(typeof p.login.best!=='number')p.login.best=0;
   p.lvIds=ids;p.wIds=wids;
   if(typeof p.xp!=='number')p.xp=0;
-  if(typeof p.hintsOn!=='boolean')p.hintsOn=!p.stars.some(function(v){return v>0;});p.seenH=obj(p.seenH);
+  if(typeof p.hintsOn!=='boolean')p.hintsOn=!p.stars.some(function(v){return v>0;});p.seenH=obj(p.seenH);p.lexS=obj(p.lexS);
   /* Neue, steilere XP-Kurve: Spielerlevel bleibt beim Umstieg erhalten, nur der Weg zum nächsten Level wird länger */
   if(p.xpv!==2){
     var ox=p.xp,olv=1;while(olv<99&&ox>=80+olv*45){ox-=80+olv*45;olv++;}
@@ -3022,7 +3044,8 @@ function dailyInfo(){
 }
 
 /* =============== Tagesbonus (7-Tage-Serie) =============== */
-var LOGIN=[{c:20,t:'20 KRISTALLE'},{m:0,t:'MODUL'},{c:40,t:'40 KRISTALLE'},{x:150,t:'150 XP'},{c:60,t:'60 KRISTALLE'},{m:1,t:'SELTENES MODUL'},{c:100,m:2,t:'100 KRISTALLE + EPISCH'}];
+/* Tag 3: Heldin Kaira (wer sie schon hat, bekommt 40 Kristalle) */
+var LOGIN=[{c:20,t:'20 KRISTALLE'},{m:0,t:'MODUL'},{h:'kaira',c:40,t:'40 KRISTALLE'},{x:150,t:'150 XP'},{c:60,t:'60 KRISTALLE'},{m:1,t:'SELTENES MODUL'},{c:100,m:2,t:'100 KRISTALLE + EPISCHES MODUL'}];
 function dayKey(ms){var d=new Date(ms);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
 function modOf(r){
   var st=['dmg','range','rate','crit'][Math.floor(Math.random()*4)],rg=st==='crit'?[[2,3],[4,6],[7,9]][r]:[[3,5],[6,9],[10,14]][r];
@@ -3034,13 +3057,18 @@ function checkLogin(){
   $('lgSub').textContent=streak>1?'Tag '+streak+' in Folge. Komm morgen wieder für mehr!':(PR.login.streak>1?'Deine Serie ist gerissen. Neuer Start!':'Komm jeden Tag vorbei, die Belohnung wächst.');
   var row=$('lgRow');row.innerHTML='';
   LOGIN.forEach(function(r,i){
-    var d=document.createElement('div');d.className='lgd'+(i<day?' done':i===day?' today':'')+(i===6?' lgbig':'');
-    d.innerHTML='<b>TAG '+(i+1)+'</b><i>'+(r.m!==undefined?'▣':r.x?'★':'◆')+'</i><span></span>';d.lastChild.textContent=r.t;row.appendChild(d);
+    var hero=r.h&&!PR.heroOwn[r.h],d=document.createElement('div');
+    d.className='lgd'+(i<day?' done':i===day?' today':'')+(i===6?' lgbig':'')+(hero?' lghero':'');
+    d.innerHTML='<b>TAG '+(i+1)+'</b><i>'+(hero?'':r.m!==undefined&&r.c?'◆ ▣':r.m!==undefined?'▣':r.x?'★':'◆')+'</i><span></span>';
+    if(hero){var hs=HSPR[r.h].n[0],hc=canvas(hs.width,hs.height);hc.getContext('2d').drawImage(hs,0,0);d.children[1].appendChild(hc);}
+    d.lastChild.textContent=hero?'HELDIN '+HEROES[r.h].name:r.t;row.appendChild(d);
   });
   $('lgGo').onclick=function(){
     var r=LOGIN[day],got=[];
     PR.login.last=today();PR.login.streak=streak;PR.login.best=Math.max(PR.login.best,streak);
-    if(r.c){PR.crystals+=r.c;PR.st.crysTotal+=r.c;got.push('+'+r.c+' KRISTALLE');}
+    var hero=r.h&&!PR.heroOwn[r.h];
+    if(hero){PR.heroOwn[r.h]=1;got.push('HELDIN '+HEROES[r.h].name+' FREIGESCHALTET');}
+    else if(r.c){PR.crystals+=r.c;PR.st.crysTotal+=r.c;got.push('+'+r.c+' KRISTALLE');}
     if(r.x){PR.xp+=r.x;got.push('+'+r.x+' XP');}
     if(r.m!==undefined){var m=modOf(r.m);if(PR.mods.length<40)PR.mods.push(m);got.push(modName(m));}
     persist();disp('loginScr',false);Snd.play('coin');Snd.play('up');toast('TAGESBONUS: '+got.join('  ·  '),'#ffc23c');refreshMapUI();checkAch();setTimeout(checkUnlocks,400);
@@ -3776,6 +3804,7 @@ function startLevel(k,mode,Lx){
   G.allowed=mod('laser')?['laser']:arsenalList().filter(function(t){return !(mod('nobar')&&t==='barracks');});
   if(L.allowT&&L.allowT.length&&mode!=='endless'){var alw=G.allowed.filter(function(t){return L.allowT.indexOf(t)>=0;});if(alw.length)G.allowed=alw;}
   if(!G.allowed.length)G.allowed=['laser'];
+  PR.lexS=PR.lexS||{};G.allowed.forEach(function(t){PR.lexS['t:'+t]=1;});
   /* Vorgebaute Türme aus dem Editor: gratis, beim Verkauf gibt es nur Gold für spätere Ausbauten */
   G.spots.forEach(function(s){
     if(!s.pre||s.rock||!ST[s.pre])return;
@@ -3800,7 +3829,7 @@ function startLevel(k,mode,Lx){
   alist.forEach(function(a){
     var b=document.createElement('button');b.className='ab'+(a.k==='hab'?' hab':'');b.style.setProperty('--c',a.c);
     b.innerHTML='<i></i><em></em><span>'+a.name+'</span>';b.insertBefore(abilIconFor(a.k,hk),b.children[1]);
-    b.addEventListener('click',function(ev){ev.stopPropagation();abilClick(a);});
+    fastTap(b,function(ev){ev.stopPropagation();abilClick(a);});
     ab.appendChild(b);
     G.abil[a.k]={cd:a.k==='hab'?4:0,max:a.cd||1,el:b,p:-1};G.abilList.push(a);
   });
@@ -3904,7 +3933,7 @@ function updateHud(){
   if(hv.btn!==bl){bWave.textContent=bl;hv.btn=bl;}
   bWave.disabled=done;
   bWave.classList.toggle('pulse',G.nextWave===0);
-  var hOk=!done&&G.nextWave>0&&(G.L.k>=3||DEV||G.endless);
+  var hOk=!done&&G.nextWave>0&&G.mode!=='train'&&(G.L.k>=3||DEV||G.endless);
   if(hv.hard!==hOk){hv.hard=hOk;$('bHard').style.display=hOk?'':'none';}
   G.abilList.forEach(function(a){
     var st=G.abil[a.k],p;
@@ -3982,6 +4011,7 @@ $('shopSkip').addEventListener('click',function(){Snd.play('tick');closeShop();}
 function banner(t,s,c){G.ban={t:t,s:s||'',c:c||'#ffc23c',life:2.4,max:2.4};}
 function makeEnemy(type,route,d,hp,wm){
   var D=ENEMIES[type],L=G.L,p=posAt(route,d);
+  if(PR.lexS&&!PR.lexS[type])PR.lexS[type]=1;
   return {type:type,def:D,hp:hp,maxhp:hp,d:d,off:D.boss?0:(Math.random()-0.5)*6,route:route,x:p.x,y:p.y,wm:wm,
     slow:0,slowT:0,freezeT:0,burnT:0,burnDps:0,flash:0,anim:Math.random()*4,dead:false,blockers:[],acd:0.6,
     hopT:2+Math.random()*2,healT:1.5+Math.random()*2,jump:0,tauntT:0,arm:D.armor,sbT:0,shCut:0,mark:0,rev:!D.stealth,
@@ -5161,7 +5191,33 @@ function getOptions(spot){
     info:{t:'Turm verkaufen',d:'Du bekommst '+Math.round(SELL*100)+'% der Kosten zurück.',s:''},action:function(){sell(spot);}});
   return list;
 }
-function openMenu(spot){G.aim=null;G.rally=null;setHint('');menu={spot:spot,sel:null,opts:getOptions(spot)};renderMenu();Snd.play('tick');}
+function openMenu(spot){G.aim=null;G.rally=null;setHint('');menu={spot:spot,sel:null,opts:getOptions(spot)};renderMenu();Snd.play('tick');specGuide(spot);}
+/* Wofür sich jede Spezialisierung lohnt (Führung und Lexikon) */
+var SPECTIP={
+ lasera:'viele schwache Gegner und Schilde – Dauerfeuer',laserb:'Schilde, Panzerung und zähe Einzelziele auf langen Wegen',laserc:'Schwärme und dichte Gruppen',
+ missilea:'große Gruppen am Boden',missileb:'zähe Gegner mit Schild oder Panzerung – Brand ignoriert jede Abwehr',missilec:'gepanzerte Gegner wie Panzer und Kolosse',
+ cryoa:'schnelle Gegner und Bosse ausbremsen',cryob:'ganze Gruppen auf einmal verlangsamen',cryoc:'Wellen mit vielen Schilden – hilft allen Türmen',
+ raila:'Bosse und dicke Einzelziele aus großer Entfernung',railb:'gepanzerte Gegner auf langen Geraden',railc:'Gegner zurückwerfen, damit andere Türme länger treffen',
+ teslaa:'Schwärme und große Gruppen',teslab:'Bosse und Wächter',teslac:'gefährliche Gegner kurz stoppen',
+ barracksa:'starke Bodengegner lange festhalten',barracksb:'gemischte Wellen mit Fliegern',barracksc:'Panzerung und Tarnläufer',
+ flaka:'Drohnenschwärme',flakb:'einzelne zähe Flieger wie Sturmbomber',
+ ampa:'viele schnelle Türme in der Nähe',ampb:'Türme, denen etwas Reichweite fehlt',
+ radara:'Gegner bremsen und Tarnung aufdecken',radarb:'mehr Schaden für alle Türme gegen Bosse',
+ minea:'schnelle Bodengegner festkleben',mineb:'große Gruppen an Engstellen',minec:'Schilde und Tarnung',
+ lancea:'viele mittelstarke Gegner',lanceb:'Bosse und dichte Gruppen',lancec:'zwei starke Gegner gleichzeitig',
+ hangara:'Schilde und Flieger überall auf der Karte',hangarb:'Gruppen am Boden',hangarc:'Level mit Saboteuren und EMP'};
+function specGuide(spot){
+  var t=spot.tower;
+  if(!t||t.spec||t.tier<2||DEV||!G||G.mode==='train'||G.test||G.bot||GUIDE)return;
+  PR.tour=PR.tour||{};if(PR.tour.spec)return;
+  PR.tour.spec=1;PR.seenH=PR.seenH||{};PR.seenH.spec=1;persist();
+  var T=TOWERS[t.type],steps=[{say:'Dein '+T.short.toUpperCase()+' hat Stufe 3 erreicht! Jetzt wählst du eine SPEZIALISIERUNG. Jede verändert, wie der Turm kämpft – und gilt nur für diesen einen Turm. Ich stelle sie dir vor.',next:true,freeze:true,dim:true}];
+  SPECS.forEach(function(k){var S=ST[t.type][k];if(!S)return;
+    steps.push({say:S.name.toUpperCase()+' · '+S.cost+' GOLD. '+S.desc+(SPECTIP[t.type+k]?' Gut für: '+SPECTIP[t.type+k]+'.':''),
+      el:function(){return document.querySelector('#menu .slot[data-id=sp'+k+']');},next:true,freeze:true,finger:false});});
+  steps.push({say:'Tippe jetzt die Spezialisierung an, die zu den Gegnern passt – oder spar erst Gold. Alle Details findest du jederzeit im LEXIKON unter TÜRME.',next:true,nextLabel:'VERSTANDEN',freeze:true,dim:true});
+  guideStart(steps,{skipLabel:'SCHLIESSEN',abort:function(){return !G||G.over||!menu||menu.spot!==spot||!!t.spec;}});
+}
 function closeMenu(){menu=null;menuEl.innerHTML='';infoEl.className='';$('abil').style.visibility='';}
 function pctX(v){return (v/W*100)+'%';}
 function pctY(v){return (v/H*100)+'%';}
@@ -8094,31 +8150,77 @@ function lexName(tab,id){
   if(tab==='abil')return ABDESC[id][0];
   return RULES[id][0];
 }
-function openLex(){LX.back=scene==='play'?'play':'map';show('lex');}
+function openLex(){LX.back=scene==='play'?'play':'map';if(!lexSeen(LX.tab,LX.sel))LX.sel=lexFirst(LX.tab);show('lex');}
+/* Das Lexikon zeigt nur, was der Spieler schon gesehen hat. Der Rest bleibt als ??? mit einem Hinweis stehen. */
+var RSEEN={arsenal:function(){return unlocked(TUNLOCK.cryo);},elite:function(){return unlocked(2);},events:function(){return unlocked(1);},spots:function(){return unlocked(6);},
+  gates:function(){return !!PR.seenH.gates;},modes:function(){return starSum()>0;},ov:function(){return !!PR.seenH.ov;},rank:function(){return !!PR.seenH.rank;},warn:function(){return unlocked(2);},
+  bosses:function(){return !!(PR.lexS.boss||PR.seenH.mini||PR.seenH.boss);},shop:function(){return unlocked(4);},tower:function(){return !!(PR.seenUl&&PR.seenUl.tower);},
+  objs:function(){return Object.keys(PR.seenH).some(function(k){return k.indexOf('o_')===0;});}};
+function lexSeen(tab,id){
+  if(DEV)return true;
+  var ls=PR.lexS||{};
+  if(tab==='towers')return (TUNLOCK[id]<99&&unlocked(TUNLOCK[id]))||!!ls['t:'+id];
+  if(tab==='enemies')return !!ls[id]||((PR.album&&PR.album[id])||0)>0;
+  if(tab==='abil')return plInfo().lv>=ABX[id].lv;
+  if(tab==='rules'){PR.seenH=PR.seenH||{};PR.lexS=ls;return !RSEEN[id]||!!RSEEN[id]();}
+  return true;
+}
+function lexFirst(tab){var it=lexItems(tab);for(var i=0;i<it.length;i++)if(lexSeen(tab,it[i]))return it[i];return it[0];}
+function lexLockHint(tab,id){
+  if(tab==='towers')return TUNLOCK[id]<99?'Dieser Turm wird nach Einsatz '+TUNLOCK[id]+' freigeschaltet.':'Diesen Turm entdeckst du später auf deiner Reise.';
+  if(tab==='enemies')return 'Diesem Gegner bist du noch nicht begegnet. Sobald er auftaucht, steht hier alles über ihn.';
+  if(tab==='abil')return 'Diese Fähigkeit wird ab Spielerlevel '+ABX[id].lv+' freigeschaltet.';
+  return 'Das wird hier erklärt, sobald es dir im Spiel begegnet.';
+}
+function lexShadow(c){var o=canvas(c.width,c.height),g=o.getContext('2d');g.drawImage(c,0,0);g.globalCompositeOperation='source-in';g.fillStyle='#2a3152';g.fillRect(0,0,o.width,o.height);return o;}
+/* Turm-Karten: drei Ausbaustufen und alle Spezialisierungen */
+function lexTowerCards(id){
+  var box=$('lexStats');
+  function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e;}
+  box.appendChild(el('div','lxh','AUSBAUSTUFEN  ·  BAUEN, DANN ZWEIMAL AUSBAUEN'));
+  var row=el('div','lxrow');
+  [0,1,2].forEach(function(i){var S=ST[id][i],c=el('div','lxc');
+    c.appendChild(iconCanvas({k:'tower',type:id,tier:i}));
+    c.appendChild(el('b','','STUFE '+(i+1)));c.appendChild(el('span','',(i?'+':'')+S.cost+' GOLD'));c.appendChild(el('em','',shortStats(S)));
+    row.appendChild(c);});
+  box.appendChild(row);
+  var ks=SPECS.filter(function(k){return !!ST[id][k];});
+  if(!ks.length)return;
+  box.appendChild(el('div','lxh','SPEZIALISIERUNGEN  ·  AUF STUFE 3 WÄHLST DU EINE'));
+  ks.forEach(function(k){var S=ST[id][k],c=el('div','lxs'),tx=el('div','lxst');c.style.setProperty('--c',SPCOL[k]);
+    c.appendChild(iconCanvas({k:'tower',type:id,tier:2,spec:k}));
+    tx.appendChild(el('b','',S.name.toUpperCase()+'  ·  +'+S.cost+' GOLD'));tx.appendChild(el('span','',S.desc));
+    if(SPECTIP[id+k])tx.appendChild(el('i','','Gut für: '+SPECTIP[id+k]));
+    tx.appendChild(el('em','',statLine(S)));
+    c.appendChild(tx);box.appendChild(c);});
+}
 function renderLex(){
   buildStats();
   var tabs=$('lexTabs');tabs.innerHTML='';
   LEXTABS.forEach(function(t){
     var b=document.createElement('button');b.className='pb'+(LX.tab===t[0]?' on':'');b.textContent=t[1];
-    b.addEventListener('click',function(){LX.tab=t[0];LX.sel=lexItems(t[0])[0];LX.t=0;LX.s={};Snd.play('tick');renderLex();});
+    b.addEventListener('click',function(){LX.tab=t[0];LX.sel=lexFirst(t[0]);LX.t=0;LX.s={};Snd.play('tick');renderLex();});
     tabs.appendChild(b);
   });
   var list=$('lexList');list.innerHTML='';
-  lexItems(LX.tab).forEach(function(id){
-    var b=document.createElement('button');b.className='lexb'+(LX.sel===id?' sel':'');
-    b.appendChild(lexIcon(LX.tab,id));
-    var s=document.createElement('span');s.textContent=lexName(LX.tab,id);b.appendChild(s);
+  var items=lexItems(LX.tab),found=items.filter(function(id){return lexSeen(LX.tab,id);}).length;
+  var cnt=document.createElement('div');cnt.className='lxcount';cnt.textContent='ENTDECKT  '+found+' / '+items.length;list.appendChild(cnt);
+  items.forEach(function(id){
+    var seen=lexSeen(LX.tab,id),b=document.createElement('button');b.className='lexb'+(LX.sel===id?' sel':'')+(seen?'':' lock');
+    b.appendChild(seen?lexIcon(LX.tab,id):lexShadow(lexIcon(LX.tab,id)));
+    var s=document.createElement('span');s.textContent=seen?lexName(LX.tab,id):'???';b.appendChild(s);
     b.addEventListener('click',function(){LX.sel=id;LX.t=0;LX.s={};Snd.play('tick');renderLex();});
     list.appendChild(b);
   });
   var sub='',name='',desc='',st=[],id=LX.sel;
-  function row(l,v,cls){st.push('<div'+(cls?' class="'+cls+'"':'')+'>'+l+(v!==undefined?' <b>'+v+'</b>':'')+'</div>');}
-  if(LX.tab==='towers'){
-    var T=TOWERS[id],s0=ST[id][0];
-    sub='TURM  ·  '+T.dmgType.toUpperCase()+'  ·  AB LEVEL '+(TUNLOCK[id]+1);name=T.name;desc=T.desc;
-    row('Kosten',s0.cost+' Gold');row('Werte (Stufe 1):',statLine(s0));
+  function row(l,v,cls){st.push('<div class="lr'+(cls?' '+cls:'')+'">'+l+(v!==undefined?' <b>'+v+'</b>':'')+'</div>');}
+  var seen=lexSeen(LX.tab,id);
+  if(!seen){
+    sub='NOCH NICHT ENTDECKT';name='???';desc=lexLockHint(LX.tab,id);
+  }else if(LX.tab==='towers'){
+    var T=TOWERS[id];
+    sub='TURM  ·  '+T.dmgType.toUpperCase();name=T.name;desc=T.desc;
     row('Gut gegen: '+TINFO[id][0],undefined,'g');row('Schwach gegen: '+TINFO[id][1],undefined,'r');
-    SPECS.forEach(function(k){var S=TOWERS[id].specs[k];if(S)row('Spezialisierung '+S.name+':',S.desc);});
   }else if(LX.tab==='enemies'){
     var D=ENEMIES[id];
     sub='GEGNER'+(D.fly?'  ·  FLIEGT':'')+(D.boss?'  ·  BOSS':'');name=D.name;desc=EDESC[id][0];
@@ -8140,6 +8242,7 @@ function renderLex(){
     sub='REGEL';name=RULES[id][0];desc=RULES[id][1];
   }
   $('lexSub').textContent=sub;$('lexName').textContent=name;$('lexDesc').textContent=desc;$('lexStats').innerHTML=st.join('');
+  if(seen&&LX.tab==='towers')lexTowerCards(id);
   document.querySelector('.lexinfo').scrollTop=0;
 }
 function fakeE(type,x,y){var D=ENEMIES[type];return {type:type,def:D,hp:1,maxhp:1,x:x,y:y,anim:T0*4,flash:0,slowT:0,freezeT:0,jump:0,shOn:0,tauntT:0,burnT:0,mark:0,arm:D.armor,rev:true,mini:false};}
@@ -8171,7 +8274,7 @@ function renderLexDemo(dt){
   var c=$('lexCv');if(!c)return;
   var g=c.getContext('2d');g.imageSmoothingEnabled=false;
   var old=ctx;ctx=g;
-  try{LX.t+=dt;lexBg(g);lexScene(LX.tab,LX.sel,LX.s,dt);lexDrawFx(LX.s,dt);}catch(err){console.error(err);}
+  try{LX.t+=dt;lexBg(g);if(lexSeen(LX.tab,LX.sel)){lexScene(LX.tab,LX.sel,LX.s,dt);lexDrawFx(LX.s,dt);}else{g.fillStyle='#05060fb0';g.fillRect(0,0,200,84);hTxt(g,'? ? ?',70,46,'#5a648a',10);}}catch(err){console.error(err);}
   ctx=old;
 }
 function lexScene(tab,id,S,dt){
@@ -8612,7 +8715,9 @@ function abilIconFor(k,hk){
 }
 /* =============== Führung (Training, Rundgang, Einführungen) =============== */
 /* Ein Schritt: {say, el:()=>Element, pt:()=>{x,y,r} (Spielkoordinaten), done:()=>bool, next:true (WEITER-Knopf),
-   when:()=>bool (erst zeigen, wenn erfüllt), freeze:true (Spiel hält an, solange der Schritt sichtbar ist), finger:false} */
+   when:()=>bool (erst zeigen, wenn erfüllt), freeze:true (Spiel hält an, solange der Schritt sichtbar ist), finger:false}
+   Optionen: lock (endet, wenn die Szene wechselt), ready:()=>bool (wartet, z. B. bis der Tagesbonus zu ist),
+   abort:()=>bool (endet still), shield (Tipps außerhalb des Ausschnitts werden abgefangen) */
 var GUIDE=null;
 (function(){
   var f=$('gFinger').getContext('2d'),rows=['...##.......','..#oo#......','..#oo#......','..#oo####...','..#oo#oo#o#.','###oooooo#o#','#oo#ooooooo#','#oooooooooo#','.#ooooooooo#','..#oooooooo#','...#ooooooo#','....#oooooo#','....########'];
@@ -8629,14 +8734,14 @@ function guideType(t){
 }
 function guideStart(steps,opt){
   guideStop(true);
-  GUIDE={steps:steps.filter(Boolean),i:0,opt:opt||{},shown:-1,timer:setInterval(guideTick,120),wait:0};
+  GUIDE={steps:steps.filter(Boolean),i:0,opt:opt||{},shown:-1,timer:setInterval(guideTick,120),wait:0,scene:scene};
   disp('guide',true,'block');guideTick();
 }
 function guideStop(silent){
   clearInterval(guideType.h);
   if(!GUIDE)return;var g=GUIDE;GUIDE=null;clearInterval(g.timer);
   if(g.frozen&&G)G.paused=false;
-  disp('guide',false);
+  guideShield(null);disp('guide',false);
   if(!silent&&g.opt.onEnd)g.opt.onEnd(g.skipped?false:true);
 }
 function guideNext(){if(!GUIDE)return;if(GUIDE.frozen&&G){G.paused=false;GUIDE.frozen=false;}GUIDE.i++;GUIDE.shown=-1;if(GUIDE.i>=GUIDE.steps.length)guideStop();else guideTick();}
@@ -8646,10 +8751,23 @@ function guideRect(el){
   return {x:r.left-sr.left,y:r.top-sr.top,w:r.width,h:r.height,round:false};
 }
 function guidePt(q){var sw=stage.clientWidth,sh=stage.clientHeight,r=(q.r||16)*sw/W;return {x:q.x/W*sw-r,y:q.y/H*sh-r,w:r*2,h:r*2,round:true};}
+function guideHide(){$('guide').className='';disp('gBox',false);disp('gFinger',false);guideShield(null);}
+function guideSh(e,x,y,w,h){e.style.display=w>0&&h>0?'block':'none';e.style.left=x+'px';e.style.top=y+'px';e.style.width=w+'px';e.style.height=h+'px';}
+/* Fängt Tipps neben dem Ausschnitt ab, damit nicht aus Versehen ein Menü aufgeht, während Korr erklärt */
+function guideShield(box,full){
+  var sh=document.querySelectorAll('#guide .gsh'),sw=stage.clientWidth,sth=stage.clientHeight,i;
+  if(!GUIDE||!GUIDE.opt.shield||(!box&&!full)){for(i=0;i<sh.length;i++)sh[i].style.display='none';return;}
+  if(full||!box){guideSh(sh[0],0,0,sw,sth);for(i=1;i<sh.length;i++)sh[i].style.display='none';return;}
+  var x0=Math.max(0,box.x),y0=Math.max(0,box.y),x1=Math.min(sw,box.x+box.w),y1=Math.min(sth,box.y+box.h);
+  guideSh(sh[0],0,0,sw,y0);guideSh(sh[1],0,y1,sw,sth-y1);guideSh(sh[2],0,y0,x0,y1-y0);guideSh(sh[3],x1,y0,sw-x1,y1-y0);
+}
 function guideTick(){
   if(!GUIDE)return;var st=GUIDE.steps[GUIDE.i];if(!st){guideStop();return;}
-  if(G&&G.loading>0&&scene==='play'){$('guide').className='';disp('gBox',false);disp('gFinger',false);return;}
-  if(st.when&&!st.when()){$('guide').className='';disp('gBox',false);disp('gFinger',false);return;}
+  var op=GUIDE.opt;
+  if((op.lock&&scene!==GUIDE.scene)||(op.abort&&op.abort())){guideStop(true);return;}
+  if(op.ready&&!op.ready()){guideHide();return;}
+  if(G&&G.loading>0&&scene==='play'){guideHide();return;}
+  if(st.when&&!st.when()){guideHide();return;}
   if(GUIDE.shown!==GUIDE.i){
     GUIDE.shown=GUIDE.i;GUIDE.t0=Date.now();
     guideType(typeof st.say==='function'?st.say():st.say);disp('gBox',true,'flex');
@@ -8658,6 +8776,7 @@ function guideTick(){
     if(st.freeze&&G&&!G.over){G.paused=true;GUIDE.frozen=true;}
     if(st.onShow)st.onShow();Snd.play('tick');
   }
+  disp('gBox',true,'flex');
   if(typeof st.say==='function'){var nt=st.say();if(guideType.full!==nt)guideType(nt);}
   if(st.done&&st.done()){guideNext();return;}
   if(st.wait&&Date.now()-GUIDE.t0>st.wait*1000){guideNext();return;}
@@ -8673,8 +8792,11 @@ function guideTick(){
     var showF=st.finger!==false&&!st.next;disp('gFinger',showF,'block');
     if(showF){fg.style.left=(box.x+box.w/2-stage.clientWidth*0.012)+'px';fg.style.top=(box.y+box.h*0.55)+'px';}
     var low=box.y+box.h/2>stage.clientHeight*0.5;bx.className=low?'top':'bottom';
-  }else{disp('gFinger',false);bx.className='bottom';}
+    guideShield({x:box.x-pad,y:box.y-pad,w:box.w+pad*2,h:box.h+pad*2},!!st.next);
+  }else{disp('gFinger',false);bx.className='bottom';guideShield(null,true);}
 }
+document.querySelectorAll('#guide .gsh').forEach(function(e){e.addEventListener('click',function(ev){ev.stopPropagation();Snd.play('no');
+  var b=$('gBox');b.classList.remove('nudge');void b.offsetWidth;b.classList.add('nudge');});});
 $('gNext').addEventListener('click',function(e){e.stopPropagation();Snd.play('tick');guideNext();});
 $('gBox').addEventListener('click',function(){if(guideType.full&&$('gTx').textContent!==guideType.full){clearInterval(guideType.h);$('gTx').textContent=guideType.full;}});
 $('gSkip').addEventListener('click',function(e){e.stopPropagation();Snd.play('tick');if(GUIDE){GUIDE.skipped=true;guideStop();}});
@@ -8694,6 +8816,8 @@ function trRun(){
 }
 function trEnd(win){
   var last=TR.i>=TRAIN.length-1;
+  /* Ab Übung 3 kennt man alles aus dem alten Einsatz-1-Tutorial */
+  if(win){PR.seenH=PR.seenH||{};(TRSEEN[TR.i]||[]).forEach(function(h){PR.seenH[h]=1;});if(TR.i>=2)PR.tutDone=1;persist();}
   if(win){banner(last?'TRAINING BESTANDEN':'ÜBUNG '+(TR.i+1)+'/'+TRAIN.length+' GESCHAFFT',TRAIN[TR.i].name,'#6be07a');Snd.play('lvup');}
   guideStart([win?{say:last?'Simulation bestanden! Du weißt jetzt alles, was du für den Anfang brauchst. Als Startkapital bekommst du 100 Kristalle für deine Basis. Kurs auf Selene, Kommandant!':TRAIN[TR.i].win,next:true,nextLabel:last?'LOS GEHT\'S':'WEITER',dim:true}
     :{say:'Die Simulation ist gefallen. Kein Problem, genau dafür üben wir. Noch einmal!',next:true,nextLabel:'NOCHMAL',dim:true}],
@@ -8705,6 +8829,19 @@ function trEnd(win){
 }
 function trQuit(){if(PR.train!==1){PR.train=-1;persist();}G=null;TR.i=-1;goMap(PR.world||0);if(starSum()===0)mapTour(true);}
 var TNAME={laser:'LASER',missile:'RAKETENWERFER',barracks:'KASERNE'};
+function trMenuOn(t){return !!(menu&&t&&menu.spot&&menu.spot.tower===t);}
+function trBar(){for(var i=0;i<G.towers.length;i++)if(G.towers[i].type==='barracks')return G.towers[i];return null;}
+/* Sammelpunkt der Kaserne in die Reichweite des Raketenwerfers ziehen */
+function trRally(){return {
+  say:function(){var b=trBar();
+    if(G.rally)return 'Jetzt auf die leuchtende Stelle am Weg tippen. Dorthin laufen deine Soldaten.';
+    if(b&&trMenuOn(b))return 'Tippe auf die GRÜNE FLAGGE (SAMMELN). Damit bestimmst du, wo deine Soldaten auf dem Weg stehen.';
+    return 'Aber Achtung: Deine Soldaten stehen noch links, außerhalb der Raketen-Reichweite. Verschieb sie! Tippe dazu die KASERNE an.';},
+  el:function(){var b=trBar();return !G.rally&&b&&trMenuOn(b)?document.querySelector('#menu .slot[data-id=rally]'):null;},
+  pt:function(){var b=trBar();if(G.rally||!b)return {x:180,y:150,r:13};return {x:b.x,y:b.y,r:15};},
+  done:function(){var b=trBar();return !!(b&&b.rally&&b.rally.x>=165);}};}
+/* Was das Training schon erklärt hat, kommt später nicht noch einmal als Tipp-Karte */
+var TRSEEN=[[],['upgrade','early'],['hab'],['combo'],['fly','speed','leak']];
 function trBuild(say,idx,type){return {
   say:function(){return menu&&menu.spot===G.spots[idx]?'Jetzt auf den '+TNAME[type]+' im Menü tippen – ein Tipp baut ihn.':say;},
   el:function(){return menu&&menu.spot===G.spots[idx]?document.querySelector('#menu .slot[data-id='+type+']'):null;},
@@ -8727,8 +8864,9 @@ var TRAIN=[
   steps:function(){return [
    trBuild('Gold ist deine wichtigste Waffe. Bau einen Laser – am besten an der Kurve, da trifft er länger. Tippe auf den Bauplatz.',0,'laser'),
    {say:'Und START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
-   {say:'Du hast genug Gold zum AUSBAUEN. Tippe deinen Turm an und dann auf AUSBAU – er wird stärker und reicht weiter.',
+   {say:function(){return trMenuOn(G.towers[0])?'Jetzt auf AUSBAU tippen – das goldene Symbol mit dem Preis. Ein Tipp genügt.':'Du hast genug Gold zum AUSBAUEN. Tippe deinen Turm an – danach wird er stärker und reicht weiter.';},
     when:function(){var t=G.towers[0];return t&&t.tier<2&&G.gold>=ST[t.type][t.tier+1].cost;},
+    el:function(){return trMenuOn(G.towers[0])?document.querySelector('#menu .slot[data-id=up]'):null;},
     pt:function(){var t=G.towers[0];return {x:t.x,y:t.y,r:15};},done:function(){return G.towers.some(function(t){return t.tier>0;});}},
    {say:'Zwischen den Wellen läuft ein Countdown. Mit WELLE + rufst du die nächste sofort – dafür gibt es Bonus-Gold.',
     when:function(){return G.countdown!=null&&!G.enemies.length&&!G.spawners.length;},el:function(){return $('bWave');},done:function(){return G.nextWave>=3;},next:true}
@@ -8745,17 +8883,18 @@ var TRAIN=[
     when:function(){return G.abil.hab&&G.abil.hab.cd<=0;},el:function(){return document.querySelector('#abil .ab.hab');},
     done:function(){var a=G.abil.hab;return a&&a.cd>a.max*0.5;}}
   ];}},
- {name:'KOMBOS',towers:['barracks','missile'],gold:240,paths:[[[4,150],[468,150]]],spots:[[200,110],[260,110],[330,190],[130,190]],
-  waves:{0:[['grunt',5]],1:[['grunt',6],['shield',2]],2:[['grunt',8],['shield',3]]},
-  win:'Kombos machen den Unterschied. Im Lexikon findest du alle. Letzte Übung: Gegner aus der Luft!',
+ {name:'KOMBOS',towers:['barracks','missile'],gold:240,paths:[[[4,150],[468,150]]],spots:[[140,112],[205,112],[300,190],[90,190]],
+  waves:{0:[['grunt',6]],1:[['grunt',8]],2:[['grunt',8],['shield',3]]},
+  win:'Kombos und Sammelpunkte machen den Unterschied. Alle Kombos findest du im Lexikon. Letzte Übung: Gegner aus der Luft!',
   steps:function(){return [
-   {say:'Manche Türme sind zusammen viel stärker als allein. Das nennen wir KOMBO.',next:true,dim:true,freeze:true},
-   trBuild('Bau hier eine KASERNE: Ihre Soldaten halten Gegner auf dem Weg fest. Tippe auf den Bauplatz.',0,'barracks'),
-   trBuild('Und direkt daneben einen RAKETENWERFER.',1,'missile'),
-   {say:function(){return G.links&&G.links.length?'Siehst du die leuchtende Linie? KOMBO FESTGENAGELT: Festgehaltene Gegner nehmen 25 % mehr Raketenschaden. Beim Bauen zeigt dir das Turm-Menü, wenn eine Kombo entsteht.'
-      :'Die beiden stehen zu weit auseinander – eine Kombo gibt es nur, wenn sie sich gegenseitig erreichen. Beim Bauen zeigt dir das Turm-Menü, ob eine Kombo entsteht. Probier es im Spiel aus!';},
-    when:function(){return G.towers.some(function(t){return t.type==='missile';});},next:true,freeze:true},
-   {say:'START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}}
+   {say:'Manche Türme sind zusammen viel stärker als allein. Das nennen wir KOMBO. Ich zeige dir die wichtigste: KASERNE und RAKETENWERFER.',next:true,dim:true,freeze:true},
+   trBuild('Bau hier eine KASERNE. Ihre Soldaten stellen sich auf den Weg und halten Gegner fest. Tippe auf den Bauplatz.',0,'barracks'),
+   trBuild('Bau direkt daneben einen RAKETENWERFER. Tippe auf den Bauplatz.',1,'missile'),
+   {say:'Siehst du die gestrichelte Linie zwischen den beiden? Das ist die KOMBO FESTGENAGELT: Gegner, die von Soldaten festgehalten werden, nehmen 25 % mehr Raketenschaden.',
+    pt:function(){var a=G.spots[0],b=G.spots[1];return {x:(a.x+b.x)/2,y:a.y,r:46};},next:true,freeze:true,onShow:recomputeBuffs},
+   trRally(),
+   {say:'Perfekt! Jetzt halten die Soldaten die Gegner genau dort fest, wo die Raketen einschlagen. Tippe auf START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
+   {say:'Schau zu: Die Soldaten stoppen die Gegner, die Raketen treffen mit Kombo-Bonus. Die grüne Flagge kannst du jederzeit verschieben – auch mitten im Kampf.',wait:9}
   ];}},
  {name:'FLIEGER UND TEMPO',towers:['laser','missile'],gold:220,paths:[[[4,80],[300,80],[300,200],[468,200]]],spots:[[240,130],[180,40],[360,150],[120,130]],
   waves:{0:[['grunt',5]],1:[['drone',5]],2:[['grunt',5],['drone',5]]},
@@ -8772,18 +8911,19 @@ var TRAIN=[
 ];
 
 /* ----- Rundgang über die Weltkarte (kurz) ----- */
+function shown(id){var e=$(id),d=e&&e.style.display;return !!d&&d!=='none';}
 function mapTour(auto){
   if(auto&&PR.tour&&PR.tour.map)return;
   PR.tour=PR.tour||{};PR.tour.map=1;persist();
-  setTimeout(function(){guideStart([
-   {say:'Das ist die Sternenkarte. Jeder Punkt ist ein Einsatz – erst Selene, dann vier weitere Welten.',pt:function(){var n=WORLDS[mapW].nodes[0];return {x:n[0],y:n[1],r:20};},next:true},
-   {say:'Oben siehst du deine STERNE, KRISTALLE und dein LEVEL. Sterne gibt es für jeden Einsatz – je weniger Leben du verlierst, desto mehr.',el:function(){return document.querySelector('.mtop .grp');},next:true},
-   {say:'In der BASIS machst du deine Verteidigung dauerhaft stärker: Skills, Held, Fähigkeiten und Werkstatt. Ich zeige dir jeden Bereich, sobald er freigeschaltet ist.',el:function(){return $('bBase');},next:true},
-   {say:'Unten findest du weitere Spielarten: TÄGLICH, ENDLOS, den TURM und den CREATOR mit Leveln anderer Spieler.',el:function(){return document.querySelector('.mbot .mid');},next:true},
-   {say:'Im MENÜ liegen Erfolge, das LEXIKON mit allen Türmen, Gegnern und Kombos, die Story und die Einstellungen.',el:function(){return $('bMapMenu');},next:true},
-   {say:'Genug geredet. Tippe auf Einsatz 1!',pt:function(){var n=WORLDS[mapW].nodes[0];return {x:n[0],y:n[1],r:18};},
-    done:function(){return scene!=='map'||$('lvpop').style.display==='flex';}}
-  ],{skipLabel:'SCHLIESSEN'});},400);
+  function node(r){var n=WORLDS[mapW].nodes[0];return {x:n[0],y:n[1],r:r};}
+  setTimeout(function(){if(scene!=='map')return;guideStart([
+   {say:'Willkommen auf der STERNENKARTE, Kommandant. Jeder Punkt ist ein Einsatz. Wir beginnen auf Selene – danach warten vier weitere Welten.',pt:function(){return node(20);},next:true},
+   {say:'Oben siehst du deine STERNE, KRISTALLE und dein SPIELERLEVEL. Je weniger Leben du in einem Einsatz verlierst, desto mehr Sterne gibt es.',el:function(){return document.querySelector('.mtop .grp');},next:true},
+   {say:'Das ist deine BASIS. Hier wirst du dauerhaft stärker. Noch ist sie leer – mit jedem Aufstieg schalte ich dir einen Bereich frei und zeige ihn dir genau.',el:function(){return $('bBase');},next:true},
+   {say:'Im MENÜ liegt das LEXIKON. Dort steht alles, was du schon entdeckt hast: Türme mit allen Ausbaustufen, Gegner und Kombos.',el:function(){return $('bMapMenu');},next:true},
+   {say:'Genug geredet. Tippe auf Einsatz 1!',pt:function(){return node(18);},done:function(){return shown('lvpop');}},
+   {say:'Hier siehst du, welche Gegner dich erwarten. Tippe auf STARTEN – viel Erfolg, Kommandant!',el:function(){return $('lpGo');},done:function(){return !shown('lvpop');}}
+  ],{skipLabel:'SCHLIESSEN',lock:true,shield:true,ready:function(){return !shown('loginScr')&&!shown('unlockScr');},onEnd:function(){setTimeout(checkUnlocks,300);}});},400);
 }
 
 /* ----- Geführte Einführungen, wenn ein Bereich frei wird ----- */
@@ -8808,7 +8948,7 @@ var GINTRO={
   {say:'Wähle oben einen Turm und setze ein Modul ein – es gilt dann für alle Türme dieser Art.',el:function(){return $('wsStrip');},next:true,pad:2}
  ];}
 };
-function guideIntro(id){var f=GINTRO[id];if(!f)return;PR.tour=PR.tour||{};PR.tour[id]=1;persist();setTimeout(function(){guideStart(f(),{skipLabel:'SCHLIESSEN'});},350);}
+function guideIntro(id){var f=GINTRO[id];if(!f)return;PR.tour=PR.tour||{};PR.tour[id]=1;persist();setTimeout(function(){guideStart(f(),{skipLabel:'SCHLIESSEN',lock:true,shield:true});},350);}
 
 /* =============== Freischalt-Fenster =============== */
 
@@ -10099,10 +10239,17 @@ $('bDaily').addEventListener('click',function(){Snd.init();openLevel(dailyInfo()
 $('lpBack').addEventListener('click',function(){disp('lvpop',false);Snd.play('tick');});
 $('lpMoreB').addEventListener('click',function(){var m=$('lpMore'),on=!m.classList.contains('on');m.classList.toggle('on',on);this.textContent=on?'WENIGER':'INFO';Snd.play('tick');});
 $('lvpop').addEventListener('click',function(e){if(e.target===$('lvpop'))disp('lvpop',false);});
-$('bWave').addEventListener('click',function(){if(G&&!G.over&&!G.paused)startWave(true);});
-$('bHard').addEventListener('click',function(){if(G&&!G.over&&!G.paused&&G.nextWave>0)startWave(true,true);});
+/* Am Handy sofort beim Antippen auslösen, der folgende Klick wird ignoriert – so geht kein Tipp verloren */
+function fastTap(el,fn){
+  var down=0,fired=0;
+  function go(e){var n=Date.now();if(n-fired<300)return;fired=n;fn(e);}
+  el.addEventListener('pointerdown',function(e){if(e.pointerType==='mouse'||el.disabled)return;down=Date.now();go(e);});
+  el.addEventListener('click',function(e){if(Date.now()-down<700){e.stopPropagation();return;}go(e);});
+}
+fastTap($('bWave'),function(){if(G&&!G.over&&!G.paused)startWave(true);});
+fastTap($('bHard'),function(){if(G&&!G.over&&!G.paused&&G.nextWave>0)startWave(true,true);});
 /* Tempo: x1 > x2 > x3 > BAU (Baupause: alles steht still, Bauen und Ausbauen geht weiter) > x1 */
-$('bSpeed').addEventListener('click',function(){if(!G)return;G.speed=G.speed===1?2:G.speed===2?3:G.speed===3?0:1;speedUI();Snd.play('tick');
+fastTap($('bSpeed'),function(){if(!G)return;G.speed=G.speed===1?2:G.speed===2?3:G.speed===3?0:1;speedUI();Snd.play('tick');
   if(G.speed===0)toast('BAUPAUSE · IN RUHE BAUEN, DANN WEITER MIT x1','#ffc23c');});
 function speedUI(){var b=$('bSpeed');b.textContent=G&&G.speed===0?'BAU':'x'+(G?G.speed:1);b.classList.toggle('bau',!!(G&&G.speed===0));}
 /* Während der Baupause laufen nur Bau-Animationen und Effekte weiter */
@@ -10115,7 +10262,7 @@ function buildPauseTick(dt){
   for(i=0;i<G.parts.length;i++){var p=G.parts[i];p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=p.g*dt;}G.parts=G.parts.filter(function(p){return p.t<p.life;});
   if(G.buffT!==undefined){G.buffT-=dt;if(G.buffT<=0){G.buffT=0.4;recomputeBuffs();}}
 }
-$('bPause').addEventListener('click',function(){if(G&&!G.over)setPaused(true);});
+fastTap($('bPause'),function(){if(G&&!G.over)setPaused(true);});
 $('bResume').addEventListener('click',function(){setPaused(false);});
 function again(){if(G.mode==='train'){trRun();return;}if(G.tw)startTower(G.tw.mode,G.tw.floor);else if(G.test)startLevel(-1,'test',G.L);else if(G.mode==='comm'){var gc=G.comm;startLevel(-1,'comm',G.L);G.comm=gc;}else startLevel(G.L.k,G.mode);}
 $('bRestart').addEventListener('click',function(){if(G&&!G.over){platformLevelEnd('abort',0,undefined,false);statSend('quit');}flushStats();again();});
