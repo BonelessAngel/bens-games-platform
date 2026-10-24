@@ -236,6 +236,28 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .mbot{position:absolute;left:.7em;right:.7em;bottom:.7em;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
 .mbot .mid{display:flex;gap:.6em}
 .mbot .pb{font-size:.85em}
+.mbot .flk{display:none!important}
+.basetile.lock{opacity:.55;filter:grayscale(.7)}
+.basetile .flk{font-style:normal;font-family:'VT323',monospace;font-size:1.2em;color:var(--am)}
+.cadet{position:absolute;left:.7em;top:4.8em;pointer-events:auto;display:none;flex-direction:column;align-items:flex-start;gap:.4em;max-width:15em;padding:.55em .7em;
+  background:#0b1024e6;border:.18em solid var(--am);box-shadow:.2em .2em 0 #000;color:#eaf8ff;text-align:left;font-family:'Press Start 2P',monospace}
+.cadet b{font-weight:400;font-size:.55em;color:var(--am);line-height:1.4}
+.cadet>span{font-family:'VT323',monospace;font-size:1.3em;line-height:1;color:#dfe9ff}
+.cadet em{display:none;position:absolute;right:-.8em;top:-.8em;background:var(--grn);color:#05130a;border:.15em solid #fff;font-style:normal;font-size:.65em;padding:.25em .45em;animation:pulse2 1s steps(2) infinite}
+.cadet em.on{display:block}
+#cadetScr{background:#05060fc8;z-index:7}
+.cdlist{display:flex;flex-direction:column;gap:.35em;max-height:20em;text-align:left;padding-right:.3em}
+.cdr{display:flex;align-items:center;gap:.6em;background:#10152b;border:.15em solid #2c3566;padding:.4em .6em;min-height:2.6em}
+.cdr.ok{border-color:var(--grn);background:#10241a}.cdr.got{opacity:.5}
+.cdr i{font-style:normal;width:1.2em;color:var(--grn);font-size:1.3em}
+.cdr span{flex:1;font-size:1.25em;line-height:1;color:#dfe9ff}
+.cdr b{font-weight:400;color:var(--vi);font-size:1.2em;white-space:nowrap}
+.cdr button{font-size:.55em;padding:.6em .8em}
+#end .panel #eNew{display:none;color:var(--grn);font-family:'Press Start 2P',monospace;font-size:.6em;line-height:1.5;animation:pulse2 1s steps(2) infinite}
+.ekorr{display:none;align-items:center;gap:.7em;background:#0b1024;border:.18em solid var(--cy);padding:.5em .7em;text-align:left;max-width:34em;margin:0 auto}
+.ekorr canvas{width:3em;height:3em;image-rendering:pixelated;flex:none;border:.14em solid var(--cy);background:#101a33}
+.ekorr b{display:block;font-family:'Press Start 2P',monospace;font-weight:400;font-size:.5em;color:var(--cy);margin-bottom:.35em}
+.ekorr span{font-size:1.2em;line-height:1.05;color:#dfe9ff}
 /* Basis: Skills, Held, Fähigkeiten und Werkstatt an einem Ort */
 #baseScr{background:#05060fd8;z-index:7}
 .basep{max-width:40em}.basehint{margin:.2em 0 1em;color:#9fb0e6}
@@ -1006,6 +1028,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
      <button class="pb go badge" id="bBase">BASIS<em id="mBase"></em></button>
     </div>
    </div>
+   <button id="cadet" class="cadet"><b>KADETTEN-AUFGABEN <span id="cdN"></span></b><span id="cdT"></span><em id="cdE"></em></button>
    <div class="mbot">
     <button class="pb arrow" id="bPrevW">&lt;</button>
     <div class="mid">
@@ -1481,6 +1504,15 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
    </div>
   </div>
 
+  <div id="cadetScr" class="screen">
+   <div class="panel" style="max-width:34em">
+    <div class="lexsub" style="color:var(--am)">ADMIRALIN KORR · AUSBILDUNG</div>
+    <h3>KADETTEN-AUFGABEN</h3>
+    <p style="margin:0">Erledige die Aufgaben und hol dir deine Kristalle ab.</p>
+    <div id="cdList" class="cdlist scroll"></div>
+    <button class="big" id="cdClose">ZURÜCK ZUR KARTE</button>
+   </div>
+  </div>
   <div id="unlockScr" class="screen">
    <div class="panel" style="max-width:32em">
     <div class="lexsub" style="color:var(--grn)">NEU FREIGESCHALTET</div>
@@ -1554,10 +1586,12 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
     <div class="stars" id="eStars"></div>
     <p id="eBonus" style="font-size:1.3em"></p>
     <p id="eText"></p>
+    <div id="eKorr" class="ekorr"><canvas id="eKorrCv" width="20" height="20"></canvas><div><b>ADMIRALIN KORR · TIPP</b><span id="eKorrTx"></span></div></div>
     <div id="eReport" class="ereport"></div>
     <p id="eXp"></p>
     <div class="xpbar"><i id="eXpBar"></i></div>
     <p id="eLvl"></p>
+    <p id="eNew" class="enew"></p>
     <div id="eRank" class="endrank"><span id="eRankText"></span><div class="rankacts"><a id="eRankLink" href="/ranglisten/?spiel=nova-bastion">RANGLISTE ANSEHEN</a><button id="eShare">TEILEN</button></div></div>
     <p id="eLoot" style="font-size:1.25em"></p>
     <div class="endActions">
@@ -3757,7 +3791,7 @@ var ABX={
    up:[['Überspannung','+30% Schaden pro Stufe'],['Dauer','+1,5 Sekunden pro Stufe'],['Abklingzeit','-10% Abklingzeit pro Stufe']]}
 };
 var ABK=['orbital','troops','frost','grav','gold','air','emp'],ABMAX=3,ABUPC=[25,50,90];
-function abOpen(k){return DEV||!!STDL||plInfo().lv>=ABX[k].lv;}
+function abOpen(k){return DEV||!!STDL||(featOn('abil')&&plInfo().lv>=ABX[k].lv);}
 function abUp(k,i){if(STDL)return STDL.lv==='full'?3:STDL.lv==='mid'?1:0;var u=PR.abil.up[k];return u?u[i]||0:0;}
 function abSel(){if(STDL&&STDL.noab)return [];return (PR.abil.sel||ABK).filter(abOpen).slice(0,ABMAX);}
 function abCd(k){return ABX[k].cd*(1-0.1*abUp(k,2));}
@@ -3776,6 +3810,7 @@ function hpSpent(){var s=0;HKEYS.forEach(function(k){for(var l=1;l<hal(k);l++)s+
 function hpFree(){return hpTotal()-hpSpent();}
 
 function startLevel(k,mode,Lx){
+  if(mode==='normal')ULV=false;
   mode=mode||'normal';
   var test=mode==='test';
   if(test){mode='normal';Lx=Lx||(G&&G.L);}
@@ -3865,6 +3900,7 @@ function show(s){
   scene=s;
   if(s!=='play'&&STDL){STDL=null;buildStats();}
   if(GUIDE&&s!=='play'&&G&&G.mode==='train')guideStop(true);
+  scrIntro(s);
   Mus.mode=s==='play'?'play':'map';if(G)Mus.world=Math.max(0,['moon','ice','lava','station','crystal'].indexOf(G.L.theme.kind));
   disp('title',s==='title');
   disp('mapui',s==='map','block');
@@ -4860,7 +4896,7 @@ function useAbility(k,x,y){
     G.enemies.forEach(function(q){if(!q.dead)hurt(q,ed,'true');});
     G.fx.push({k:'ring',x:W/2,y:H/2,r:300,t:0,life:0.7,c:'#7fe9ff'});G.frostFx=0.4;G.shake=0.3;Snd.play('emp');banner('EMP-WELLE','Schilde, Tarnung und Spiegel sind aus','#7fe9ff');
   }
-  if(ok){G.abil[k].cd=G.abil[k].max;G.aim=null;setHint('');G.abUsed++;}
+  if(ok){G.abil[k].cd=G.abil[k].max;G.aim=null;setHint('');G.abUsed++;if(k!=='hero'&&k!=='hab'&&G.mode!=='train'){PR.cadet=PR.cadet||{};PR.cadet.ab=1;}}
 }
 function strike(x,y){
   var dmg=Math.round(200*(1+0.25*abUp('orbital',0))*G.L.hpMul),r=Math.round(34*(1+0.12*abUp('orbital',1)));
@@ -5486,6 +5522,11 @@ function endGame(win,result){
     $('bMenu').textContent=g.test?(ED.comm?'BAUKASTEN':'EDITOR'):g.comm?'COMMUNITY':g.tw?(g.tw.mode==='week'?'ERFOLGE':g.tw.mode==='finale'?'KARTE':'TURM'):'KARTE';
     $('bNext').textContent=g.tw?(g.tw.mode==='week'?'NÄCHSTE MISSION':'NÄCHSTE ETAGE'):L.boss?'NÄCHSTE WELT':'NÄCHSTES LEVEL';
     disp('bNext',canNext,'block');
+    var pu=mode==='normal'&&win&&!g.test?ulPending():null,force=!!pu&&!ulVet();
+    $('bNext').dataset.ul=force?'1':'';
+    if(force){$('bNext').textContent='NEUES ANSEHEN ›';disp('bNext',true,'block');}
+    $('eNew').textContent=pu?'NEU FREIGESCHALTET: '+pu.t:'';disp('eNew',!!pu,'block');
+    var kt=!win&&!g.test&&result!=='abort'?lossTip(g):'';$('eKorrTx').textContent=kt;disp('eKorr',!!kt,'flex');
     disp('end',true);
     if(typeof updateNoticeRefresh==='function')updateNoticeRefresh();
     checkAch();checkWeekly();
@@ -6534,7 +6575,7 @@ function drawMap(t){
 
 /* =============== Weltkarte: UI =============== */
 function refreshMapUI(){
-  var Wd=WORLDS[mapW],pi=plInfo(),f=ptsFree();
+  var Wd=WORLDS[mapW],pi=plInfo(),f=featOn('skills')?ptsFree():0;
   $('mWorld').textContent='WELT '+(mapW+1);
   $('mWorldName').textContent=Wd.name+(DEV?' · DEV':'');
   $('mStars').textContent='★ '+starSum()+'/'+(LEVELS.length*3);
@@ -6544,7 +6585,7 @@ function refreshMapUI(){
   var em=$('mPts');em.textContent=DEV?'99+':f;em.classList.toggle('on',DEV||f>0);
   var ad=0;ACH.forEach(function(a){if(PR.ach[a.id])ad++;});
   var ea=$('mAch');ea.textContent=ad+'/'+ACH.length;ea.classList.add('on');
-  var free=PR.mods.filter(function(m){return !equippedIn(m.id);}).length,mm=$('mMods');mm.textContent=free;mm.classList.toggle('on',free>0);
+  var free=featOn('ws')?PR.mods.filter(function(m){return !equippedIn(m.id);}).length:0,mm=$('mMods');mm.textContent=free;mm.classList.toggle('on',free>0);
   var mb=$('mBase'),todo=DEV?0:f+free;mb.textContent=todo>9?'9+':todo;mb.classList.toggle('on',todo>0);
   $('bPrevW').style.visibility=mapW>0?'visible':'hidden';
   $('bNextW').style.visibility=mapW<WORLDS.length-1?'visible':'hidden';
@@ -6560,6 +6601,7 @@ function refreshMapUI(){
   var dd=PR.daily===today();
   $('bDaily').textContent=dd?'TÄGLICH ✓':'TÄGLICH';
   $('bDaily').classList.toggle('done',dd);
+  featUI();cadetUI();
 }
 function arsenalList(){
   if(STDL)return STDL.towers.slice();
@@ -8722,7 +8764,7 @@ var GUIDE=null;
 (function(){
   var f=$('gFinger').getContext('2d'),rows=['...##.......','..#oo#......','..#oo#......','..#oo####...','..#oo#oo#o#.','###oooooo#o#','#oo#ooooooo#','#oooooooooo#','.#ooooooooo#','..#oooooooo#','...#ooooooo#','....#oooooo#','....########'];
   rows.forEach(function(r,y){for(var x=0;x<r.length;x++)if(r[x]!=='.')R(f,x,y,1,1,r[x]==='#'?'#05060f':'#fff4e0');});
-  setTimeout(function(){try{$('gCv').getContext('2d').drawImage($('radioCv'),0,0);}catch(e){}},0);
+  setTimeout(function(){try{$('gCv').getContext('2d').drawImage($('radioCv'),0,0);$('eKorrCv').getContext('2d').drawImage($('radioCv'),0,0);}catch(e){}},0);
 })();
 function guideType(t){
   clearInterval(guideType.h);var el=$('gTx'),n=0;guideType.full=t;el.textContent='';
@@ -8775,6 +8817,7 @@ function guideTick(){
     $('gSkip').textContent=GUIDE.opt.skipLabel||'ÜBERSPRINGEN';$('gWho').textContent=GUIDE.opt.who||'ADMIRALIN KORR';disp('gSkip',GUIDE.opt.skip!==false,'');
     if(st.freeze&&G&&!G.over){G.paused=true;GUIDE.frozen=true;}
     if(st.onShow)st.onShow();Snd.play('tick');
+    if(st.scroll){try{var se=st.el();if(se)se.scrollIntoView({block:'nearest'});}catch(e){}}
   }
   disp('gBox',true,'flex');
   if(typeof st.say==='function'){var nt=st.say();if(guideType.full!==nt)guideType(nt);}
@@ -8840,8 +8883,16 @@ function trRally(){return {
   el:function(){var b=trBar();return !G.rally&&b&&trMenuOn(b)?document.querySelector('#menu .slot[data-id=rally]'):null;},
   pt:function(){var b=trBar();if(G.rally||!b)return {x:180,y:150,r:13};return {x:b.x,y:b.y,r:15};},
   done:function(){var b=trBar();return !!(b&&b.rally&&b.rally.x>=165);}};}
+function trLaser(){for(var i=0;i<G.towers.length;i++)if(G.towers[i].type==='laser')return G.towers[i];return null;}
+/* Zielwahl: Laser auf LUFT ZUERST stellen */
+function trTarget(){return {
+  say:function(){var t=trLaser();return t&&trMenuOn(t)?'Tippe auf ZIEL (lila). Jeder Tipp wechselt: ERSTER (am nächsten an der Basis), STÄRKSTER, SCHWÄCHSTER und LUFT ZUERST. Stell LUFT ZUERST ein!'
+    :'Noch ein Trick: Du bestimmst, wen ein Turm zuerst angreift. Tippe deinen LASER an.';},
+  el:function(){var t=trLaser();return t&&trMenuOn(t)?document.querySelector('#menu .slot[data-id=tm]'):null;},
+  pt:function(){var t=trLaser();return t?{x:t.x,y:t.y,r:15}:{x:240,y:130,r:15};},
+  done:function(){var t=trLaser(),ok=!!t&&t.tm===3;if(ok&&menu)closeMenu();return ok;}};}
 /* Was das Training schon erklärt hat, kommt später nicht noch einmal als Tipp-Karte */
-var TRSEEN=[[],['upgrade','early'],['hab'],['combo'],['fly','speed','leak']];
+var TRSEEN=[[],['upgrade','early'],['hab'],['combo'],['fly','speed','leak','target']];
 function trBuild(say,idx,type){return {
   say:function(){return menu&&menu.spot===G.spots[idx]?'Jetzt auf den '+TNAME[type]+' im Menü tippen – ein Tipp baut ihn.':say;},
   el:function(){return menu&&menu.spot===G.spots[idx]?document.querySelector('#menu .slot[data-id='+type+']'):null;},
@@ -8903,7 +8954,8 @@ var TRAIN=[
    {say:'Achtung, Flieger! RAKETEN treffen nur Bodenziele. Gegen Flieger hilft dir der LASER – später auch die FLAK. Bau beide.',next:true,dim:true,freeze:true},
    trBuild('Bau zuerst einen LASER – er trifft die Flieger.',0,'laser'),
    trBuild('Und einen RAKETENWERFER für die Bodengegner.',2,'missile'),
-   {say:'START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
+   trTarget(),
+   {say:'Perfekt: Der Laser jagt jetzt zuerst die Flieger, die Raketen kümmern sich um den Boden. Tippe auf START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
    {say:'Zu langsam? Mit x1, x2 und x3 stellst du das Tempo um. Danach kommt BAU: Das Spiel steht still und du baust in Ruhe.',
     el:function(){return $('bSpeed');},done:function(){return G.speed!==1;},next:true},
    {say:'Oben links siehst du deine LEBEN. Kommt ein Gegner bis zur Basis, verlierst du welche. Halte durch!',el:function(){return $('sLives');},wait:7}
@@ -8919,8 +8971,10 @@ function mapTour(auto){
   setTimeout(function(){if(scene!=='map')return;guideStart([
    {say:'Willkommen auf der STERNENKARTE, Kommandant. Jeder Punkt ist ein Einsatz. Wir beginnen auf Selene – danach warten vier weitere Welten.',pt:function(){return node(20);},next:true},
    {say:'Oben siehst du deine STERNE, KRISTALLE und dein SPIELERLEVEL. Je weniger Leben du in einem Einsatz verlierst, desto mehr Sterne gibt es.',el:function(){return document.querySelector('.mtop .grp');},next:true},
-   {say:'Das ist deine BASIS. Hier wirst du dauerhaft stärker. Noch ist sie leer – mit jedem Aufstieg schalte ich dir einen Bereich frei und zeige ihn dir genau.',el:function(){return $('bBase');},next:true},
-   {say:'Im MENÜ liegt das LEXIKON. Dort steht alles, was du schon entdeckt hast: Türme mit allen Ausbaustufen, Gegner und Kombos.',el:function(){return $('bMapMenu');},next:true},
+   {say:'Das ist deine BASIS. Hier wirst du dauerhaft stärker. Nach jedem der ersten Einsätze öffnet sich dort ein neuer Bereich – ich zeige ihn dir dann genau.',el:function(){return $('bBase');},next:true},
+   {say:'Hier stehen deine KADETTEN-AUFGABEN. Sie zeigen dir, was als Nächstes zu tun ist – und jede erledigte Aufgabe bringt Kristalle.',el:function(){return $('cadet');},when:function(){return shown('cadet');},next:true},
+   {say:'Unten liegen weitere Spielarten: TÄGLICH, ENDLOS, TURM und der CREATOR mit Leveln anderer Spieler. Gesperrte öffnen sich im Lauf der Kampagne – den CREATOR kannst du sofort ausprobieren.',el:function(){return document.querySelector('.mbot .mid');},next:true},
+   {say:'Im MENÜ findest du ERFOLGE, das LEXIKON mit allem, was du entdeckt hast, die STORY und die EINSTELLUNGEN.',el:function(){return $('bMapMenu');},next:true},
    {say:'Genug geredet. Tippe auf Einsatz 1!',pt:function(){return node(18);},done:function(){return shown('lvpop');}},
    {say:'Hier siehst du, welche Gegner dich erwarten. Tippe auf STARTEN – viel Erfolg, Kommandant!',el:function(){return $('lpGo');},done:function(){return !shown('lvpop');}}
   ],{skipLabel:'SCHLIESSEN',lock:true,shield:true,ready:function(){return !shown('loginScr')&&!shown('unlockScr');},onEnd:function(){setTimeout(checkUnlocks,300);}});},400);
@@ -8933,47 +8987,181 @@ var GINTRO={
    done:function(){return skSel==='core'||rk('core')>0;}},
   {say:'Tippe auf LERNEN. Für jedes Spielerlevel bekommst du einen Skillpunkt.',el:function(){return $('bLearn');},done:function(){return rk('core')>0;}},
   {say:'Jetzt blinken die Nachbarn: Sie sind lernbar. Leuchtend heißt gelernt, mit Schloss heißt noch gesperrt.',el:function(){return $('skgrid');},next:true,pad:2},
-  {say:'Unter TÜRME verbesserst du jeden Turm einzeln, zum Beispiel mehr Reichweite für den Laser.',el:function(){return $('skTabT');},next:true}
+  {say:'Unter TÜRME verbesserst du jeden Turm einzeln, zum Beispiel mehr Reichweite für den Laser.',el:function(){return $('skTabT');},next:true},
+  {say:'Mit RESET bekommst du alle Punkte zurück und kannst neu verteilen – probier ruhig aus.',el:function(){return $('bSkReset');},next:true},
+  {say:'Neue Punkte zeigt dir die BASIS mit einer Zahl. Mit diesem Pfeil geht es zurück.',el:function(){return $('bSkBack');},next:true,nextLabel:'VERSTANDEN'}
  ];},
  hero:function(){return [
-  {say:'Hier wählst du deinen HELDEN. Weitere Helden schaltest du mit Kristallen frei – jeder spielt sich anders.',el:function(){return $('hTabs');},next:true},
-  {say:'Für jedes geschaffte Level gibt es HELDENPUNKTE. Damit machst du Leben, Schaden und die Spezialfähigkeit stärker.',el:function(){return $('hUps');},next:true}
+  {say:'Das ist dein HELD. Er kämpft im Einsatz direkt auf dem Weg mit. Oben siehst du alle Helden – weitere schaltest du mit Kristallen frei, jeder spielt sich anders.',el:function(){return $('hTabs');},next:true},
+  {say:'Hier stehen seine Werte: Leben, Schaden, Rüstung und Tempo.',el:function(){return $('hStats');},next:true},
+  {say:'Für jeden geschafften Einsatz gibt es HELDENPUNKTE. Damit machst du Leben, Schaden und die Spezialfähigkeit stärker und lernst TALENTE.',el:function(){return $('hUps');},next:true,pad:2},
+  {say:'Mit diesem Knopf wählst du einen Helden aus oder schaltest ihn frei.',el:function(){return $('hAct');},next:true,nextLabel:'VERSTANDEN'}
  ];},
  abil:function(){return [
-  {say:'FÄHIGKEITEN sind Spezialkräfte für den Kampf, zum Beispiel ein ORBITALSCHLAG. Du nimmst bis zu 3 mit in jeden Einsatz.',el:function(){return $('abGrid');},next:true,pad:2},
-  {say:'Im Kampf findest du sie unten. Nach dem Einsatz laden sie wieder auf. Mit Kristallen machst du sie stärker.',el:function(){return $('abCount');},next:true}
+  {say:'FÄHIGKEITEN sind Spezialkräfte für den Kampf, zum Beispiel der ORBITALSCHLAG. Tippe eine an, um sie auszuwählen – du nimmst bis zu 3 mit.',el:function(){return $('abGrid');},next:true,pad:2},
+  {say:'Hier siehst du, wie viele du ausgewählt hast. Im Einsatz liegen sie unten als runde Knöpfe: antippen, dann auf die Karte tippen. Danach laden sie wieder auf.',el:function(){return $('abCount');},next:true},
+  {say:'Mit KRISTALLEN machst du Fähigkeiten stärker. Kristalle gibt es für Siege, Erfolge, Kadetten-Aufgaben und den Tagesbonus.',el:function(){return $('abCrys');},next:true,nextLabel:'VERSTANDEN'}
  ];},
  ws:function(){return [
   {say:'MODULE findest du nach Einsätzen. Hier im Lager liegen sie.',el:function(){return $('wsInv');},next:true,pad:2},
-  {say:'Wähle oben einen Turm und setze ein Modul ein – es gilt dann für alle Türme dieser Art.',el:function(){return $('wsStrip');},next:true,pad:2}
+  {say:'Wähle oben einen Turm und setze ein Modul ein – es gilt dann für alle Türme dieser Art.',el:function(){return $('wsStrip');},next:true,pad:2},
+  {say:'Hier siehst du, was der gewählte Turm gerade eingebaut hat. Seltene und epische Module sind stärker.',el:function(){return $('wsCard');},next:true,pad:2,nextLabel:'VERSTANDEN'}
+ ];},
+ ach:function(){return [
+  {say:'Hier sind alle ERFOLGE. Jeder bringt Kristalle, sobald du ihn schaffst.',el:function(){return $('achList');},next:true,pad:2},
+  {say:'Oben wechselst du zwischen den Bereichen, zum Beispiel den WOCHEN-MISSIONEN.',el:function(){return $('achTabs');},next:true},
+  {say:'Unten wählst du Skins für deine Station. Neue schaltest du mit Erfolgen frei.',el:function(){return $('skinRow');},next:true,nextLabel:'VERSTANDEN'}
+ ];},
+ lex:function(){return [
+  {say:'Das LEXIKON füllt sich mit allem, was du entdeckst. Felder mit ??? hast du noch nicht gesehen.',el:function(){return $('lexList');},next:true,pad:2},
+  {say:'Tippe einen Eintrag an: Oben läuft eine kleine Vorführung, darunter stehen Stärken und Schwächen. Bei Türmen siehst du alle Ausbaustufen und Spezialisierungen.',el:function(){return document.querySelector('.lexdet');},next:true,pad:2},
+  {say:'Oben wechselst du zwischen TÜRMEN, GEGNERN, HELDEN, FÄHIGKEITEN und REGELN – dort stehen auch alle KOMBOS.',el:function(){return $('lexTabs');},next:true,nextLabel:'VERSTANDEN'}
+ ];},
+ twr:function(){return [
+  {say:'Willkommen im HERAUSFORDERUNGS-TURM. Jede Etage ist ein eigenes Level mit besonderen Regeln.',el:function(){return $('twCv');},next:true},
+  {say:'Oben wählst du den Turm: von LEICHT bis UNMÖGLICH, dazu ein Endlos-Turm.',el:function(){return $('twTabs');},next:true},
+  {say:'Hier stehen die Regeln der Etage und die Belohnung. Etage 5 hat einen Wächter, Etage 10 einen Boss.',el:function(){return $('twRows');},next:true,pad:2},
+  {say:'Mit STARTEN geht es los. Viel Glück, Kommandant!',el:function(){return $('twGo');},next:true,nextLabel:'VERSTANDEN'}
+ ];},
+ comm:function(){return [
+  {say:'Das ist der CREATOR. Hier spielst du Level, die andere Spieler gebaut haben.',el:function(){return $('commList');},next:true,pad:2},
+  {say:'Oben sortierst du die Level – unter MEINE findest du deine eigenen.',el:function(){return $('commTabs');},next:true},
+  {say:'Mit diesem Knopf baust du selbst ein Level und teilst es mit allen.',el:function(){return $('bCommBuild');},next:true,nextLabel:'VERSTANDEN'}
  ];}
 };
+var SCRMAP={skills:'skills',hero:'hero',abl:'abil',ws:'ws',ach:'ach',lex:'lex',tower:'twr',comm:'comm'};
+function scrIntro(s){var id=SCRMAP[s];if(!id||DEV||GUIDE||!PR)return;PR.tour=PR.tour||{};if(!PR.tour[id])guideIntro(id);}
+function optIntro(){
+  PR.tour=PR.tour||{};if(DEV||GUIDE||PR.tour.opt)return;PR.tour.opt=1;persist();
+  setTimeout(function(){guideStart([
+   {say:'In den EINSTELLUNGEN stellst du Musik, Effekte und Vibration ein.',el:function(){return $('oMus');},next:true,scroll:true},
+   {say:'Bei TEXTGRÖSSE machst du alle Erklärtexte größer, falls sie dir zu klein sind.',el:function(){return $('oText');},next:true,scroll:true},
+   {say:'Unter HILFE spielst du das TRAINING noch einmal, siehst den Karten-Rundgang und holst alle Tipps zurück.',el:function(){return $('oTrain');},next:true,scroll:true},
+   {say:'Und mit AUF ANDERES GERÄT nimmst du deinen Spielstand per Link auf ein anderes Gerät mit.',el:function(){return $('oMove');},next:true,scroll:true,nextLabel:'VERSTANDEN'}
+  ],{skipLabel:'SCHLIESSEN',shield:true,abort:function(){return !shown('optScr');}});},300);
+}
+function drawerIntro(){
+  PR.tour=PR.tour||{};if(DEV||GUIDE||PR.tour.drawer)return;PR.tour.drawer=1;persist();
+  var open=function(){return $('mDrawer').classList.contains('on');};
+  setTimeout(function(){guideStart([
+   {say:'ERFOLGE: Ziele für unterwegs, jedes bringt Kristalle. Dort findest du auch die Wochen-Missionen.',el:function(){return $('bAch');},next:true},
+   {say:'LEXIKON: Alles, was du schon entdeckt hast – Türme mit allen Stufen, Gegner, Helden und Kombos.',el:function(){return $('bLex');},next:true},
+   {say:'STORY: Hier schaust du dir alle Story-Szenen noch einmal an.',el:function(){return $('bStory');},next:true},
+   {say:'EINSTELLUNGEN: Ton, Textgröße, Training wiederholen und den Spielstand auf ein anderes Gerät mitnehmen.',el:function(){return $('bOptM');},next:true,nextLabel:'VERSTANDEN'}
+  ],{skipLabel:'SCHLIESSEN',shield:true,abort:function(){return !open();}});},200);
+}
 function guideIntro(id){var f=GINTRO[id];if(!f)return;PR.tour=PR.tour||{};PR.tour[id]=1;persist();setTimeout(function(){guideStart(f(),{skipLabel:'SCHLIESSEN',lock:true,shield:true});},350);}
 
 /* =============== Freischalt-Fenster =============== */
 
 var UNLOCKS=[
- {id:'skills',c:function(){return plInfo().lv>=2;},t:'SKILL-NETZ',d:'Du bist aufgestiegen! In der BASIS unter SKILLS verteilst du Punkte für dauerhafte Verbesserungen. Pro Level gibt es einen Punkt.',b:'bSkills'},
- {id:'abil',c:function(){return plInfo().lv>=2;},t:'FÄHIGKEITEN',d:'Dein erster Orbitalschlag ist bereit. In der BASIS unter FÄHIGKEITEN wählst du, welche 3 Fähigkeiten du mitnimmst.',b:'bAbl'},
- {id:'hero',c:function(){return hpFree()>0;},t:'HELDENPUNKTE',d:'Für jedes geschaffte Level gibt es Heldenpunkte. In der BASIS unter HELD machst du damit die Fähigkeit deines Helden stärker.',b:'bHero'},
+ {id:'skills',c:function(){return PR.stars[0]>0;},t:'SKILL-NETZ',d:'Einsatz 1 geschafft! In deiner BASIS ist jetzt das SKILL-NETZ offen. Dort verteilst du Skillpunkte für dauerhafte Verbesserungen – pro Spielerlevel gibt es einen Punkt.',b:'bSkills'},
+ {id:'hero',c:function(){return PR.stars[1]>0;},t:'HELDENPUNKTE',d:'Für jeden geschafften Einsatz gibt es HELDENPUNKTE. In der BASIS unter HELD machst du Vega damit stärker – und später schaltest du neue Helden frei.',b:'bHero'},
+ {id:'abil',c:function(){return PR.stars[2]>0;},t:'FÄHIGKEITEN',d:'Ab jetzt nimmst du Spezialkräfte mit in den Kampf, zum Beispiel den ORBITALSCHLAG. In der BASIS unter FÄHIGKEITEN wählst du bis zu 3 aus.',b:'bAbl'},
  {id:'ws',c:function(){return PR.mods.length>0;},t:'WERKSTATT',d:'Du hast dein erstes Modul eingesammelt! In der BASIS unter WERKSTATT baust du es in einen Turm ein.',b:'bWs'},
- {id:'daily',c:function(){return PR.stars[1]>0;},t:'TÄGLICHE HERAUSFORDERUNG',d:'Jeden Tag ein Level mit Sonderregel und Extra-Belohnung.',b:'bDaily'},
+ {id:'daily',c:function(){return PR.stars[3]>0;},t:'TÄGLICHE HERAUSFORDERUNG',d:'Jeden Tag ein Level mit Sonderregel und Extra-Belohnung.',b:'bDaily'},
  {id:'tower',c:function(){return PR.stars[wLast(0)]>0;},t:'HERAUSFORDERUNGS-TURM',d:'Das erste Mutterschiff ist besiegt! Im Turm warten Etagen von Leicht bis Unmöglich und ein Endlos-Turm.',b:'bTower'},
  {id:'endless',c:function(){return PR.stars[wLast(0)]>0;},t:'ENDLOS-MODUS',d:'Wie lange hältst du durch? Im Endlos-Modus jeder Welt kämpfst du um deinen Rekord.',b:'bEndless'},
  {id:'t_mine',c:function(){return TUNLOCK.mine<99&&unlocked(TUNLOCK.mine);},t:'NEUER TURM: MINENLEGER',d:'Legt Minen auf den Weg, die unter Bodengegnern explodieren, auch unter getarnten. Spezialisierungen: Haftmine, Splittermine, EMP-Mine.',go:'mine'},
  {id:'t_lance',c:function(){return TUNLOCK.lance<99&&unlocked(TUNLOCK.lance);},t:'NEUER TURM: SONNENLANZE',d:'Ein Dauerstrahl, der auf demselben Ziel immer heißer wird. Spezialisierungen: Brennglas, Supernova, Prismenteiler.',go:'lance'},
  {id:'t_hangar',c:function(){return TUNLOCK.hangar<99&&unlocked(TUNLOCK.hangar);},t:'NEUER TURM: DROHNENHANGAR',d:'Drohnen jagen Boden- und Luftziele in großem Umkreis. Spezialisierungen: Jäger, Bomber, Reparatur.',go:'hangar'}
 ];
+/* Pro Kartenbesuch nur eine Neuigkeit (erfahrene Spieler bekommen alle nacheinander) */
+var ULV=false;
+function ulVet(){return PR.st.wins>=6;}
+function ulPending(){if(DEV)return null;PR.seenUl=PR.seenUl||{};for(var i=0;i<UNLOCKS.length;i++){var u=UNLOCKS[i];if(!PR.seenUl[u.id]&&u.c())return u;}return null;}
 function checkUnlocks(){
-  if(DEV||GUIDE||scene!=='map'||$('loginScr').style.display==='flex'||$('unlockScr').style.display==='flex')return;
-  PR.seenUl=PR.seenUl||{};
-  for(var i=0;i<UNLOCKS.length;i++){var u=UNLOCKS[i];if(PR.seenUl[u.id]||!u.c())continue;
-    PR.seenUl[u.id]=1;persist();
-    $('ulT').textContent=u.t;$('ulD').textContent=u.d;
-    $('ulGo').onclick=function(){disp('unlockScr',false);Snd.play('tick');if(u.go){LX.tab='towers';LX.sel=u.go;LX.t=0;LX.s={};openLex();}else {$(u.b).click();guideIntro({skills:'skills',abil:'abil',hero:'hero',ws:'ws'}[u.id]);}};
-    disp('unlockScr',true);Snd.play('lvup');
-    var el=u.b?$(['bSkills','bHero','bAbl','bWs'].indexOf(u.b)>=0?'bBase':u.b):null;if(el){el.classList.add('tutglow');setTimeout(function(){el.classList.remove('tutglow');},6000);}
-    return;}
+  if(DEV||GUIDE||scene!=='map'||shown('loginScr')||shown('unlockScr'))return;
+  if(ULV&&!ulVet())return;
+  var u=ulPending();if(!u)return;
+  PR.seenUl[u.id]=1;ULV=true;persist();refreshMapUI();
+  $('ulT').textContent=u.t;$('ulD').textContent=u.d;
+  disp('ulLater',ulVet(),'');$('ulGo').textContent=u.go?'IM LEXIKON ANSEHEN':'ZEIG MIR';
+  $('ulGo').onclick=function(){disp('unlockScr',false);Snd.play('tick');
+    if(u.go){LX.tab='towers';LX.sel=u.go;LX.t=0;LX.s={};openLex();}
+    else if(BASEF[u.id])baseFlow(u);
+    else if(MODESAY[u.id])modeFlow(u);};
+  disp('unlockScr',true);Snd.play('lvup');
+}
+/* Neuer Basis-Bereich: Korr führt in die Basis, auf die Kachel und dann durch den Bereich */
+var BASEF={skills:'bSkills',hero:'bHero',abil:'bAbl',ws:'bWs'};
+var BASESAY={skills:'Hier ist dein neues SKILL-NETZ. Tippe auf SKILLS.',hero:'Hier wird dein Held stärker. Tippe auf HELD.',abil:'Hier warten deine Spezialkräfte. Tippe auf FÄHIGKEITEN.',ws:'Hier baust du Module ein. Tippe auf WERKSTATT.'};
+function baseFlow(u){
+  PR.tour=PR.tour||{};var first=!PR.tour.base;PR.tour.base=1;persist();
+  var steps=[{say:'Komm mit in deine BASIS, Kommandant. Tippe hier.',el:function(){return $('bBase');},done:function(){return shown('baseScr');}}];
+  if(first)steps.push({say:'Das ist deine BASIS. Hier wirst du dauerhaft stärker – auch wenn ein Einsatz mal schiefgeht. Bereiche mit Schloss öffnen sich mit deinen nächsten Einsätzen.',
+    el:function(){return document.querySelector('#baseScr .basegrid');},next:true,pad:4});
+  steps.push({say:BASESAY[u.id],el:function(){return $(BASEF[u.id]);},done:function(){return scene!=='map';}});
+  setTimeout(function(){guideStart(steps,{skipLabel:'SCHLIESSEN',shield:true,onEnd:function(ok){if(ok&&scene!=='map')guideIntro(u.id);}});},250);
+}
+/* Neue Spielart: Korr zeigt auf den Knopf unten */
+var MODESAY={daily:'Neu: die TÄGLICHE HERAUSFORDERUNG. Jeden Tag wartet ein Level mit einer Sonderregel. Schaffst du es, gibt es Extra-Kristalle und ein Modul.',
+  tower:'Der HERAUSFORDERUNGS-TURM ist offen! Vier Türme mit je 10 Etagen von LEICHT bis UNMÖGLICH und ein Endlos-Turm – jede Etage hat eigene Regeln.',
+  endless:'Im ENDLOS-Modus kommen Wellen ohne Ende. Wie weit kommst du? Dein Rekord steht danach direkt auf dem Knopf.'};
+function modeFlow(u){refreshMapUI();setTimeout(function(){guideStart([{say:MODESAY[u.id],el:function(){return $(u.b);},next:true,nextLabel:'VERSTANDEN'}],
+  {skipLabel:'SCHLIESSEN',shield:true,lock:true,onEnd:function(){setTimeout(checkUnlocks,300);}});},250);}
+/* Gesperrte Bereiche: Schloss und Hinweis, wann sie aufgehen */
+function featOn(id){return DEV||!!(PR.seenUl&&PR.seenUl[id]);}
+var FEATLOCK={bSkills:['skills','NACH EINSATZ 1'],bHero:['hero','NACH EINSATZ 2'],bAbl:['abil','NACH EINSATZ 3'],bWs:['ws','MIT DEM 1. MODUL'],bDaily:['daily','NACH EINSATZ 4'],bTower:['tower','NACH DEM 1. MUTTERSCHIFF']};
+Object.keys(FEATLOCK).forEach(function(id){$(id).addEventListener('click',function(e){var f=FEATLOCK[id];if(featOn(f[0]))return;
+  e.stopImmediatePropagation();Snd.play('no');toast('WIRD '+f[1]+' FREIGESCHALTET');},true);});
+function featUI(){
+  if(!FEATLOCK)return;
+  Object.keys(FEATLOCK).forEach(function(id){var b=$(id),on=featOn(FEATLOCK[id][0]),q=b.querySelector('.flk');b.classList.toggle('lock',!on);
+    if(!on&&!q){q=document.createElement('i');q.className='flk';b.appendChild(q);}
+    if(q){q.textContent=on?'':'GESPERRT · '+FEATLOCK[id][1];q.style.display=on?'none':'';}});
+}
+
+/* ----- Kadetten-Aufgaben: erste Ziele mit Kristallen als Belohnung ----- */
+var CADET=[
+ {id:'train',t:'Das Training abschließen',c:20,v:function(){return PR.train===1;}},
+ {id:'l1',t:'Einsatz 1 schaffen',c:20,v:function(){return PR.stars[0]>0;}},
+ {id:'skill',t:'Deinen ersten Skill lernen',c:20,v:function(){return rk('core')>0;}},
+ {id:'star3',t:'Einen Einsatz mit 3 Sternen schaffen',c:25,v:function(){return PR.stars.some(function(v){return v>=3;});}},
+ {id:'hero',t:'Deinen Helden verbessern',c:25,v:function(){return hpSpent()>0;}},
+ {id:'spec',t:'Einen Turm spezialisieren',c:25,v:function(){return PR.st.specs>0;}},
+ {id:'abil',t:'Eine Fähigkeit im Kampf einsetzen',c:25,v:function(){return !!(PR.cadet&&PR.cadet.ab);}},
+ {id:'ws',t:'Ein Modul in der Werkstatt einbauen',c:30,v:function(){return PR.mods.some(function(m){return !!equippedIn(m.id);});}},
+ {id:'boss',t:'Das erste Mutterschiff besiegen',c:50,v:function(){return PR.stars[wLast(0)]>0;}}];
+function cadetGot(){PR.cadet=PR.cadet||{};PR.cadet.got=PR.cadet.got||{};return PR.cadet.got;}
+function cadetOk(q){try{return !!q.v();}catch(e){return false;}}
+function cadetUI(){
+  if(!CADET)return;
+  var got=cadetGot(),done=0,claim=0,next=null;
+  CADET.forEach(function(q){if(got[q.id])done++;else if(cadetOk(q))claim++;else if(!next)next=q;});
+  var all=done>=CADET.length;disp('cadet',!DEV&&!all,'flex');if(all||DEV)return;
+  $('cdN').textContent=done+'/'+CADET.length;$('cdT').textContent=claim?'Belohnung abholen!':next?'Nächstes Ziel: '+next.t:'';
+  var e=$('cdE');e.textContent=claim?'+'+claim:'';e.classList.toggle('on',claim>0);
+}
+function cadetOpen(){
+  var got=cadetGot(),list=$('cdList');list.innerHTML='';
+  CADET.forEach(function(q){var ok=cadetOk(q),r=document.createElement('div');
+    r.className='cdr'+(got[q.id]?' got':ok?' ok':'');
+    r.innerHTML='<i>'+(got[q.id]||ok?'✓':'○')+'</i><span></span><b>+'+q.c+' ◆</b>';r.children[1].textContent=q.t;
+    if(ok&&!got[q.id]){var b=document.createElement('button');b.className='pb go';b.textContent='ABHOLEN';
+      b.addEventListener('click',function(){got[q.id]=1;PR.crystals+=q.c;PR.st.crysTotal+=q.c;persist();Snd.play('coin');toast('+'+q.c+' KRISTALLE','#c08cff');refreshMapUI();cadetOpen();
+        if(CADET.every(function(x){return got[x.id];}))setTimeout(function(){disp('cadetScr',false);toast('AUSBILDUNG ABGESCHLOSSEN! DU BIST BEREIT, KOMMANDANT.','#6be07a');},800);});
+      r.appendChild(b);}
+    list.appendChild(r);});
+  disp('cadetScr',true);
+}
+$('cadet').addEventListener('click',function(){Snd.play('tick');cadetOpen();});
+$('cdClose').addEventListener('click',function(){Snd.play('tick');disp('cadetScr',false);});
+
+/* ----- Tipp von Korr nach einer Niederlage ----- */
+function lossTip(g){
+  var lb=g.leakedBy||{},fly=0,arm=0,shd=0,all=0,tips=[];
+  Object.keys(lb).forEach(function(k){var D=ENEMIES[k],n=lb[k];if(!D)return;all+=n;if(D.fly)fly+=n;if((D.armor||0)>=0.3)arm+=n;if((D.shield||0)>0)shd+=n;});
+  var air=g.towers.some(function(t){var T=TOWERS[t.type];return !T.groundOnly&&!T.support;});
+  if(fly>0&&fly>=all/2)tips.push(air?'Die Flieger sind durchgekommen. Stell deinen Laser im Turm-Menü auf ZIEL: LUFT ZUERST oder bau eine FLAK.':'Die Flieger sind durchgekommen! Raketen und Kaserne treffen keine Flieger. Bau einen LASER oder eine FLAK.');
+  else if(arm>0&&arm>=all/2)tips.push('Gepanzerte Gegner haben dich überrannt. Gegen Panzerung hilft die RAILGUN oder ein RAKETENWERFER als PANZERKNACKER – Laser prallen ab.');
+  else if(shd>0&&shd>=all/2)tips.push('Die Schilde waren das Problem. LASER brechen Schilde, danach treffen alle anderen Türme voll.');
+  if(featOn('skills')&&ptsFree()>0)tips.push('Du hast noch '+(ptsFree()===1?'1 Skillpunkt':ptsFree()+' Skillpunkte')+' frei. In der BASIS unter SKILLS wirst du dauerhaft stärker.');
+  else if(featOn('hero')&&hpFree()>0)tips.push('Du hast noch Heldenpunkte frei. In der BASIS unter HELD wird dein Held stärker.');
+  if(!tips.length&&g.gold>=120)tips.push('Am Ende hattest du noch '+g.gold+' Gold übrig. Bau früher mehr Türme oder bau sie aus – Gold auf dem Konto verteidigt nichts.');
+  if(!tips.length&&g.abilList&&g.abilList.some(function(a){return a.k!=='hero'&&a.k!=='hab';})&&!g.abUsed)tips.push('Du hast keine Fähigkeit eingesetzt. Ein ORBITALSCHLAG im richtigen Moment rettet oft die Station.');
+  if(!tips.length)tips.push('Stell deine Türme an Kurven, dort treffen sie länger. Und mit dem Tempo-Knopf auf BAU hältst du das Spiel an und baust in Ruhe.');
+  return tips.slice(0,2).join(' ');
 }
 $('ulLater').addEventListener('click',function(){disp('unlockScr',false);Snd.play('tick');setTimeout(checkUnlocks,300);});
 
@@ -10193,9 +10381,9 @@ $('bHero').addEventListener('click',function(){Snd.play('tick');hView=hsel();sho
 $('bAch').addEventListener('click',function(){Snd.play('tick');show('ach');});
 /* Menü-Fach auf der Karte */
 function menuClose(){$('mDrawer').classList.remove('on');$('bMapMenu').classList.remove('on');}
-$('bMapMenu').addEventListener('click',function(e){e.stopPropagation();var on=!$('mDrawer').classList.contains('on');$('mDrawer').classList.toggle('on',on);this.classList.toggle('on',on);Snd.play('tick');});
+$('bMapMenu').addEventListener('click',function(e){e.stopPropagation();var on=!$('mDrawer').classList.contains('on');$('mDrawer').classList.toggle('on',on);this.classList.toggle('on',on);Snd.play('tick');if(on)drawerIntro();});
 $('mDrawer').addEventListener('click',function(){setTimeout(menuClose,0);});
-document.addEventListener('pointerdown',function(e){if(!e.target.closest||!e.target.closest('.mmenu'))menuClose();});
+document.addEventListener('pointerdown',function(e){if(!e.target.closest||(!e.target.closest('.mmenu')&&!e.target.closest('#guide')))menuClose();});
 setInterval(function(){var a=$('mAch'),m=$('mMenuB');if(a&&m){m.className=a.className;m.textContent=a.textContent;}},700);
 $('bSkBack').addEventListener('click',function(){Snd.play('tick');show('map');});
 $('bHeroBack').addEventListener('click',function(){Snd.play('tick');show('map');});
@@ -10290,7 +10478,7 @@ function optUI(){
   tg('oVib',o.vib);tg('oShake',o.shake);tg('oHints',!!PR.hintsOn);
   Array.prototype.forEach.call(document.querySelectorAll('#oText .pb'),function(b){b.classList.toggle('on',+b.dataset.v===o.ts);});
 }
-function openOpt(){Snd.play('tick');optUI();var calm=scene==='title'||scene==='map';disp('oResetRow',calm,'flex');disp('oTrainRow',calm,'flex');disp('oTourRow',calm,'flex');disp('optScr',true);}
+function openOpt(){Snd.play('tick');optUI();var calm=scene==='title'||scene==='map';disp('oResetRow',calm,'flex');disp('oTrainRow',calm,'flex');disp('oTourRow',calm,'flex');disp('optScr',true);if(calm)optIntro();}
 $('oMus').addEventListener('input',function(){SAVE.opt.mus=+this.value/100;applyOpt();optUI();});
 $('oSfx').addEventListener('input',function(){SAVE.opt.sfx=+this.value/100;applyOpt();optUI();});
 $('oSfx').addEventListener('change',function(){Snd.init();Snd.play('coin');});
@@ -10351,7 +10539,7 @@ function toggleMusic(){SAVE.opt.mus=SAVE.opt.mus>0?0:1;applyOpt();persist();Snd.
 $('bMusic').addEventListener('click',toggleMusic);$('bMusT').addEventListener('click',toggleMusic);
 $('bHints').addEventListener('click',function(){hintsReset();Snd.play('tick');});
 $('bMusic').textContent=$('bMusT').textContent=Mus.on?'MUSIK AN':'MUSIK AUS';
-$('bNext').addEventListener('click',function(){if(G.tw){startTower(G.tw.mode,G.tw.floor+1);return;}var nk=G.L.k+1;storyGate(function(){startLevel(nk,'normal');});});
+$('bNext').addEventListener('click',function(){if(this.dataset.ul==='1'){$('bMenu').click();return;}if(G.tw){startTower(G.tw.mode,G.tw.floor+1);return;}var nk=G.L.k+1;storyGate(function(){startLevel(nk,'normal');});});
 $('bAgain').addEventListener('click',again);
 $('bMenu').addEventListener('click',function(){var w=G.L.w,tw=G.mode==='normal'&&G.L.boss&&PR.stars[G.L.k]&&w<WORLDS.length-1?w+1:w;
   if(G.test||G.comm||G.tw){goMap(tw);return;}storyGate(function(){goMap(tw);});});
