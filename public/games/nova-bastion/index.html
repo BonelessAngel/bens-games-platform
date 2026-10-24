@@ -2935,6 +2935,7 @@ function bonusSum(){var s=0;PR.bonus.forEach(function(v){s+=v?1:0;});return s;}
 function goalCount(){return LEVELS.filter(function(L){return !!L.goal;}).length;}
 function talentCount(){var s=0;HKEYS.forEach(function(k){var h=PR.heroes[k]||{};for(var r=1;r<=3;r++)if(h['u'+r])s++;});return s;}
 var ACH=[
+ {id:'train',name:'Kadett',d:'Bestehe das Training an Bord der Bastion.',goal:1,cr:100,v:function(){return PR.train===1?1:0;}},
  {id:'win1',name:'Erster Sieg',d:'Gewinne ein Level.',goal:1,cr:10,v:function(){return PR.st.wins;}},
  {id:'kill500',name:'Säuberung',d:'Besiege 500 Gegner.',goal:500,cr:15,v:function(){return PR.st.kills;}},
  {id:'kill5k',name:'Vernichter',d:'Besiege 5.000 Gegner.',goal:5000,cr:40,v:function(){return PR.st.kills;}},
@@ -3730,7 +3731,7 @@ var ABX={
 var ABK=['orbital','troops','frost','grav','gold','air','emp'],ABMAX=3,ABUPC=[25,50,90];
 function abOpen(k){return DEV||!!STDL||plInfo().lv>=ABX[k].lv;}
 function abUp(k,i){if(STDL)return STDL.lv==='full'?3:STDL.lv==='mid'?1:0;var u=PR.abil.up[k];return u?u[i]||0:0;}
-function abSel(){return (PR.abil.sel||ABK).filter(abOpen).slice(0,ABMAX);}
+function abSel(){if(STDL&&STDL.noab)return [];return (PR.abil.sel||ABK).filter(abOpen).slice(0,ABMAX);}
 function abCd(k){return ABX[k].cd*(1-0.1*abUp(k,2));}
 /* Aktive Helden-Fähigkeit, aufwertbar mit Heldenpunkten */
 var HABIL={
@@ -8618,12 +8619,21 @@ var GUIDE=null;
   rows.forEach(function(r,y){for(var x=0;x<r.length;x++)if(r[x]!=='.')R(f,x,y,1,1,r[x]==='#'?'#05060f':'#fff4e0');});
   setTimeout(function(){try{$('gCv').getContext('2d').drawImage($('radioCv'),0,0);}catch(e){}},0);
 })();
+function guideType(t){
+  clearInterval(guideType.h);var el=$('gTx'),n=0;guideType.full=t;el.textContent='';
+  guideType.h=setInterval(function(){
+    n=Math.min(t.length,n+2);el.textContent=t.slice(0,n);
+    if(n%6===0&&Snd.ac&&Snd.on)Snd.tone(900+Math.random()*200,0.025,'square',0.01);
+    if(n>=t.length)clearInterval(guideType.h);
+  },28);
+}
 function guideStart(steps,opt){
   guideStop(true);
   GUIDE={steps:steps.filter(Boolean),i:0,opt:opt||{},shown:-1,timer:setInterval(guideTick,120),wait:0};
   disp('guide',true,'block');guideTick();
 }
 function guideStop(silent){
+  clearInterval(guideType.h);
   if(!GUIDE)return;var g=GUIDE;GUIDE=null;clearInterval(g.timer);
   if(g.frozen&&G)G.paused=false;
   disp('guide',false);
@@ -8642,13 +8652,13 @@ function guideTick(){
   if(st.when&&!st.when()){$('guide').className='';disp('gBox',false);disp('gFinger',false);return;}
   if(GUIDE.shown!==GUIDE.i){
     GUIDE.shown=GUIDE.i;GUIDE.t0=Date.now();
-    $('gTx').textContent=typeof st.say==='function'?st.say():st.say;disp('gBox',true,'flex');
+    guideType(typeof st.say==='function'?st.say():st.say);disp('gBox',true,'flex');
     disp('gNext',!!st.next,'');$('gNext').textContent=st.nextLabel||'WEITER';
-    $('gSkip').textContent=GUIDE.opt.skipLabel||'ÜBERSPRINGEN';disp('gSkip',GUIDE.opt.skip!==false,'');
+    $('gSkip').textContent=GUIDE.opt.skipLabel||'ÜBERSPRINGEN';$('gWho').textContent=GUIDE.opt.who||'ADMIRALIN KORR';disp('gSkip',GUIDE.opt.skip!==false,'');
     if(st.freeze&&G&&!G.over){G.paused=true;GUIDE.frozen=true;}
     if(st.onShow)st.onShow();Snd.play('tick');
   }
-  if(typeof st.say==='function'){var nt=st.say();if($('gTx').textContent!==nt)$('gTx').textContent=nt;}
+  if(typeof st.say==='function'){var nt=st.say();if(guideType.full!==nt)guideType(nt);}
   if(st.done&&st.done()){guideNext();return;}
   if(st.wait&&Date.now()-GUIDE.t0>st.wait*1000){guideNext();return;}
   var el=null,box=null;
@@ -8666,6 +8676,7 @@ function guideTick(){
   }else{disp('gFinger',false);bx.className='bottom';}
 }
 $('gNext').addEventListener('click',function(e){e.stopPropagation();Snd.play('tick');guideNext();});
+$('gBox').addEventListener('click',function(){if(guideType.full&&$('gTx').textContent!==guideType.full){clearInterval(guideType.h);$('gTx').textContent=guideType.full;}});
 $('gSkip').addEventListener('click',function(e){e.stopPropagation();Snd.play('tick');if(GUIDE){GUIDE.skipped=true;guideStop();}});
 
 /* ----- Training an Bord der Bastion (Simulator, 5 kurze Übungen) ----- */
@@ -8673,41 +8684,48 @@ var TR={i:-1};
 function trLevel(n){
   var t=TRAIN[n],lv={id:'train'+n,name:'SIMULATION '+(n+1)+': '+t.name,paths:t.paths,spots:t.spots.map(function(q){return [q[0],q[1],''];}),gates:false,diff:defDiff(),
     mini:false,boss:'classic',goal:null,obj:null,focus:null,msg:'',rules:[],deco:[],decoD:0.4,waveOv:t.waves,pool:null,pathOnly:null,towers:t.towers};
-  var L=commBuildL(lv,1,false,'station');L.waves=Object.keys(t.waves).length;L.gold=t.gold;L.lives=15;L.boss=false;L.mini=false;return L;
+  var L=commBuildL(lv,1,false,'station');L.waves=Object.keys(t.waves).length;L.gold=t.gold;L.lives=15;L.hpMul=0.35;L.boss=false;L.mini=false;return L;
 }
 function trBegin(n){TR.i=n||0;PR.train=PR.train||0;trRun();}
 function trRun(){
-  var t=TRAIN[TR.i];STDL={lv:'none',hero:'vega',towers:t.towers.slice()};buildStats();
+  var t=TRAIN[TR.i];STDL={lv:'none',hero:'vega',towers:t.towers.slice(),noab:true};buildStats();
   startLevel(-1,'train',trLevel(TR.i));
-  guideStart(t.steps(),{skipLabel:'TRAINING BEENDEN',onEnd:function(ok){if(!ok)trQuit();}});
+  guideStart(t.steps(),{skipLabel:'TRAINING BEENDEN',who:'ADMIRALIN KORR  ·  ÜBUNG '+(TR.i+1)+'/'+TRAIN.length,onEnd:function(ok){if(!ok)trQuit();}});
 }
 function trEnd(win){
   var last=TR.i>=TRAIN.length-1;
-  guideStart([win?{say:last?'Simulation bestanden! Du weißt jetzt alles, was du für den Anfang brauchst. Kurs auf Selene, Kommandant: Die echte Station braucht dich.':TRAIN[TR.i].win,next:true,nextLabel:last?'LOS GEHT\'S':'WEITER',dim:true}
+  if(win){banner(last?'TRAINING BESTANDEN':'ÜBUNG '+(TR.i+1)+'/'+TRAIN.length+' GESCHAFFT',TRAIN[TR.i].name,'#6be07a');Snd.play('lvup');}
+  guideStart([win?{say:last?'Simulation bestanden! Du weißt jetzt alles, was du für den Anfang brauchst. Als Startkapital bekommst du 100 Kristalle für deine Basis. Kurs auf Selene, Kommandant!':TRAIN[TR.i].win,next:true,nextLabel:last?'LOS GEHT\'S':'WEITER',dim:true}
     :{say:'Die Simulation ist gefallen. Kein Problem, genau dafür üben wir. Noch einmal!',next:true,nextLabel:'NOCHMAL',dim:true}],
-    {skip:false,onEnd:function(){
+    {skip:false,who:'ADMIRALIN KORR  ·  ÜBUNG '+(TR.i+1)+'/'+TRAIN.length,onEnd:function(){
       if(!win){trRun();return;}
       if(last){PR.train=1;PR.tutDone=1;persist();G=null;TR.i=-1;goMap(0);mapTour(true);return;}
       TR.i++;trRun();
     }});
 }
-function trQuit(){if(PR.train!==1){PR.train=-1;persist();}G=null;TR.i=-1;goMap(PR.world||0);}
+function trQuit(){if(PR.train!==1){PR.train=-1;persist();}G=null;TR.i=-1;goMap(PR.world||0);if(starSum()===0)mapTour(true);}
+var TNAME={laser:'LASER',missile:'RAKETENWERFER',barracks:'KASERNE'};
+function trBuild(say,idx,type){return {
+  say:function(){return menu&&menu.spot===G.spots[idx]?'Jetzt auf den '+TNAME[type]+' im Menü tippen – ein Tipp baut ihn.':say;},
+  el:function(){return menu&&menu.spot===G.spots[idx]?document.querySelector('#menu .slot[data-id='+type+']'):null;},
+  pt:function(){var q=G.spots[idx];return {x:q.x,y:q.y,r:15};},
+  done:function(){return G.towers.some(function(t){return t.type===type;});}};}
 var TRAIN=[
  {name:'ERSTER TURM',towers:['laser'],gold:150,paths:[[[4,140],[468,140]]],spots:[[150,104],[250,176],[350,104],[300,104]],
   waves:{0:[['scout',4]],1:[['scout',6]]},
   win:'Sauber! Dein erster Turm hat die Station gehalten. Nächste Übung: Gold sinnvoll einsetzen.',
   steps:function(){return [
-   {say:'Willkommen an Bord der Bastion, Kommandant! Bevor wir nach Selene fliegen, schicke ich dich in den Simulator. Hier kann nichts kaputtgehen.',next:true,dim:true,freeze:true},
+   {say:'Kommandant, bevor wir bei Landezone Alpha landen, gehst du in den Simulator. Fünf kurze Übungen – hier kann nichts kaputtgehen.',next:true,dim:true,freeze:true},
    {say:'Siehst du die leuchtenden Bauplätze neben dem Weg? Tippe einen an.',pt:function(){var q=G.spots[0];return {x:q.x,y:q.y,r:15};},done:function(){return !!menu;}},
    {say:'Das ist der LASER: günstig und er trifft Boden- und Fluggegner. Tippe ihn an, um ihn zu bauen.',el:function(){return document.querySelector('#menu .slot[data-id=laser]');},done:function(){return G.towers.length>0;}},
    {say:'Stark! Tippe jetzt auf START – dann kommen die ersten Gegner.',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
    {say:'Die Gegner laufen den Pfeilen nach zu deiner Basis. Jeder besiegte Gegner bringt Gold – das brauchst du für neue Türme.',wait:7}
   ];}},
- {name:'AUSBAUEN',towers:['laser'],gold:100,paths:[[[4,60],[240,60],[240,210],[468,210]]],spots:[[180,104],[300,170],[120,104],[300,250]],
+ {name:'AUSBAUEN',towers:['laser'],gold:170,paths:[[[4,60],[240,60],[240,210],[468,210]]],spots:[[180,104],[300,170],[120,104],[300,250]],
   waves:{0:[['scout',4]],1:[['grunt',2],['scout',4]],2:[['grunt',4]]},
   win:'Genau so: Erst bauen, dann ausbauen. Jetzt lernst du deine Heldin kennen.',
   steps:function(){return [
-   {say:'Gold ist deine wichtigste Waffe. Bau einen Laser – am besten an der Kurve, da trifft er länger.',pt:function(){var q=G.spots[0];return {x:q.x,y:q.y,r:15};},done:function(){return G.towers.length>0;}},
+   trBuild('Gold ist deine wichtigste Waffe. Bau einen Laser – am besten an der Kurve, da trifft er länger. Tippe auf den Bauplatz.',0,'laser'),
    {say:'Und START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
    {say:'Du hast genug Gold zum AUSBAUEN. Tippe deinen Turm an und dann auf AUSBAU – er wird stärker und reicht weiter.',
     when:function(){var t=G.towers[0];return t&&t.tier<2&&G.gold>=ST[t.type][t.tier+1].cost;},
@@ -8719,7 +8737,7 @@ var TRAIN=[
   waves:{0:[['grunt',3]],1:[['grunt',4],['scout',4]],2:[['grunt',6]]},
   win:'Vega ist zufrieden mit dir. Jetzt zeige ich dir, warum manche Türme zusammen stärker sind.',
   steps:function(){return [
-   {say:'Bau zuerst einen Laser und starte die Welle.',pt:function(){var q=G.spots[1];return {x:q.x,y:q.y,r:15};},done:function(){return G.towers.length>0;}},
+   trBuild('Bau zuerst einen Laser: Tippe auf den Bauplatz.',1,'laser'),
    {say:'START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
    {say:function(){return G.aim==='hero'?'Jetzt auf die leuchtende Stelle am Weg tippen – neben deinem Laser kämpft sie am besten.':'Das ist VEGA, deine Heldin. Tippe ihren Knopf an und dann auf den Weg – dort hält sie die Gegner auf.';},
     el:function(){return G.aim==='hero'?null:document.querySelector('#abil .ab');},pt:function(){return {x:250,y:60,r:14};},done:function(){return !!G.heroMoved;}},
@@ -8732,12 +8750,11 @@ var TRAIN=[
   win:'Kombos machen den Unterschied. Im Lexikon findest du alle. Letzte Übung: Gegner aus der Luft!',
   steps:function(){return [
    {say:'Manche Türme sind zusammen viel stärker als allein. Das nennen wir KOMBO.',next:true,dim:true,freeze:true},
-   {say:'Bau hier eine KASERNE: Ihre Soldaten halten Gegner auf dem Weg fest.',pt:function(){var q=G.spots[0];return {x:q.x,y:q.y,r:15};},
-    done:function(){return G.towers.some(function(t){return t.type==='barracks';});}},
-   {say:'Und direkt daneben einen RAKETENWERFER.',pt:function(){var q=G.spots[1];return {x:q.x,y:q.y,r:15};},
-    done:function(){return G.towers.some(function(t){return t.type==='missile';});}},
-   {say:'Siehst du die leuchtende Linie? KOMBO FESTGENAGELT: Festgehaltene Gegner nehmen 25 % mehr Raketenschaden. Beim Bauen zeigt dir das Turm-Menü, wenn eine Kombo entsteht.',
-    when:function(){return G.links&&G.links.length>0;},next:true,freeze:true},
+   trBuild('Bau hier eine KASERNE: Ihre Soldaten halten Gegner auf dem Weg fest. Tippe auf den Bauplatz.',0,'barracks'),
+   trBuild('Und direkt daneben einen RAKETENWERFER.',1,'missile'),
+   {say:function(){return G.links&&G.links.length?'Siehst du die leuchtende Linie? KOMBO FESTGENAGELT: Festgehaltene Gegner nehmen 25 % mehr Raketenschaden. Beim Bauen zeigt dir das Turm-Menü, wenn eine Kombo entsteht.'
+      :'Die beiden stehen zu weit auseinander – eine Kombo gibt es nur, wenn sie sich gegenseitig erreichen. Beim Bauen zeigt dir das Turm-Menü, ob eine Kombo entsteht. Probier es im Spiel aus!';},
+    when:function(){return G.towers.some(function(t){return t.type==='missile';});},next:true,freeze:true},
    {say:'START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}}
   ];}},
  {name:'FLIEGER UND TEMPO',towers:['laser','missile'],gold:220,paths:[[[4,80],[300,80],[300,200],[468,200]]],spots:[[240,130],[180,40],[360,150],[120,130]],
@@ -8745,8 +8762,8 @@ var TRAIN=[
   win:'',
   steps:function(){return [
    {say:'Achtung, Flieger! RAKETEN treffen nur Bodenziele. Gegen Flieger hilft dir der LASER – später auch die FLAK. Bau beide.',next:true,dim:true,freeze:true},
-   {say:'Bau einen Laser und einen Raketenwerfer.',pt:function(){var q=G.spots[0];return {x:q.x,y:q.y,r:15};},
-    done:function(){var a={};G.towers.forEach(function(t){a[t.type]=1;});return a.laser&&a.missile;}},
+   trBuild('Bau zuerst einen LASER – er trifft die Flieger.',0,'laser'),
+   trBuild('Und einen RAKETENWERFER für die Bodengegner.',2,'missile'),
    {say:'START!',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
    {say:'Zu langsam? Mit x1, x2 und x3 stellst du das Tempo um. Danach kommt BAU: Das Spiel steht still und du baust in Ruhe.',
     el:function(){return $('bSpeed');},done:function(){return G.speed!==1;},next:true},

@@ -1,12 +1,12 @@
 {
   "id": "nova-bastion",
-  "version": "1.8.0",
-  "tag": "v1.8.0",
-  "commit": "08f5ea02c47e19ca4b57cf30c4f3afa54af3ac79",
+  "version": "1.8.1",
+  "tag": "v1.8.1",
+  "commit": "f7c546277ee5ee3fb753fdd9006e58a211a377c1",
   "files": {
-    "index.html": "2e271e7bab449f65a3558922cbe3344827d22ea4b1543e1bf5f2e50354857bc1",
+    "index.html": "356a3116930f78cc7773e084158f58dcd89fa5b3f4a589cfea6a8e05bc816965",
     "manifest.webmanifest": "3b95350bb3db88456c7934788c2534c9b130fd0c5bfc4eba9cd4a8e67d1d02b8",
-    "sw.js": "97785b806f0eb108598c000adac3204798c5bfa3d4ec0519a218244e31d765b9",
+    "sw.js": "cf393a8f578ee9582c7fb45638ade1c776d3ff53b0535af806ad87edc2d66676",
     "icon-180.png": "1eb2fe709bd3217b4e627d739bb1a0aafb5a214eea931bfd3fcd5afa283830db",
     "icon-192.png": "42e09e7e91a40840e6cd253a008b589ad17c15bf549dc441253b4c6c0d1b426d",
     "icon-512.png": "45fd69b3f8cd8b7e013f62dcb766229ad64a7c8fbb78a7518f6b484e2243f673",
@@ -14,6 +14,6 @@
     "VT323-Regular-latin.woff2": "8ddbebcc1048154132e1d78eb9b1f7850bca1b7d857035ccf1cb4318ebc615b6",
     "PressStart2P-OFL.txt": "aa17c06ad829655830e2eacd07a7e0eedca261582e693c3c33118df6fd1ac987",
     "VT323-OFL.txt": "e9703da7abe97795a41be19905323706502723a1eec104608c24f858e352f9a8",
-    "achievements.json": "c167435ec0dd4db2fb7b91e8b235c48484042931beb42b64bf34e51eff24f1eb"
+    "achievements.json": "736a4ddee1f1773889a45c8a8d93d1c8d7c3f0ceff0c238ec54d03e91c7bb2f2"
   }
 }
