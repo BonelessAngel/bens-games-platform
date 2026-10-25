@@ -1,0 +1,54 @@
+{
+  "nova-bastion": {
+    "tagline": "Tower-Defense im Retro-Look",
+    "intro": [
+      "Die Raumstation ist gefallen – jetzt verteidigst du die Bastion. Baue Türme an den Weg, schicke deine Heldin in den Kampf und finde für jede Welle die beste Taktik.",
+      "Fünf Welten mit 40 Einsätzen und riesigen Mutterschiffen, ein Training an Bord für den Einstieg und ein Creator, mit dem du eigene Level baust und mit anderen teilst."
+    ],
+    "features": [
+      "12 Türme mit je drei Spezialisierungen",
+      "Kombos: Türme, die zusammen stärker sind",
+      "4 Helden mit Talenten und Spezialfähigkeiten",
+      "40 Einsätze in 5 Welten, Endlos-Modus und Herausforderungs-Turm",
+      "Tägliche Herausforderung und Kadetten-Aufgaben",
+      "Creator: eigene Level bauen und die Level anderer spielen",
+      "Spielstand im Konto – auf jedem Gerät weiterspielen"
+    ],
+    "controls": {
+      "pc": ["Bauplatz anklicken und Turm wählen – ein Klick baut", "Turm anklicken zum Ausbauen, Spezialisieren oder Verkaufen", "Tempo oben rechts: x1, x2, x3 oder BAU-Pause"],
+      "handy": ["Quer halten", "Antippen genügt – ein Tipp baut", "Heldin antippen und dann auf den Weg tippen, wohin sie laufen soll"]
+    },
+    "images": [
+      { "src": "/bilder/spiele/nova-bastion-1.jpg", "alt": "Einsatz in der Lavawelt Ignis: Türme am Weg, Heldin Vega in der Mitte", "width": 1280, "height": 720 },
+      { "src": "/bilder/spiele/nova-bastion-2.jpg", "alt": "Sternenkarte der Frostwelt Kryos mit geschafften Einsätzen", "width": 1280, "height": 720 },
+      { "src": "/bilder/spiele/nova-bastion-3.jpg", "alt": "Lexikon mit Ausbaustufen und Spezialisierungen der Railgun", "width": 1280, "height": 720 }
+    ],
+    "leaderboard": { "board": "endlos", "title": "Endlos-Rekorde" }
+  },
+  "royal-blocks": {
+    "tagline": "Block-Puzzle mit Pokerhänden",
+    "intro": [
+      "Zieh die Teile aufs Feld und fülle Reihen. Jede volle Reihe wird zur Pokerhand – je besser die Hand, desto mehr Punkte.",
+      "Sammle Chips, schalte Designs frei und hol dir den Highscore in der Tages-Challenge und im Profi-Modus."
+    ],
+    "features": [
+      "Volle Reihen werden zu Pokerhänden – vom Paar bis zum Royal Flush",
+      "Kombos, wenn mehrere Reihen auf einmal fallen",
+      "Tages-Challenge mit eigener Rangliste",
+      "Profi-Modus ab Level 10",
+      "Shop mit Designs, Kacheln, Effekten und Hintergründen",
+      "Erfolge und Level-Aufstieg",
+      "Spielstand im Konto – auf jedem Gerät weiterspielen"
+    ],
+    "controls": {
+      "pc": ["Teile mit der Maus aufs Feld ziehen"],
+      "handy": ["Hochkant spielen", "Teile mit dem Finger aufs Feld ziehen"]
+    },
+    "images": [
+      { "src": "/bilder/spiele/royal-blocks-1.jpg", "alt": "Spielfeld mit Karten-Blöcken in Orange und Blau", "width": 1280, "height": 720 },
+      { "src": "/bilder/spiele/royal-blocks-2.jpg", "alt": "Royal Blocks am Handy mit einer fast vollen Reihe", "width": 430, "height": 900 },
+      { "src": "/bilder/spiele/royal-blocks-3.jpg", "alt": "Startbildschirm mit Chips, Jackpot und Rekord", "width": 430, "height": 900 }
+    ],
+    "leaderboard": { "board": "standard", "title": "Bestenliste" }
+  }
+}

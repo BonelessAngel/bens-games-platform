@@ -58,8 +58,10 @@ test('Bibliothek trennt Spiele und Apps und zeigt Hinweise', () => {
     app(),
     app({ id: 'notizen', name: 'Notizen', type: 'tool', path: '/apps/notizen/', status: 'beta' }),
   ]);
-  assert.match(html, /<h2 id="spiele"[^>]*>Spiele<\/h2>\s*<ul class="grid"><li><a class="card" href="\/games\/demo\/"/);
-  assert.match(html, /<h2 id="apps"[^>]*>Apps<\/h2>\s*<ul class="grid"><li><a class="card" href="\/apps\/notizen\/"/);
+  assert.match(html, /<h2 id="spiele"[^>]*>Spiele<\/h2>\s*<ul class="grid"><li class="card-item"><a class="card" href="\/games\/demo\/"/);
+  assert.match(html, /<h2 id="apps"[^>]*>Apps<\/h2>\s*<ul class="grid"><li class="card-item"><a class="card" href="\/apps\/notizen\/"/);
+  assert.match(html, /<a class="card__more" href="\/spiele\/demo\/"/, 'Spiele verlinken ihre Spiel-Seite');
+  assert.doesNotMatch(html, /\/spiele\/notizen\//, 'Apps haben keine Spiel-Seite');
   assert.match(html, /badge--beta/);
 });
 

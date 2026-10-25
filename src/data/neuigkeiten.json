@@ -1,0 +1,48 @@
+[
+  {
+    "app": "nova-bastion",
+    "version": "1.11",
+    "date": "2026-10-25",
+    "title": "Neue Kombos und ein Einsatz-Berater",
+    "points": [
+      "Drei neue Kombos: Kältebruch, Zielerfassung und Supraleiter",
+      "Der Einsatz-Berater warnt vor unsichtbaren Gegnern und Fliegern",
+      "Schwierigkeit der Kampagne geglättet",
+      "Längere Musik, die zwischen den Wellen ruhiger wird"
+    ]
+  },
+  {
+    "app": "nova-bastion",
+    "version": "1.10",
+    "date": "2026-10-24",
+    "title": "Die Basis – Schritt für Schritt",
+    "points": [
+      "Skills, Held und Fähigkeiten öffnen sich nach und nach",
+      "Kadetten-Aufgaben mit Kristallen als Belohnung",
+      "Tipps von Admiralin Korr nach einer Niederlage",
+      "Wellen früher rufen nur noch mit Bestätigung"
+    ]
+  },
+  {
+    "app": "nova-bastion",
+    "version": "1.9",
+    "date": "2026-10-24",
+    "title": "Neues Tutorial und ein besseres Lexikon",
+    "points": [
+      "Training an Bord und Rundgang über die Sternenkarte",
+      "Lexikon mit Turm-Karten, Ausbaustufen und Spezialisierungen",
+      "Heldin Kaira als Tagesbonus"
+    ]
+  },
+  {
+    "app": "royal-blocks",
+    "version": "1.6",
+    "date": "2026-10-23",
+    "title": "Profi-Modus und ein neuer Shop",
+    "points": [
+      "Profi-Modus mit eigener Rangliste",
+      "Shop mit Reitern und neuen Designs",
+      "Erfolge und Spielstand im Konto"
+    ]
+  }
+]
