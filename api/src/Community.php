@@ -16,7 +16,7 @@ final class Community
 {
     public const RECENT = 4;
 
-    public function __construct(private PDO $pdo, private Leaderboards $leaderboards, private ?Permissions $permissions = null)
+    public function __construct(private PDO $pdo, private Leaderboards $leaderboards, private ?Permissions $permissions = null, private ?Profiles $profiles = null)
     {
     }
 
@@ -123,7 +123,7 @@ final class Community
             'member_since' => substr((string) $user['created_at'], 0, 7),
             'me' => $session !== null && (int) $session['id'] === $userId,
             'games' => array_values($games),
-        ]]);
+        ] + ($this->profiles?->publicParts($userId) ?? [])]);
     }
 
     /**
