@@ -27,6 +27,9 @@
         <a href="#apps" data-tab="apps" data-needs="app.*.manage">Apps</a>
         <a href="#ankuendigungen" data-tab="ankuendigungen" data-needs="announcements.manage">Ankündigungen</a>
         <a href="#protokoll" data-tab="protokoll" data-needs="audit.view">Protokoll</a>
+        <a href="#fehler" data-tab="fehler" data-needs="stats.view">Fehler</a>
+        <a href="#technik" data-tab="technik" data-needs="stats.view">Technik</a>
+        <a href="#anmeldungen" data-tab="anmeldungen" data-needs="panel">Anmeldungen</a>
         <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
       </nav>
     </div>
@@ -60,9 +63,15 @@
 
     <section data-view="uebersicht" hidden>
       <h1>Übersicht</h1>
+      <h2 class="admin__first">Letzte 7 Tage</h2>
+      <p class="hint">Pfeil und Prozent: Vergleich mit den 7 Tagen davor.</p>
+      <div class="stats" data-trends></div>
+      <h2>Konten und Sicherheit</h2>
       <div class="stats" data-stats></div>
       <h2>Gesicherte Spielstände</h2>
-      <table class="table"><thead><tr><th>Spiel</th><th>Spielstände</th></tr></thead><tbody data-saves></tbody></table>
+      <div class="table-wrap">
+        <table class="table"><thead><tr><th>Spiel</th><th>Spielstände</th></tr></thead><tbody data-saves></tbody></table>
+      </div>
     </section>
 
     <section data-view="spiele" hidden>
@@ -80,8 +89,14 @@
       <h2>Besuche und Spielzeit pro Tag</h2>
       <div class="chart" data-game-chart role="img" aria-label="Spielzeit pro Tag"></div>
 
+      <h2>Spieler-Trichter</h2>
+      <p class="hint" data-funnel-hint></p>
+      <div class="funnel" data-funnel></div>
+      <div class="button-row"><button class="button button--secondary button--small" type="button" data-csv="funnel">Als Tabelle (CSV)</button></div>
+
       <h2>Level</h2>
       <p class="hint" data-game-hints></p>
+      <div class="button-row"><button class="button button--secondary button--small" type="button" data-csv="levels">Als Tabelle (CSV)</button></div>
       <div class="table-wrap">
         <table class="table">
           <thead><tr><th>Level</th><th>Versuche</th><th>Gewonnen</th><th>Verloren</th><th>Aufgegeben</th><th>Gewinnquote</th><th>Ø Dauer</th><th>Ø Punkte</th><th>Bestwert</th><th>Ø Sterne</th></tr></thead>
@@ -109,6 +124,14 @@
         </table>
       </div>
       <div class="pager" data-pager="users"></div>
+      <div class="button-row"><button class="button button--secondary button--small" type="button" data-csv="users">Diese Seite als Tabelle (CSV)</button></div>
+
+      <div class="panel" data-saves-panel hidden>
+        <h2>Spielstände von <span data-saves-name></span></h2>
+        <p class="hint">Für Hilfe, wenn jemand Fortschritt verloren hat. Vor jedem Überschreiben bleibt der bisherige Stand erhalten (höchstens alle 6 Stunden einer, bis zu 10 Stände, 30 Tage). Wiederherstellen gilt sofort auf allen Geräten und landet im Protokoll.</p>
+        <div data-saves-list></div>
+        <button class="button button--secondary" type="button" data-saves-close>Schließen</button>
+      </div>
 
       <div class="panel" data-user-stats hidden>
         <h2>Spielstatistik von <span data-user-stats-name></span></h2>
@@ -147,6 +170,7 @@
           <tbody data-mod-entries></tbody>
         </table>
       </div>
+      <div class="button-row"><button class="button button--secondary button--small" type="button" data-csv="leaderboard">Als Tabelle (CSV)</button></div>
 
       <h1 class="admin__second">Moderation: Community-Level</h1>
       <p class="hint">Level, die Spieler hochgeladen haben. Ausgeblendete Level sieht niemand mehr; Löschen ist endgültig. Jede Änderung landet im Protokoll.</p>
@@ -235,6 +259,52 @@
         </table>
       </div>
       <div class="pager" data-pager="audit"></div>
+    </section>
+
+    <section data-view="fehler" hidden>
+      <h1>Fehler aus den Spielen</h1>
+      <p class="hint">Stürzt bei einem Spieler etwas ab, meldet das Spiel den Fehler – ohne Konto und ohne IP-Adresse. Gleiche Fehler sind zusammengefasst. „Erledigt“ gilt, bis der Fehler wieder auftritt. Meldungen werden nach 90 Tagen gelöscht.</p>
+      <div class="admin-search">
+        <select data-errors-game aria-label="Spiel"><option value="">Alle Spiele</option></select>
+        <select data-errors-days aria-label="Zeitraum">
+          <option value="1">letzte 24 Stunden</option>
+          <option value="7" selected>letzte 7 Tage</option>
+          <option value="30">letzte 30 Tage</option>
+          <option value="90">letzte 90 Tage</option>
+        </select>
+        <label class="checkbox"><input type="checkbox" data-errors-open checked><span>nur offene</span></label>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Fehler</th><th>Spiel</th><th>Anzahl</th><th>Zuletzt</th><th>Versionen</th><th>Browser</th><th></th></tr></thead>
+          <tbody data-errors></tbody>
+        </table>
+      </div>
+      <div class="button-row"><button class="button button--secondary button--small" type="button" data-csv="errors">Als Tabelle (CSV)</button></div>
+    </section>
+
+    <section data-view="technik" hidden>
+      <h1>Technik</h1>
+      <div class="stats" data-system-tiles></div>
+      <h2>Spiele und Apps auf dieser Umgebung</h2>
+      <div class="table-wrap">
+        <table class="table"><thead><tr><th>App</th><th>Version</th><th>Status</th><th>Sichtbar für</th></tr></thead><tbody data-system-apps></tbody></table>
+      </div>
+      <h2>Datenbank</h2>
+      <p class="hint" data-system-db></p>
+      <div class="table-wrap">
+        <table class="table"><thead><tr><th>Tabelle</th><th>Einträge (ca.)</th><th>Größe</th></tr></thead><tbody data-system-tables></tbody></table>
+      </div>
+      <h2>Diese Zentrale</h2>
+      <p class="hint" data-system-build></p>
+      <p class="hint">Veröffentlichungen und Tests: <a href="https://github.com/BonelessAngel/bens-games-platform/actions" rel="noopener" target="_blank">GitHub Actions</a></p>
+    </section>
+
+    <section data-view="anmeldungen" hidden>
+      <h1>Deine Anmeldungen</h1>
+      <p class="hint">Alle Geräte, auf denen du gerade angemeldet bist – auf der Webseite und in der Zentrale. Kennst du eine Anmeldung nicht, beende sie und ändere dein Passwort.</p>
+      <ul class="sessions" data-my-sessions></ul>
+      <div class="button-row"><button class="button button--danger" type="button" data-sessions-others>Alle anderen Anmeldungen beenden</button></div>
     </section>
   </main>
 
