@@ -35,7 +35,10 @@ test('Verschlüsselung der Schlüssel', function (): void {
     same(RFC_SECRET, $box->decrypt($stored));
     check($box->encrypt(RFC_SECRET) !== $stored, 'gleiche Verschlüsselung zweimal');
     throws(fn () => (new SecretBox(str_repeat('x', 64), 'totp'))->decrypt($stored), '/fehlgeschlagen/');
-    $tampered = substr($stored, 0, -2) . (str_ends_with($stored, 'A') ? 'B' : 'A') . substr($stored, -1);
+    // Ein echtes Byte im verschlüsselten Teil kippen (ein Zeichen am Ende ändern trifft manchmal nur Füllbits).
+    $raw = base64_decode(substr($stored, 3), true);
+    $raw[strlen($raw) - 1] = chr(ord($raw[strlen($raw) - 1]) ^ 0x01);
+    $tampered = 'v1:' . base64_encode($raw);
     throws(fn () => $box->decrypt($tampered), '/fehlgeschlagen|Ungültig/');
 });
 

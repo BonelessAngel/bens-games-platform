@@ -53,6 +53,8 @@ final class Api
             // Spielstatistik: Gäste anonym, Angemeldete mit Konto (außer bei Widerspruch). Kein CSRF-Token nötig,
             // die Herkunftsprüfung verhindert Ereignisse von fremden Seiten.
             'events' => ['POST', false, fn (): Response => $this->gameStats()->record($request->json(), $this->sessions()->current($request), $request)],
+            // Fehlermeldungen aus den Spielen: ohne Konto, ohne IP-Adresse (docs/spiele-anbindung.md).
+            'errors' => ['POST', false, fn (): Response => $this->clientErrors()->record($request->json(), $request)],
             'account/stats' => ['GET', true, fn (array $session): Response => new Response(200, [
                 'opt_out' => (bool) $session['stats_opt_out'],
                 'leaderboard_opt_out' => (bool) $session['leaderboard_opt_out'],
@@ -153,6 +155,22 @@ final class Api
             'admin/announcements' => ['GET', true, fn (array $session): Response => $this->announcementsFor($session)->all()],
             'admin/announcements/save' => ['POST', true, fn (array $session): Response => $this->announcementsFor($session)->save($session, $request->json(), $request)],
             'admin/announcements/delete' => ['POST', true, fn (array $session): Response => $this->announcementsFor($session)->delete($session, $request->json(), $request)],
+            'admin/funnel' => ['GET', true, fn (array $session): Response => $this->admin()->funnel($session, $request->query)],
+            'admin/errors' => ['GET', true, function (array $session) use ($request): Response {
+                $this->permitted($session, 'stats.view');
+                return $this->clientErrors()->groups($request->query);
+            }],
+            'admin/errors/resolve' => ['POST', true, function (array $session) use ($request): Response {
+                $this->permitted($session, 'stats.view');
+                return $this->clientErrors()->resolve($session, $request->json(), $request);
+            }],
+            'admin/saves' => ['GET', true, fn (array $session): Response => $this->admin()->saves($session, $request->query, $this->saveHistory())],
+            'admin/saves/restore' => ['POST', true, fn (array $session): Response => $this->admin()->restoreSave($session, $request->json(), $request, $this->saveHistory())],
+            'admin/system' => ['GET', true, fn (array $session): Response => $this->system($session)],
+            // Eigene Anmeldungen (Webseite und Zentrale) ansehen und beenden.
+            'admin/sessions' => ['GET', true, fn (array $session): Response => $this->accounts()->listSessions($session)],
+            'admin/sessions/revoke' => ['POST', true, fn (array $session): Response => $this->accounts()->revokeSession($session, $request->json(), $request)],
+            'admin/sessions/revoke-others' => ['POST', true, fn (array $session): Response => $this->accounts()->revokeOtherSessions($session, $request)],
         ];
 
         $routes = $this->isAdmin() ? $adminRoutes : $siteRoutes;
@@ -341,7 +359,55 @@ final class Api
     private function gameSaves(): GameSaves
     {
         $pdo = $this->pdo();
-        return new GameSaves($pdo, $this->clock, new RateLimiter($pdo, $this->clock), new AuditLog($pdo, $this->clock));
+        return new GameSaves($pdo, $this->clock, new RateLimiter($pdo, $this->clock), new AuditLog($pdo, $this->clock), $this->saveHistory());
+    }
+
+    private function saveHistory(): SaveHistory
+    {
+        return new SaveHistory($this->pdo(), $this->clock);
+    }
+
+    private function clientErrors(): ClientErrors
+    {
+        $pdo = $this->pdo();
+        return new ClientErrors($pdo, $this->clock, new RateLimiter($pdo, $this->clock), new AuditLog($pdo, $this->clock));
+    }
+
+    /**
+     * Technik-Übersicht für die Zentrale: Umgebung, Versionen, Datenbank, Migrationen und Datenmengen.
+     * @param array<string, mixed> $session
+     */
+    private function system(array $session): Response
+    {
+        $this->permitted($session, 'stats.view');
+        $pdo = $this->pdo();
+        $migrator = new Migrator($pdo, $this->migrationsDir);
+        $tables = $pdo->query(
+            'SELECT table_name AS name, table_rows AS row_estimate, data_length + index_length AS bytes
+             FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY bytes DESC'
+        )->fetchAll();
+        $day = $this->clock->datetime(-86400);
+        $count = static function (string $sql, array $params = []) use ($pdo): int {
+            $statement = $pdo->prepare($sql);
+            $statement->execute($params);
+            return (int) $statement->fetchColumn();
+        };
+        return new Response(200, [
+            'environment' => $this->config['environment'] ?? '',
+            'php' => PHP_VERSION,
+            'database' => (string) $pdo->query('SELECT VERSION()')->fetchColumn(),
+            'schema' => $migrator->currentVersion(),
+            'pending_migrations' => $migrator->pending(),
+            'server_time' => $this->clock->datetime(),
+            'apps' => $pdo->query('SELECT id, name, type, version, status, visibility FROM apps ORDER BY sort_order, name')->fetchAll(),
+            'tables' => array_map(static fn (array $t): array => ['name' => $t['name'], 'rows' => (int) $t['row_estimate'], 'bytes' => (int) $t['bytes']], $tables),
+            'last_24h' => [
+                'events' => $count('SELECT COUNT(*) FROM game_events WHERE created_at >= ?', [$day]),
+                'errors' => $count('SELECT COUNT(*) FROM client_errors WHERE created_at >= ?', [$day]),
+                'saves' => $count('SELECT COUNT(*) FROM game_saves WHERE updated_at >= ?', [$day]),
+                'logins' => $count("SELECT COUNT(*) FROM audit_log WHERE action = 'user.login' AND created_at >= ?", [$day]),
+            ],
+        ]);
     }
 
     private function twoFactor(): TwoFactor

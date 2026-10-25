@@ -19,8 +19,13 @@ final class GameSaves
     public const MAX_BYTES = 524288;      // 512 KB je Spielstand
     public const MAX_ACHIEVEMENTS = 500;  // je Speichervorgang
 
-    public function __construct(private PDO $pdo, private Clock $clock, private RateLimiter $limiter, private AuditLog $audit)
-    {
+    public function __construct(
+        private PDO $pdo,
+        private Clock $clock,
+        private RateLimiter $limiter,
+        private AuditLog $audit,
+        private ?SaveHistory $history = null,
+    ) {
     }
 
     /** @param array<string, mixed> $session */
@@ -61,6 +66,16 @@ final class GameSaves
             throw new HttpError(422, 'validation', ['fields' => ['data' => 'data muss gültiges JSON sein.']]);
         }
 
+        // Den bisherigen Stand für die Spielstand-Hilfe festhalten, bevor er überschrieben wird.
+        if ($this->history !== null) {
+            $before = $this->pdo->prepare('SELECT data, client_time FROM game_saves WHERE user_id = ? AND app_id = ?');
+            $before->execute([$userId, $appId]);
+            $previous = $before->fetch();
+            if ($previous && $time >= (int) $previous['client_time'] && $previous['data'] !== $data) {
+                $this->history->remember($userId, $appId, $previous);
+            }
+        }
+
         // Nur speichern, wenn der neue Stand nicht älter ist als der gespeicherte.
         $statement = $this->pdo->prepare(
             'INSERT INTO game_saves (user_id, app_id, data, client_time, size, updated_at) VALUES (:user, :app, :data, :t, :size, :now)
@@ -97,6 +112,7 @@ final class GameSaves
         $userId = (int) $session['id'];
         $this->pdo->prepare('DELETE FROM game_saves WHERE user_id = ? AND app_id = ?')->execute([$userId, $appId]);
         $this->pdo->prepare('DELETE FROM game_achievements WHERE user_id = ? AND app_id = ?')->execute([$userId, $appId]);
+        $this->history?->forget($userId, $appId);
         $this->audit->log('game.save_deleted', $request, actorUserId: $userId, targetType: 'app', targetId: $appId);
         return new Response(200, ['status' => 'deleted']);
     }

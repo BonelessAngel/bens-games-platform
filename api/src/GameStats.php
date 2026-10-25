@@ -258,6 +258,65 @@ final class GameStats
         return array_column(array_map(static fn (array $r): array => ['id' => (int) $r['user_id'], 's' => (int) $r['seconds']], $rows), 's', 'id');
     }
 
+    /**
+     * Spieler-Trichter: Wie viele Spieler erreichen Level 1, 2, 3 … und wie viele schaffen es?
+     * Zählt nur nummerierte Level (z. B. die Kampagne von Nova Bastion). Spieler mit Konto zählen einmal,
+     * Gäste einmal pro Besuch (sie haben keine dauerhafte Kennung).
+     * @param array<string, string> $query {app, days}
+     */
+    public function funnel(array $query): Response
+    {
+        $days = max(1, min(self::MAX_DAYS, (int) ($query['days'] ?? self::MAX_DAYS)));
+        $apps = $this->pdo->query("SELECT id, name FROM apps WHERE type = 'game' ORDER BY sort_order, name")->fetchAll();
+        $app = (string) ($query['app'] ?? '');
+        if (!in_array($app, array_column($apps, 'id'), true)) {
+            $app = $apps[0]['id'] ?? '';
+        }
+        $who = "COALESCE(CONCAT('u', user_id), CONCAT('v', visit))";
+        $rows = $this->all(
+            "SELECT level, COUNT(DISTINCT $who) AS players,
+                    COUNT(DISTINCT CASE WHEN type = 'level_end' AND result = 'win' THEN $who END) AS winners
+             FROM game_events
+             WHERE app_id = ? AND created_at >= ? AND type IN ('level_start', 'level_end') AND level REGEXP '^[0-9]{1,3}$'
+             GROUP BY level",
+            [$app, $this->clock->datetime(-$days * 86400)]
+        );
+        $steps = array_map(static fn (array $r): array => ['level' => (int) $r['level'], 'players' => (int) $r['players'], 'winners' => (int) $r['winners']], $rows);
+        usort($steps, static fn (array $a, array $b): int => $a['level'] <=> $b['level']);
+        $first = $steps[0]['players'] ?? 0;
+        $previous = null;
+        foreach ($steps as &$step) {
+            $step['win_rate'] = $step['players'] > 0 ? round($step['winners'] / $step['players'], 3) : null;
+            $step['of_first'] = $first > 0 ? round($step['players'] / $first, 3) : null;
+            // Wie viele der Spieler des vorigen Levels sind hier nicht mehr angekommen?
+            $step['drop'] = $previous !== null && $previous > 0 ? round(max(0, $previous - $step['players']) / $previous, 3) : null;
+            $previous = $step['players'];
+        }
+        unset($step);
+        return new Response(200, ['apps' => $apps, 'app' => $app, 'days' => $days, 'steps' => $steps]);
+    }
+
+    /**
+     * Kennzahlen der letzten 7 Tage im Vergleich zu den 7 Tagen davor.
+     * @return array<string, array{now: int, before: int}>
+     */
+    public function trends(): array
+    {
+        $now = $this->clock->datetime();
+        $week = $this->clock->datetime(-7 * 86400);
+        $two = $this->clock->datetime(-14 * 86400);
+        $pair = function (string $sql) use ($now, $week, $two): array {
+            return ['now' => (int) $this->one($sql, [$week, $now])['v'], 'before' => (int) $this->one($sql, [$two, $week])['v']];
+        };
+        return [
+            'players' => $pair("SELECT COUNT(DISTINCT COALESCE(CONCAT('u', user_id), CONCAT('v', visit))) AS v FROM game_events WHERE created_at >= ? AND created_at < ?"),
+            'visits' => $pair('SELECT COUNT(DISTINCT visit) AS v FROM game_events WHERE created_at >= ? AND created_at < ?'),
+            'seconds' => $pair("SELECT COALESCE(SUM(seconds), 0) AS v FROM game_events WHERE type = 'heartbeat' AND created_at >= ? AND created_at < ?"),
+            'new_users' => $pair('SELECT COUNT(*) AS v FROM users WHERE created_at >= ? AND created_at < ?'),
+            'wins' => $pair("SELECT COUNT(*) AS v FROM game_events WHERE type = 'level_end' AND result = 'win' AND created_at >= ? AND created_at < ?"),
+        ];
+    }
+
     /** Summen der Zusatzwerte (z. B. genutzte Türme) aus beendeten Leveln. @return list<array{key: string, total: int}> */
     private function details(string $app, string $since): array
     {
