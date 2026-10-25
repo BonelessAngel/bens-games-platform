@@ -2816,6 +2816,18 @@ function platformFetch(url,options){
   var c=new AbortController(),t=setTimeout(function(){c.abort();},3000);options.signal=c.signal;
   return fetch(url,options).then(function(r){clearTimeout(t);return r;},function(e){clearTimeout(t);throw e;});
 }
+/* Fehlermeldungen an bens-games.de: ohne Konto, ohne IP, höchstens 5 verschiedene pro Besuch (docs/spiele-anbindung.md der Webseite) */
+var PLATFORM_ERR={n:0,seen:{}};
+function platformError(msg,src,line,col,stack){
+  if(!platformSite()||location.protocol!=='https:'||navigator.globalPrivacyControl===true||PLATFORM_ERR.n>=5)return;
+  var key=String(msg).slice(0,120)+'|'+(line|0);if(PLATFORM_ERR.seen[key])return;PLATFORM_ERR.seen[key]=1;PLATFORM_ERR.n++;
+  try{fetch('/api/errors',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({app:PLATFORM.app,message:String(msg||'Unbekannter Fehler').slice(0,300),source:String(src||'').slice(0,300),line:Math.max(0,line|0),col:Math.max(0,col|0),stack:String(stack||'').slice(0,3000)})}).catch(function(){});}catch(e){}
+}
+if(typeof window.addEventListener==='function'){
+  window.addEventListener('error',function(e){if(e&&e.message)platformError(e.message,e.filename,e.lineno,e.colno,e.error&&e.error.stack);});
+  window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;platformError(r&&r.message?r.message:String(r),'',0,0,r&&r.stack);});
+}
 function platformEnabled(g){
   return platformHosted()&&location.protocol==='https:'&&!(g&&(g.test||g.mode==='train'))&&navigator.globalPrivacyControl!==true;
 }
@@ -10797,7 +10809,7 @@ if(window.visualViewport)window.visualViewport.addEventListener('resize',fit);
 window.__nb={econ:econ,ECON:ECON,rt:function(dt){realTick(dt);},get LEVELS(){return LEVELS;},get WORLDS(){return WORLDS;},get PR(){return PR;},ED:ED,get CAMP(){return CAMP;},edDown:edDown,edMove:edMove,edUp:edUp,get G(){return G;},get SAVE(){return SAVE;},startLevel:startLevel,goMap:goMap,setMode:setMode,show:show,update:function(dt){update(dt);},dailyInfo:dailyInfo,openLevel:openLevel};
 /* Für die automatischen Tests (tests/ablauf.test.mjs): weitere Spielteile erreichbar machen */
 Object.assign(window.__nb,{trBegin:trBegin,endGame:endGame,checkUnlocks:checkUnlocks,ulPending:ulPending,featOn:featOn,abOpen:abOpen,openMenu:openMenu,closeMenu:closeMenu,
-  botInit:botInit,botThink:botThink,halfSkills:halfSkills,arsAdvice:arsAdvice,arsApply:arsApply,Mus:Mus,COMBOS:COMBOS,waveAsking:waveAsking,lexSeen:lexSeen,persist:persist,normSave:normSave,CADET:CADET,UNLOCKS:UNLOCKS,TRAIN:TRAIN,buildStats:buildStats});
+  botInit:botInit,botThink:botThink,platformError:platformError,halfSkills:halfSkills,arsAdvice:arsAdvice,arsApply:arsApply,Mus:Mus,COMBOS:COMBOS,waveAsking:waveAsking,lexSeen:lexSeen,persist:persist,normSave:normSave,CADET:CADET,UNLOCKS:UNLOCKS,TRAIN:TRAIN,buildStats:buildStats});
 Object.defineProperties(window.__nb,{menu:{get:function(){return menu;}},scene:{get:function(){return scene;}},GUIDE:{get:function(){return GUIDE;}},TR:{get:function(){return TR;}},
   ULV:{get:function(){return ULV;},set:function(v){ULV=v;}},DEV:{get:function(){return DEV;}}});
 fit();show('title');requestAnimationFrame(frame);
