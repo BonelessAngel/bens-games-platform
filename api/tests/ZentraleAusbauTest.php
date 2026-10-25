@@ -128,7 +128,8 @@ dbTest('Übersicht mit Trends, Technik-Übersicht und eigene Sitzungen', functio
 
     $system = $app->adminGet('admin/system', $admin);
     same(200, $system->status);
-    same(basename((string) end($migrations = glob(migrationsDir() . '/*.sql')), '.sql'), $system->body['schema']);
+    $migrations = glob(migrationsDir() . '/*.sql');
+    same(basename((string) end($migrations), '.sql'), $system->body['schema'], 'neuester Datenbank-Stand');
     same([], $system->body['pending_migrations']);
     check(in_array('nova-bastion', array_column($system->body['apps'], 'id'), true), 'Spiele mit Version');
     check(in_array('client_errors', array_column($system->body['tables'], 'name'), true), 'Tabellen-Größen');

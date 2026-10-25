@@ -3,6 +3,7 @@
 import { safeReturnPath } from '../../lib/return-path.js';
 import { avatarSvg, AVATARS, AVATAR_COLORS } from '../../lib/avatars.js';
 import { adminUrl } from '../../lib/admin-url.js';
+import { achievementInfo, loadAchievementNames } from '../../lib/achievements.js';
 import { badgeList } from './badges.js';
 import { renderNavUser } from './nav.js';
 
@@ -319,6 +320,7 @@ const pages = {
     setupTwoFactor(root, data.user, csrf, () => loadSessions());
     loadGames(root, csrf);
     loadStats(root, csrf);
+    setupStyle(root, data.user, csrf);
 
     // Geräte
     const list = root.querySelector('[data-sessions]');
@@ -678,3 +680,81 @@ addPasswordToggles();
 
 const root = document.querySelector('[data-page]');
 pages[root?.dataset.page]?.(root);
+
+// Bereich „Profil gestalten“: Banner, Titel, Lieblings-Abzeichen und Aktivitäts-Kalender (api/src/Profiles.php).
+async function setupStyle(root, user, csrf) {
+  const panel = root.querySelector('[data-style-panel]');
+  const { ok, data } = await api('account/profile-style');
+  if (!ok || !panel) return;
+  const choice = { ...data.current, pins: [...data.current.pins] };
+  const unlockedBanner = data.banners.find((b) => b.unlocked && b.id === choice.banner);
+  if (!unlockedBanner) choice.banner = 'nacht';
+
+  root.querySelector('[data-style-link]').href = `/spieler/?name=${encodeURIComponent(user.display_name)}`;
+  const rank = data.rank;
+  root.querySelector('[data-style-rank]').textContent = `Dein Spieler-Rang: ${rank.name} (${rank.points.toLocaleString('de-DE')} Punkte)${
+    rank.next ? ` – noch ${(rank.next_points - rank.points).toLocaleString('de-DE')} Punkte bis ${rank.next}.` : ' – der höchste Rang!'}`;
+
+  const banners = root.querySelector('[data-style-banners]');
+  const titles = root.querySelector('[data-style-titles]');
+  const pins = root.querySelector('[data-style-pins]');
+  const names = Object.fromEntries(await Promise.all([...new Set(data.achievements.map((a) => a.app_id))]
+    .map(async (app) => [app, await loadAchievementNames(app)])));
+
+  const render = () => {
+    banners.replaceChildren(...data.banners.map((banner) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `banner-choice banner--${banner.id}`;
+      button.disabled = !banner.unlocked;
+      button.setAttribute('aria-pressed', String(choice.banner === banner.id));
+      button.append(banner.name, Object.assign(document.createElement('small'), { textContent: banner.unlocked ? 'freigeschaltet' : `🔒 ${banner.condition}` }));
+      button.onclick = () => { choice.banner = banner.id; render(); };
+      return button;
+    }));
+    const none = { id: null, name: 'Kein Titel', unlocked: true, condition: '' };
+    titles.replaceChildren(...[none, ...data.titles].map((title) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'choice-chip';
+      button.disabled = !title.unlocked;
+      button.title = title.unlocked ? '' : `Noch gesperrt: ${title.condition}`;
+      button.textContent = title.unlocked ? title.name : `🔒 ${title.name}`;
+      button.setAttribute('aria-pressed', String(choice.title === title.id));
+      button.onclick = () => { choice.title = title.id; render(); };
+      return button;
+    }));
+    pins.replaceChildren(...data.achievements.map((a) => {
+      const key = `${a.app_id}:${a.id}`;
+      const info = achievementInfo(a.id, names[a.app_id]);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'choice-chip';
+      const pinned = choice.pins.includes(key);
+      button.setAttribute('aria-pressed', String(pinned));
+      button.disabled = !pinned && choice.pins.length >= 3;
+      button.textContent = `${info.icon} ${info.name}`;
+      button.title = a.app;
+      button.onclick = () => {
+        choice.pins = pinned ? choice.pins.filter((p) => p !== key) : [...choice.pins, key];
+        render();
+      };
+      return button;
+    }));
+    root.querySelector('[data-style-pins-empty]').hidden = data.achievements.length > 0;
+  };
+
+  const activity = root.querySelector('[data-style-activity]');
+  activity.checked = choice.activity;
+  root.querySelector('[data-style-save]').addEventListener('click', async () => {
+    const result = await api('account/profile-style/save', {
+      method: 'POST', csrf, body: { banner: choice.banner, title: choice.title, pins: choice.pins, activity: activity.checked },
+    });
+    const notice = root.querySelector('[data-notice="style"]');
+    if (result.ok) show(notice, 'Dein Profil ist gespeichert.', 'success');
+    else show(notice, Object.values(result.data.fields ?? {}).join(' ') || (MESSAGES[result.data.error] ?? FALLBACK));
+  });
+
+  render();
+  panel.hidden = false;
+}
