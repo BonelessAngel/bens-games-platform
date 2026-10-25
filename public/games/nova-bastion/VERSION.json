@@ -1,10 +1,10 @@
 {
   "id": "nova-bastion",
-  "version": "1.10.0",
-  "tag": "v1.10.0",
-  "commit": "06374f92e396851856148dd427475403eb2c038a",
+  "version": "1.10.1",
+  "tag": "v1.10.1",
+  "commit": "986e30aadb7998d97028c4a8c17891d87d1eb841",
   "files": {
-    "index.html": "40cda5be247eee6caa7775ee72d2c1b7e91f7ea8826dcf15c898566efbe9aa59",
+    "index.html": "1385909fb0331b0227b68ac91a405108608b43de6fe9cb02a899144d5dce9243",
     "manifest.webmanifest": "3b95350bb3db88456c7934788c2534c9b130fd0c5bfc4eba9cd4a8e67d1d02b8",
     "sw.js": "10818ee525cccd38dfc924f0d8a789b81a0b416b5e70e8587d9d9e8c985cd002",
     "icon-180.png": "1eb2fe709bd3217b4e627d739bb1a0aafb5a214eea931bfd3fcd5afa283830db",

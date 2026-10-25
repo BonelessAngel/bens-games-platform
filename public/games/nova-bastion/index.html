@@ -66,6 +66,7 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .pb.vi{background:#2a1a40;border-color:var(--vi);color:var(--vi)}
 .pb:disabled{opacity:.45}
 #bWave{min-width:13.5em}
+#bWave.ask{background:#ff7a2f;border-color:#ffd0a0;color:#1a0800;animation:pulse .6s steps(2) infinite}
 .pb.hard{border-color:var(--red);color:var(--red);background:#2a0f14}
 @keyframes pulse{50%{background:#fff0b8}}
 
@@ -3965,9 +3966,12 @@ function updateHud(){
   var bl,done=!G.endless&&G.nextWave>=n;
   if(done)bl='LETZTE WELLE';
   else if(G.nextWave===0)bl='START';
-  else bl='WELLE +'+Math.ceil(G.countdown*EARLY);
+  else if(G.spawners.length)bl='WELLE LÄUFT';
+  else if(waveAsking())bl=G.noEarly?'SICHER? JETZT RUFEN':'SICHER? +'+Math.ceil(G.countdown*EARLY)+' GOLD';
+  else bl='NÄCHSTE IN '+Math.ceil(G.countdown)+' s';
   if(hv.btn!==bl){bWave.textContent=bl;hv.btn=bl;}
-  bWave.disabled=done;
+  bWave.disabled=done||(G.nextWave>0&&G.spawners.length>0);
+  bWave.classList.toggle('ask',waveAsking());
   bWave.classList.toggle('pulse',G.nextWave===0);
   var hOk=!done&&G.nextWave>0&&G.mode!=='train'&&(G.L.k>=3||DEV||G.endless);
   if(hv.hard!==hOk){hv.hard=hOk;$('bHard').style.display=hOk?'':'none';}
@@ -5227,7 +5231,10 @@ function getOptions(spot){
     info:{t:'Turm verkaufen',d:'Du bekommst '+Math.round(SELL*100)+'% der Kosten zurück.',s:''},action:function(){sell(spot);}});
   return list;
 }
-function openMenu(spot){G.aim=null;G.rally=null;setHint('');menu={spot:spot,sel:null,opts:getOptions(spot)};renderMenu();Snd.play('tick');specGuide(spot);}
+function openMenu(spot){
+  var tl=G.mode==='train'&&TRAIN[TR.i]&&TRAIN[TR.i].maxT;
+  if(tl&&!spot.tower&&G.towers.length>=tl){Snd.play('no');toast('IN DIESER ÜBUNG NUR EIN TURM – BAU DEINEN LASER AUS!','#ffc23c');return;}
+  G.aim=null;G.rally=null;setHint('');menu={spot:spot,sel:null,opts:getOptions(spot)};renderMenu();Snd.play('tick');specGuide(spot);}
 /* Wofür sich jede Spezialisierung lohnt (Führung und Lexikon) */
 var SPECTIP={
  lasera:'viele schwache Gegner und Schilde – Dauerfeuer',laserb:'Schilde, Panzerung und zähe Einzelziele auf langen Wegen',laserc:'Schwärme und dichte Gruppen',
@@ -8535,7 +8542,7 @@ var TUTS=[
  {tx:'Die Gegner laufen den Pfeilen nach. Jeder besiegte Gegner bringt Gold für neue Türme.',wait:6},
  {tx:'Tippe auf deinen Turm, um ihn mit Gold AUSZUBAUEN.',tower:true,done:function(){return G.towers.some(function(t){return t.tier>0;});},wait:30},
  {tx:'Dein Held kämpft mit! Tippe auf seinen Knopf unten links und dann auf eine Stelle des Wegs.',dom:function(){return document.querySelector('#abil .ab');},done:function(){return !!G.heroMoved;},wait:30},
- {tx:'Perfekt! Mit WELLE + rufst du Wellen früher und bekommst Bonus-Gold. Viel Erfolg!',wait:6}
+ {tx:'Perfekt! Oben rechts läuft der Countdown zur nächsten Welle. Tippst du darauf und bestätigst mit SICHER?, kommt sie früher – mit Bonus-Gold. Viel Erfolg!',wait:7}
 ];
 function tutStart(){G.tut={i:0,t:0};tutShow();}
 function tutShow(){var s=TUTS[G.tut.i];$('tutTx').textContent=s.tx;disp('tutBox',true);}
@@ -8573,7 +8580,7 @@ var HINTS=[
  /* Steuerung */
  {id:'speed',tag:'STEUERUNG',t:'TEMPO UND BAUPAUSE',d:'Mit x1, x2 und x3 schaltest du die Geschwindigkeit um. Danach kommt BAU: Das Spiel steht still, aber du kannst in Ruhe bauen und ausbauen. II öffnet das Pausemenü.',
   when:function(){return G.nextWave>=2&&!G.tut;},dom:function(){return $('bSpeed');},scene:'speed'},
- {id:'early',tag:'STEUERUNG',t:'WELLE FRÜHER RUFEN',d:'Ist eine Welle besiegt, läuft ein Countdown. Mit WELLE + rufst du die nächste sofort und bekommst dafür Bonus-Gold.',
+ {id:'early',tag:'STEUERUNG',t:'WELLE FRÜHER RUFEN',d:'Oben rechts siehst du, wann die nächste Welle kommt. Tippst du darauf und bestätigst mit SICHER?, kommt sie sofort – dafür gibt es Bonus-Gold. Mach das nur, wenn deine Türme gut mithalten!',
   when:function(){return G.nextWave>=2&&G.countdown!=null&&!G.enemies.length&&!G.spawners.length&&!G.tut;},dom:function(){return $('bWave');},scene:'early'},
  {id:'leak',tag:'BASIS',t:'DEINE LEBEN',d:'Erreicht ein Gegner deine Basis, verlierst du Leben (oben links). Starke Gegner kosten mehr. Bei 0 ist das Level verloren.',
   when:function(){return G.lives<G.maxLives&&!G.god;},dom:function(){return $('sLives');},scene:'leak'},
@@ -8679,7 +8686,7 @@ function hintScene(sc,g,S,dt){
     R(g,152,8,20,16,'#141b38');R(g,158,11,3,10,'#cfe0ff');R(g,164,11,3,10,'#cfe0ff');
   }else if(sc==='early'){
     var k=(t%3)/3;R(g,40,14,120,6,'#0b1024');R(g,40,14,Math.round(120*(1-k)),6,'#3de8ff');hTxt(g,'NÄCHSTE WELLE',52,10,'#9fb0e6',5);
-    R(g,70,30,60,16,'#ffc23c');R(g,70,30,60,2,'#fff2c0');hTxt(g,'WELLE +',76,42,'#1a1200',6);
+    R(g,70,30,60,16,'#ffc23c');R(g,70,30,60,2,'#fff2c0');hTxt(g,'SICHER?',76,42,'#1a1200',6);
     if(k>0.5){for(i=0;i<3;i++){var cy=56-((t*30+i*9)%20);R(g,90+i*8,cy,4,4,'#ffd23c');R(g,91+i*8,cy+1,2,2,'#fff2c0');}hTxt(g,'+GOLD',86,78,'#ffd23c',6);}
   }else if(sc==='leak'){
     S.x=(S.x===undefined?20:S.x)+18*dt;if(S.x>150){S.x=20;S.hit=0.8;}
@@ -8909,7 +8916,7 @@ var TRAIN=[
    {say:'Stark! Tippe jetzt auf START – dann kommen die ersten Gegner.',el:function(){return $('bWave');},done:function(){return G.nextWave>0;}},
    {say:'Die Gegner laufen den Pfeilen nach zu deiner Basis. Jeder besiegte Gegner bringt Gold – das brauchst du für neue Türme.',wait:7}
   ];}},
- {name:'AUSBAUEN',towers:['laser'],gold:170,paths:[[[4,60],[240,60],[240,210],[468,210]]],spots:[[180,104],[300,170],[120,104],[300,250]],
+ {name:'AUSBAUEN',towers:['laser'],gold:170,maxT:1,paths:[[[4,60],[240,60],[240,210],[468,210]]],spots:[[180,104],[300,170],[120,104],[300,250]],
   waves:{0:[['scout',4]],1:[['grunt',2],['scout',4]],2:[['grunt',4]]},
   win:'Genau so: Erst bauen, dann ausbauen. Jetzt lernst du deine Heldin kennen.',
   steps:function(){return [
@@ -8919,7 +8926,7 @@ var TRAIN=[
     when:function(){var t=G.towers[0];return t&&t.tier<2&&G.gold>=ST[t.type][t.tier+1].cost;},
     el:function(){return trMenuOn(G.towers[0])?document.querySelector('#menu .slot[data-id=up]'):null;},
     pt:function(){var t=G.towers[0];return {x:t.x,y:t.y,r:15};},done:function(){return G.towers.some(function(t){return t.tier>0;});}},
-   {say:'Zwischen den Wellen läuft ein Countdown. Mit WELLE + rufst du die nächste sofort – dafür gibt es Bonus-Gold.',
+   {say:'Hier läuft der Countdown bis zur nächsten Welle. Willst du nicht warten: einmal antippen, dann SICHER? bestätigen – das bringt Bonus-Gold. Aber Vorsicht, dann kommen mehr Gegner auf einmal!',
     when:function(){return G.countdown!=null&&!G.enemies.length&&!G.spawners.length;},el:function(){return $('bWave');},done:function(){return G.nextWave>=3;},next:true}
   ];}},
  {name:'DEINE HELDIN',towers:['laser'],gold:150,paths:[[[4,135],[160,135],[160,60],[330,60],[330,210],[468,210]]],spots:[[110,95],[250,104],[380,170],[250,20]],
@@ -10434,8 +10441,17 @@ function fastTap(el,fn){
   el.addEventListener('pointerdown',function(e){if(e.pointerType==='mouse'||el.disabled)return;down=Date.now();go(e);});
   el.addEventListener('click',function(e){if(Date.now()-down<700){e.stopPropagation();return;}go(e);});
 }
-fastTap($('bWave'),function(){if(G&&!G.over&&!G.paused)startWave(true);});
-fastTap($('bHard'),function(){if(G&&!G.over&&!G.paused&&G.nextWave>0)startWave(true,true);});
+/* Erste Welle: sofort. Danach erst, wenn die laufende Welle komplett unterwegs ist – und nur nach einer Bestätigung,
+   damit niemand aus Versehen mehrere Wellen auf einmal ruft */
+function waveAsking(){return !!G&&!!G.waveAsk&&Date.now()-G.waveAsk<3000&&!G.spawners.length;}
+fastTap($('bWave'),function(){
+  if(!G||G.over||G.paused)return;
+  if(G.nextWave===0){startWave(true);return;}
+  if(G.spawners.length){Snd.play('no');return;}
+  if(waveAsking()){G.waveAsk=0;startWave(true);}else{G.waveAsk=Date.now();Snd.play('tick');}
+  updateHud();
+});
+fastTap($('bHard'),function(){if(G&&!G.over&&!G.paused&&G.nextWave>0&&!G.spawners.length)startWave(true,true);});
 /* Tempo: x1 > x2 > x3 > BAU (Baupause: alles steht still, Bauen und Ausbauen geht weiter) > x1 */
 fastTap($('bSpeed'),function(){if(!G)return;G.speed=G.speed===1?2:G.speed===2?3:G.speed===3?0:1;speedUI();Snd.play('tick');
   if(G.speed===0)toast('BAUPAUSE · IN RUHE BAUEN, DANN WEITER MIT x1','#ffc23c');});
