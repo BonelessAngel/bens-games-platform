@@ -14,6 +14,8 @@ const MESSAGES = {
   not_on_self: 'Das geht nicht für dein eigenes Konto.',
   owner_protected: 'Das Konto des Besitzers kann hier nicht geändert werden.',
   unavailable: 'Die Zentrale ist gerade nicht verfügbar.',
+  confirmation_required: 'Bitte bestätige das Wiederherstellen.',
+  not_found: 'Nicht gefunden – vielleicht schon gelöscht.',
 };
 const FALLBACK = 'Etwas ist schiefgelaufen.';
 
@@ -58,6 +60,9 @@ const ACTIONS = {
   'user.leaderboard_opt_in': 'In Ranglisten aufgenommen',
   'user.stats_opt_out': 'Statistik-Zuordnung abgeschaltet',
   'user.stats_opt_in': 'Statistik-Zuordnung eingeschaltet',
+  'admin.save_restored': 'Zentrale: Spielstand wiederhergestellt',
+  'admin.error_resolved': 'Zentrale: Fehler erledigt',
+  'admin.error_reopened': 'Zentrale: Fehler wieder geöffnet',
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -90,6 +95,7 @@ function notify(text, kind = 'error') {
 }
 
 const can = (permission) => {
+  if (permission === 'panel') return !!me; // für alle, die die Zentrale betreten dürfen
   if (me?.permissions.includes('*')) return true;
   if (permission === 'app.*.manage') return me?.permissions.some((p) => /^app\..+\.manage$/.test(p)) ?? false;
   return me?.permissions.includes(permission) ?? false;
@@ -114,6 +120,34 @@ function button(label, onClick, kind = 'secondary') {
     b.disabled = false;
   });
   return b;
+}
+
+// --- Export als Tabelle ----------------------------------------------------
+// Semikolon und BOM, damit Excel die Datei auf deutschen Rechnern direkt richtig öffnet.
+const csvData = {};
+
+function downloadCsv(name, header, rows) {
+  const escape = (value) => {
+    const text = value == null ? '' : String(value);
+    return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  const text = [header, ...rows].map((row) => row.map(escape).join(';')).join('\r\n');
+  const link = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob(['﻿', text], { type: 'text/csv;charset=utf-8' })),
+    download: `${name}-${new Date().toISOString().slice(0, 10)}.csv`,
+  });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+for (const element of document.querySelectorAll('[data-csv]')) {
+  element.addEventListener('click', () => {
+    const data = csvData[element.dataset.csv];
+    if (!data || !data.rows.length) return notify('Keine Daten zum Exportieren.');
+    downloadCsv(data.name, data.header, data.rows);
+  });
 }
 
 function pager(name, page, hasMore, load) {
@@ -191,6 +225,9 @@ function showTab(name) {
     apps: loadApps,
     ankuendigungen: loadAnnouncements,
     protokoll: () => loadAudit(1),
+    fehler: loadErrors,
+    technik: loadSystem,
+    anmeldungen: loadMySessions,
   })[tab]?.();
 }
 
@@ -215,6 +252,14 @@ async function start() {
 async function loadOverview() {
   const { ok, data } = await api('admin/overview');
   if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  const t = data.trends;
+  $('[data-trends]').replaceChildren(...[
+    [t.players, 'Spieler', number],
+    [t.visits, 'Besuche', number],
+    [t.seconds, 'Spielzeit', (s) => (s >= 3600 ? `${number(Math.round(s / 3600))} Std.` : formatDuration(s))],
+    [t.wins, 'geschaffte Level', number],
+    [t.new_users, 'neue Konten', number],
+  ].map(([pair, label, format]) => trendTile(format(pair.now), label, pair.now, pair.before)));
   const tiles = [
     [data.users.total, 'Konten insgesamt'],
     [data.users.new_today, 'neu heute'],
@@ -224,6 +269,7 @@ async function loadOverview() {
     [data.users.two_factor, 'mit Zwei-Faktor'],
     [data.users.locked, 'gesperrt'],
     [data.failed_logins_24h, 'Fehlanmeldungen 24 h'],
+    [data.errors_24h, 'Spielfehler 24 h'],
   ];
   $('[data-stats]').replaceChildren(...tiles.map(([value, label]) => {
     const tile = Object.assign(document.createElement('div'), { className: 'stat' });
@@ -235,6 +281,22 @@ async function loadOverview() {
     row.append(cell(game.name), cell(String(game.saves)));
     return row;
   }));
+}
+
+/** Kachel mit Wert und Vergleich zur Vorwoche (▲ grün, ▼ rot, – gleich). */
+function trendTile(value, label, now, before) {
+  const tile = Object.assign(document.createElement('div'), { className: 'stat' });
+  const trend = Object.assign(document.createElement('em'), { className: 'trend' });
+  if (before === 0 && now === 0) trend.textContent = '–';
+  else if (before === 0) Object.assign(trend, { textContent: '▲ neu', className: 'trend trend--up' });
+  else {
+    const change = Math.round(((now - before) / before) * 100);
+    trend.textContent = change === 0 ? '± 0 %' : `${change > 0 ? '▲' : '▼'} ${Math.abs(change)} %`;
+    if (change !== 0) trend.className = `trend trend--${change > 0 ? 'up' : 'down'}`;
+  }
+  trend.title = `Vorwoche: ${before.toLocaleString('de-DE')}`;
+  tile.append(Object.assign(document.createElement('strong'), { textContent: value }), Object.assign(document.createElement('span'), { textContent: label }), trend);
+  return tile;
 }
 
 // --- Spiele ----------------------------------------------------------------
@@ -314,6 +376,50 @@ async function loadGames() {
     row.append(cell(detail.key), cell(number(detail.total)));
     return row;
   }));
+
+  csvData.levels = {
+    name: `level-${data.app}`,
+    header: ['Level', 'Versuche', 'Gewonnen', 'Verloren', 'Aufgegeben', 'Gewinnquote', 'Ø Sekunden', 'Ø Punkte', 'Bestwert', 'Ø Sterne'],
+    rows: data.levels.map((l) => [l.level, l.tries, l.wins, l.losses, l.aborts, l.win_rate, l.avg_seconds, l.avg_score, l.max_score, l.avg_stars]),
+  };
+  loadFunnel(data.app, data.days);
+}
+
+/** Spieler-Trichter: wie viele erreichen Level 1, 2, 3 … – der größte Einbruch ist markiert. */
+async function loadFunnel(app, days) {
+  const { ok, data } = await api('admin/funnel', { query: { app, days } });
+  const box = $('[data-funnel]');
+  if (!ok) return box.replaceChildren();
+  const steps = data.steps;
+  csvData.funnel = {
+    name: `trichter-${data.app}`,
+    header: ['Level', 'Spieler', 'Geschafft', 'Gewinnquote', 'Anteil vom ersten Level', 'Abbruch seit vorigem Level'],
+    rows: steps.map((s) => [s.level, s.players, s.winners, s.win_rate, s.of_first, s.drop]),
+  };
+  if (!steps.length) {
+    $('[data-funnel-hint]').textContent = 'Keine nummerierten Level in diesem Zeitraum (der Trichter passt zu Spielen mit Kampagne, z. B. Nova Bastion).';
+    return box.replaceChildren();
+  }
+  const worst = steps.slice(1).reduce((a, s) => (s.drop != null && s.drop > (a?.drop ?? -1) ? s : a), null);
+  $('[data-funnel-hint]').textContent = `Wie viele Spieler erreichen welches Level? Spieler mit Konto zählen einmal, Gäste einmal pro Besuch.${
+    worst && worst.drop > 0 ? ` Größter Einbruch vor Level ${worst.level}: ${percent(worst.drop)} der Spieler kommen dort nicht mehr an.` : ''}`;
+  const first = steps[0].players || 1;
+  box.replaceChildren(...steps.map((step) => {
+    const row = Object.assign(document.createElement('div'), { className: `funnel__row${step === worst ? ' funnel__row--worst' : ''}` });
+    const bar = Object.assign(document.createElement('div'), { className: 'funnel__bar' });
+    bar.style.width = `${Math.max(2, Math.round((step.players / first) * 100))}%`;
+    const won = Object.assign(document.createElement('div'), { className: 'funnel__won' });
+    won.style.width = `${step.players ? Math.round((step.winners / step.players) * 100) : 0}%`;
+    bar.append(won);
+    row.append(
+      Object.assign(document.createElement('span'), { className: 'funnel__label', textContent: `Level ${step.level}` }),
+      Object.assign(document.createElement('div'), { className: 'funnel__track' }),
+      Object.assign(document.createElement('span'), { className: 'funnel__value', textContent: `${number(step.players)} · ${percent(step.win_rate)} geschafft` }),
+    );
+    row.children[1].append(bar);
+    row.title = `Level ${step.level}: ${step.players} Spieler, ${step.winners} geschafft${step.drop != null ? `, ${percent(step.drop)} weniger als im Level davor` : ''}`;
+    return row;
+  }));
 }
 
 // --- Konten ----------------------------------------------------------------
@@ -366,11 +472,70 @@ async function loadUsers(page) {
     if (can('stats.view') && can('users.view')) {
       actions.append(button('Statistik', () => openUserStats(user)));
     }
+    if (can('users.manage') && !isSelf && !user.roles.includes('owner')) {
+      actions.append(button('Spielstände', () => openSaves(user)));
+    }
     row.append(actions);
     return row;
   }));
   pager('users', data.page, data.page * data.page_size < data.total, loadUsers);
+  csvData.users = {
+    name: 'konten',
+    header: ['Name', 'Status', 'Registriert', 'Zuletzt angemeldet', 'Zwei-Faktor', 'Spielzeit (Sekunden, 90 Tage)', 'Rollen'],
+    rows: data.users.map((u) => [u.display_name, u.status === 'locked' ? 'gesperrt' : u.email_verified ? 'aktiv' : 'unbestätigt', u.created_at, u.last_login_at, u.two_factor ? 'an' : 'aus', u.playtime_seconds ?? '', u.roles.join(', ')]),
+  };
 }
+
+// --- Spielstand-Hilfe ------------------------------------------------------
+
+async function openSaves(user) {
+  const { ok, data } = await api('admin/saves', { query: { id: user.id } });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-saves-name]').textContent = user.display_name;
+  const list = $('[data-saves-list]');
+  if (!data.games.length) {
+    list.replaceChildren(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Keine Spielstände im Konto gesichert.' }));
+  } else {
+    list.replaceChildren(...data.games.map((game) => {
+      const box = document.createElement('div');
+      box.append(
+        Object.assign(document.createElement('h3'), { textContent: game.name }),
+        Object.assign(document.createElement('p'), {
+          className: 'hint',
+          textContent: `Aktuell: ${formatDate(game.current.updated_at)} · ${number(Math.round(game.current.size / 1024))} KB${game.current.summary ? ` · ${game.current.summary}` : ''}`,
+        }),
+      );
+      const items = Object.assign(document.createElement('ul'), { className: 'sessions' });
+      items.append(...game.history.map((entry) => {
+        const item = Object.assign(document.createElement('li'), { className: 'sessions__item' });
+        const text = document.createElement('div');
+        text.append(
+          Object.assign(document.createElement('strong'), { textContent: `${formatDate(entry.saved_at)}${entry.reason === 'before_restore' ? ' (vor einer Wiederherstellung)' : ''}` }),
+          Object.assign(document.createElement('span'), { textContent: entry.summary ?? `${number(Math.round(entry.size / 1024))} KB` }),
+        );
+        item.append(text, button('Wiederherstellen', async () => {
+          const typed = window.prompt(`Spielstand vom ${formatDate(entry.saved_at)} für ${user.display_name} in ${game.name} wiederherstellen?\n\nDer aktuelle Stand bleibt im Verlauf erhalten. Zum Bestätigen WIEDERHERSTELLEN eintippen:`, '');
+          if (typed === null) return;
+          if (typed.trim().toUpperCase() !== 'WIEDERHERSTELLEN') return notify('Nicht bestätigt – nichts geändert.');
+          const result = await api('admin/saves/restore', { method: 'POST', body: { id: user.id, history_id: entry.id, confirm: 'WIEDERHERSTELLEN' } });
+          if (!result.ok) return notify(MESSAGES[result.data.error] ?? FALLBACK);
+          notify(`${game.name}: Spielstand von ${user.display_name} wiederhergestellt. Er gilt beim nächsten Start auf allen Geräten.`, 'success');
+          openSaves(user);
+        }, 'danger'));
+        return item;
+      }));
+      if (!game.history.length) items.append(Object.assign(document.createElement('li'), { className: 'hint', textContent: 'Noch kein älterer Stand im Verlauf.' }));
+      box.append(items);
+      return box;
+    }));
+  }
+  $('[data-saves-panel]').hidden = false;
+  $('[data-saves-panel]').scrollIntoView({ behavior: 'smooth' });
+}
+
+$('[data-saves-close]').addEventListener('click', () => {
+  $('[data-saves-panel]').hidden = true;
+});
 
 async function openUserStats(user) {
   const { ok, data } = await api('admin/users/stats', { query: { id: user.id } });
@@ -484,6 +649,11 @@ async function loadModeration() {
     row.append(empty);
     $('[data-mod-entries]').replaceChildren(row);
   }
+  csvData.leaderboard = {
+    name: `rangliste-${data.app}-${data.board}-${$('[data-mod-period]').value}`,
+    header: ['Name', 'Punkte', 'Erreicht', 'Status'],
+    rows: data.entries.map((e) => [e.display_name, e.score, e.achieved_at, e.hidden_at !== null ? 'ausgeblendet' : e.status === 'active' ? 'sichtbar' : 'Konto gesperrt']),
+  };
   loadLevels();
 }
 
@@ -718,5 +888,149 @@ async function loadAudit(page) {
   }));
   pager('audit', data.page, data.entries.length === data.page_size, loadAudit);
 }
+
+// --- Fehler aus den Spielen ------------------------------------------------
+
+for (const selector of ['[data-errors-game]', '[data-errors-days]', '[data-errors-open]']) {
+  $(selector).addEventListener('change', () => loadErrors());
+}
+
+async function loadErrors() {
+  const { ok, data } = await api('admin/errors', { query: { app: $('[data-errors-game]').value, days: $('[data-errors-days]').value } });
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  const select = $('[data-errors-game]');
+  if (select.options.length !== data.apps.length + 1) {
+    select.replaceChildren(new Option('Alle Spiele', ''), ...data.apps.map((app) => new Option(app.name, app.id)));
+    select.value = data.app;
+  }
+  const appName = (id) => data.apps.find((app) => app.id === id)?.name ?? id;
+  const onlyOpen = $('[data-errors-open]').checked;
+  const groups = data.groups.filter((g) => !onlyOpen || !g.resolved);
+  csvData.errors = {
+    name: 'fehler',
+    header: ['Meldung', 'Ort', 'Spiel', 'Anzahl', 'Zuerst', 'Zuletzt', 'Versionen', 'Browser', 'Erledigt'],
+    rows: groups.map((g) => [g.message, g.source, appName(g.app_id), g.count, g.first_seen, g.last_seen, g.versions, g.browsers, g.resolved ? 'ja' : 'nein']),
+  };
+  const rows = groups.flatMap((group) => {
+    const row = document.createElement('tr');
+    const what = document.createElement('td');
+    what.append(Object.assign(document.createElement('strong'), { textContent: group.message }));
+    if (group.source) what.append(document.createElement('br'), Object.assign(document.createElement('code'), { textContent: group.source }));
+    const details = Object.assign(document.createElement('tr'), { className: 'error-stack', hidden: true });
+    const stackCell = Object.assign(document.createElement('td'), { colSpan: 7 });
+    stackCell.append(Object.assign(document.createElement('pre'), { textContent: group.stack || 'Kein Aufrufpfad gemeldet.' }),
+      Object.assign(document.createElement('p'), { className: 'hint', textContent: `Zuerst am ${formatDate(group.first_seen)} aufgetreten.` }));
+    details.append(stackCell);
+    const actions = Object.assign(document.createElement('td'), { className: 'actions' });
+    actions.append(
+      button('Details', () => { details.hidden = !details.hidden; }),
+      button(group.resolved ? 'Wieder öffnen' : 'Erledigt', async () => {
+        const result = await api('admin/errors/resolve', { method: 'POST', body: { app_id: group.app_id, fingerprint: group.fingerprint, resolved: !group.resolved } });
+        if (!result.ok) return notify(MESSAGES[result.data.error] ?? FALLBACK);
+        loadErrors();
+      }, group.resolved ? 'secondary' : 'primary'),
+    );
+    row.append(what, cell(appName(group.app_id)), cell(number(group.count)), cell(formatDate(group.last_seen)), cell(group.versions || '–'), cell(group.browsers || '–'), actions);
+    if (group.resolved) row.className = 'row--resolved';
+    return [row, details];
+  });
+  if (!rows.length) {
+    const row = document.createElement('tr');
+    const empty = cell(onlyOpen ? 'Keine offenen Fehler in diesem Zeitraum. 🎉' : 'Keine Fehler in diesem Zeitraum.');
+    empty.colSpan = 7;
+    row.append(empty);
+    rows.push(row);
+  }
+  $('[data-errors]').replaceChildren(...rows);
+}
+
+// --- Technik ---------------------------------------------------------------
+
+const ENV_LABELS = { production: 'Live', staging: 'Test (Staging)', development: 'Entwicklung', test: 'Test' };
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
+}
+
+async function loadSystem() {
+  const { ok, data } = await api('admin/system');
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  const pending = data.pending_migrations.length;
+  const tiles = [
+    [ENV_LABELS[data.environment] ?? data.environment, 'Umgebung'],
+    [data.schema ?? '–', 'Datenbank-Stand'],
+    [pending ? `${pending} offen` : 'keine', 'ausstehende Migrationen'],
+    [number(data.last_24h.events), 'Spiel-Ereignisse 24 h'],
+    [number(data.last_24h.errors), 'Spielfehler 24 h'],
+    [number(data.last_24h.saves), 'gesicherte Spielstände 24 h'],
+    [number(data.last_24h.logins), 'Anmeldungen 24 h'],
+  ];
+  $('[data-system-tiles]').replaceChildren(...tiles.map(([value, label]) => {
+    const tile = Object.assign(document.createElement('div'), { className: 'stat stat--text' });
+    tile.append(Object.assign(document.createElement('strong'), { textContent: String(value) }), Object.assign(document.createElement('span'), { textContent: label }));
+    if (label === 'ausstehende Migrationen' && pending) tile.classList.add('stat--warn');
+    return tile;
+  }));
+  $('[data-system-apps]').replaceChildren(...data.apps.map((app) => {
+    const row = document.createElement('tr');
+    row.append(cell(app.name), cell(app.version || '–'), cell(STATUS_LABELS[app.status] ?? app.status), cell(VISIBILITY_LABELS[app.visibility] ?? app.visibility));
+    return row;
+  }));
+  const total = data.tables.reduce((sum, t) => sum + t.bytes, 0);
+  $('[data-system-db]').textContent = `${data.database} · PHP ${data.php} · zusammen ${formatBytes(total)} · Serverzeit ${formatDate(data.server_time)}`;
+  $('[data-system-tables]').replaceChildren(...data.tables.map((table) => {
+    const row = document.createElement('tr');
+    row.append(cell(table.name), cell(number(table.rows)), cell(formatBytes(table.bytes)));
+    return row;
+  }));
+  const build = typeof __ZENTRALE_BUILD__ === 'object' ? __ZENTRALE_BUILD__ : null;
+  $('[data-system-build]').textContent = build
+    ? `Gebaut am ${new Date(build.time).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })} aus dem Code-Stand ${build.commit}.`
+    : 'Keine Angaben zum Build.';
+}
+
+// --- Eigene Anmeldungen ----------------------------------------------------
+
+function describeAgent(agent) {
+  if (!agent) return 'Unbekanntes Gerät';
+  const browser = /Edg\//.test(agent) ? 'Edge' : /Firefox\//.test(agent) ? 'Firefox' : /SamsungBrowser/.test(agent) ? 'Samsung Internet' : /Chrome\/|CriOS\//.test(agent) ? 'Chrome' : /Safari\//.test(agent) ? 'Safari' : 'Browser';
+  const system = /Android/.test(agent) ? 'Android' : /iPhone|iPad/.test(agent) ? 'iPhone/iPad' : /Windows/.test(agent) ? 'Windows' : /Mac OS/.test(agent) ? 'Mac' : /Linux/.test(agent) ? 'Linux' : 'unbekanntes System';
+  return `${browser} auf ${system}`;
+}
+
+async function loadMySessions() {
+  const { ok, data } = await api('admin/sessions');
+  if (!ok) return notify(MESSAGES[data.error] ?? FALLBACK);
+  $('[data-my-sessions]').replaceChildren(...data.sessions.map((session) => {
+    const item = Object.assign(document.createElement('li'), { className: 'sessions__item' });
+    const text = document.createElement('div');
+    text.append(
+      Object.assign(document.createElement('strong'), {
+        textContent: `${session.admin ? 'Zentrale' : 'Webseite'} · ${describeAgent(session.user_agent)}${session.current ? ' (dieses Gerät)' : ''}`,
+      }),
+      Object.assign(document.createElement('span'), {
+        textContent: `angemeldet ${formatDate(session.created_at)} · zuletzt aktiv ${formatDate(session.last_seen_at)}${session.ip_prefix ? ` · Netz ${session.ip_prefix}` : ''}`,
+      }),
+    );
+    item.append(text);
+    if (!session.current) {
+      item.append(button('Beenden', async () => {
+        const result = await api('admin/sessions/revoke', { method: 'POST', body: { id: session.id } });
+        if (!result.ok) return notify(MESSAGES[result.data.error] ?? FALLBACK);
+        loadMySessions();
+      }, 'danger'));
+    }
+    return item;
+  }));
+}
+
+$('[data-sessions-others]').addEventListener('click', async () => {
+  if (!window.confirm('Alle anderen Anmeldungen beenden – auf der Webseite und in der Zentrale?')) return;
+  const result = await api('admin/sessions/revoke-others', { method: 'POST' });
+  notify(result.ok ? 'Alle anderen Anmeldungen sind beendet.' : MESSAGES[result.data.error] ?? FALLBACK, result.ok ? 'success' : 'error');
+  loadMySessions();
+});
 
 start();

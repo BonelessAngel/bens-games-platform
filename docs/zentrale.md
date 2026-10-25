@@ -52,3 +52,24 @@ Einzelrechte: `stats.view`, `users.view`, `users.view_email`, `users.manage`, `m
 `announcements.manage` (Reiter „Ankündigungen“; in der Rolle Admin enthalten),
 sowie pro App `app.<id>.beta` und `app.<id>.manage`. `roles.manage` hat nur der Besitzer.
 Niemand kann eigene Rechte ändern, und das Konto des Besitzers ist in der Zentrale nicht änderbar.
+
+## Bereiche (Stand Oktober 2026)
+
+| Reiter | Recht | Inhalt |
+|---|---|---|
+| Übersicht | `stats.view` | Kennzahlen der letzten 7 Tage mit Vergleich zur Vorwoche, Konten, Sicherheit, Spielstände |
+| Spiele | `stats.view` | Spielzeit, Besuche, **Spieler-Trichter** (wie viele erreichen Level 1, 2, 3 …), Level-Tabelle, Details |
+| Konten | `users.view` | Suche, Sperren, Rechte, Statistik; mit `users.manage` die **Spielstand-Hilfe** |
+| Fehler | `stats.view` | Fehlermeldungen aus den Spielen, gruppiert; „Erledigt“ gilt, bis der Fehler wieder auftritt |
+| Technik | `stats.view` | Umgebung, Datenbank-Stand, ausstehende Migrationen, Versionen der Apps, Tabellengrößen, Build der Zentrale |
+| Anmeldungen | alle | eigene Anmeldungen (Webseite und Zentrale) ansehen und beenden |
+
+Tabellen lassen sich als CSV (Semikolon, für Excel) herunterladen. Die Zentrale ist auch am Handy bedienbar.
+
+### Spielstand-Hilfe
+
+Vor jedem Überschreiben eines Spielstands bleibt der bisherige erhalten (`game_save_history`: höchstens alle 6 Stunden
+einer, bis zu 10 je Konto und Spiel, 30 Tage). In „Konten → Spielstände“ steht je Stand eine kurze Zusammenfassung
+(bei Nova Bastion: geschaffte Einsätze, Sterne, Kristalle, XP). Wiederherstellen verlangt die Eingabe `WIEDERHERSTELLEN`,
+sichert vorher den aktuellen Stand, gibt dem alten einen neuen Zeitstempel (damit ihn alle Geräte übernehmen) und landet
+im Protokoll. Nie beim eigenen Konto oder beim Besitzer.

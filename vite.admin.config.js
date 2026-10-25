@@ -25,6 +25,10 @@ export default defineConfig({
   root: 'admin-src',
   publicDir: false,
   plugins: [zentrale()],
+  // Für den Bereich „Technik“: wann und aus welchem Code-Stand diese Zentrale gebaut wurde.
+  define: {
+    __ZENTRALE_BUILD__: JSON.stringify({ time: new Date().toISOString(), commit: (process.env.GITHUB_SHA ?? 'lokal').slice(0, 7) }),
+  },
   build: {
     outDir: '../dist-admin',
     emptyOutDir: true,

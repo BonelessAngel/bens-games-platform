@@ -192,7 +192,45 @@ final class Admin
                  WHERE a.type = \'game\' GROUP BY a.id, a.name ORDER BY saves DESC, a.name'
             )->fetchAll(),
             'failed_logins_24h' => $this->count("SELECT COUNT(*) FROM audit_log WHERE action = 'user.login_failed' AND created_at >= ?", [$day]),
+            'errors_24h' => $this->count('SELECT COUNT(*) FROM client_errors WHERE created_at >= ?', [$day]),
+            'trends' => $this->stats->trends(),
         ]);
+    }
+
+    /** Spieler-Trichter eines Spiels. @param array<string, mixed> $session @param array<string, string> $query */
+    public function funnel(array $session, array $query): Response
+    {
+        $this->require($session, 'stats.view');
+        return $this->stats->funnel($query);
+    }
+
+    /**
+     * Spielstände eines Kontos mit Verlauf (Spielstand-Hilfe). Nur mit users.manage, nie für sich selbst oder den Besitzer.
+     * @param array<string, mixed> $session
+     * @param array<string, string> $query {id}
+     */
+    public function saves(array $session, array $query, SaveHistory $history): Response
+    {
+        $this->require($session, 'users.manage');
+        $target = $this->target($session, $query);
+        return new Response(200, ['user_id' => $target, 'games' => $history->overview($target)]);
+    }
+
+    /**
+     * Älteren Spielstand wiederherstellen – nur mit ausdrücklicher Bestätigung, immer im Protokoll.
+     * @param array<string, mixed> $session
+     * @param array<string, mixed> $input {id, history_id, confirm: "WIEDERHERSTELLEN"}
+     */
+    public function restoreSave(array $session, array $input, Request $request, SaveHistory $history): Response
+    {
+        $this->require($session, 'users.manage');
+        $target = $this->target($session, $input);
+        if (($input['confirm'] ?? null) !== 'WIEDERHERSTELLEN') {
+            throw new HttpError(422, 'confirmation_required');
+        }
+        $restored = $history->restore($target, (int) ($input['history_id'] ?? 0));
+        $this->audit->log('admin.save_restored', $request, actorUserId: (int) $session['id'], targetType: 'user', targetId: (string) $target, details: ['app' => $restored['app_id'], 'history' => (int) ($input['history_id'] ?? 0)]);
+        return new Response(200, ['status' => 'restored'] + $restored);
     }
 
     /**

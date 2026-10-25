@@ -95,7 +95,24 @@ Das Spiel kann `achievements.json` im Build-Ordner mitliefern (siehe `ranglisten
 `{ "stars30": { "name": "30 Sterne", "icon": "⭐" } }`. Dann zeigen „Mein Konto“ und das Spielerprofil schöne Abzeichen.
 Die Datei muss in `lib/games.js` der Plattform unter `files` stehen – das trägt der Plattform-Chat beim Einbinden ein.
 
-## 7. Prüfliste vor dem Tag
+## 7. Fehlermeldungen: `POST /api/errors`
+
+Unerwartete Fehler meldet das Spiel an die Zentrale (Reiter „Fehler“). Nur auf der Plattform (https, Pfad `/games/<id>/`),
+nicht wenn `navigator.globalPrivacyControl === true`, gleiche Fehler nur einmal und **höchstens 5 Meldungen pro Besuch**.
+
+```js
+fetch('/api/errors', {
+  method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ app: '<id>', message, source, line, col, stack }), // nichts weiter!
+}).catch(() => {});
+```
+
+Auslöser: `window.addEventListener('error', …)` und `window.addEventListener('unhandledrejection', …)`.
+Keine Konto-, Spielstand- oder Spielerdaten mitschicken. Der Server kürzt Adressen auf den Pfad, macht E-Mail-Adressen und
+lange Zahlen unkenntlich, ergänzt Spielversion und Browser-Familie und löscht nach 90 Tagen. Antwort `202`, bei zu vielen
+Meldungen `429` – beides still ignorieren. Vorbild: `platformError` in Nova Bastion (`Quelltext/17-plattform.js`).
+
+## 8. Prüfliste vor dem Tag
 
 - [ ] Spiel startet ohne Netz, ohne Konto und lokal ohne Fehler in der Konsole.
 - [ ] Knopf „← Bens Games“ nur auf der Plattform sichtbar, führt zu `/`.
