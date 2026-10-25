@@ -106,6 +106,9 @@ final class Api
                 return new Response(200, ['user' => $session === null ? null : Accounts::publicUser($session)]);
             }],
             'account/profile' => ['POST', true, fn (array $session): Response => $this->accounts()->updateProfile($session, $request->json(), $request)],
+            // Profil gestalten: Banner, Titel, angepinnte Abzeichen, Aktivitäts-Kalender (src/konto, Reiter Profil)
+            'account/profile-style' => ['GET', true, fn (array $session): Response => $this->profiles()->options($session)],
+            'account/profile-style/save' => ['POST', true, fn (array $session): Response => $this->profiles()->save($session, $request->json())],
             'account/password' => ['POST', true, fn (array $session): Response => $this->accounts()->changePassword($session, $request->json(), $request)],
             'account/sessions' => ['GET', true, fn (array $session): Response => $this->accounts()->listSessions($session)],
             'account/sessions/revoke' => ['POST', true, fn (array $session): Response => $this->accounts()->revokeSession($session, $request->json(), $request)],
@@ -287,7 +290,12 @@ final class Api
 
     private function community(): Community
     {
-        return new Community($this->pdo(), $this->leaderboards(), new Permissions($this->pdo()));
+        return new Community($this->pdo(), $this->leaderboards(), new Permissions($this->pdo()), $this->profiles());
+    }
+
+    private function profiles(): Profiles
+    {
+        return new Profiles($this->pdo(), $this->clock, $this->leaderboards());
     }
 
     /** Prüft ein Recht in der Zentrale (bricht sonst mit 403 ab). @param array<string, mixed> $session */

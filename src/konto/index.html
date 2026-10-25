@@ -71,6 +71,33 @@
             <button class="button" type="submit">Name speichern</button>
           </form>
         </section>
+
+        <section class="panel" aria-labelledby="titel-gestalten" data-style-panel hidden>
+          <h2 id="titel-gestalten">Profil gestalten</h2>
+          <p class="auth__lead">So sieht dein <a data-style-link href="/spieler/">öffentliches Profil</a> aus. Neue Banner und Titel schaltest du mit Erfolgen, Platzierungen und eigenen Leveln frei.</p>
+          <p class="notice" data-style-rank></p>
+
+          <p class="style-label">Banner</p>
+          <div class="banner-choices" data-style-banners></div>
+
+          <p class="style-label">Titel unter deinem Namen</p>
+          <div class="choice-chips" data-style-titles></div>
+
+          <p class="style-label">Lieblings-Abzeichen (bis zu 3)</p>
+          <div class="choice-chips" data-style-pins></div>
+          <p class="field__hint" data-style-pins-empty hidden>Sobald du in einem Spiel einen Erfolg schaffst, kannst du ihn hier anpinnen.</p>
+
+          <label class="checkbox style-label">
+            <input type="checkbox" data-style-activity>
+            <span>Aktivitäts-Kalender im Profil zeigen</span>
+          </label>
+          <p class="field__hint">Zeigt, an welchen Tagen der letzten drei Monate du gespielt hast, wie lange und dein Lieblingsspiel. Nur möglich, solange deine Spielstatistik deinem Konto zugeordnet ist.</p>
+
+          <div class="button-row">
+            <button class="button" type="button" data-style-save>Profil speichern</button>
+          </div>
+          <p data-notice="style" hidden></p>
+        </section>
       </div>
 
       <div data-group="spiele" role="tabpanel">

@@ -40,21 +40,52 @@
     </div>
 
     <div data-player-details hidden>
-      <section class="profile-card">
-        <span class="profile-card__avatar" data-player-avatar></span>
-        <div class="profile-card__text">
-          <h1 data-player-name></h1>
-          <p data-player-since></p>
+      <section class="player-hero" data-player-hero>
+        <div class="player-hero__main">
+          <span class="player-hero__avatar" data-player-avatar></span>
+          <div class="player-hero__text">
+            <p class="player-hero__title" data-player-title hidden></p>
+            <h1 data-player-name></h1>
+            <p class="player-hero__since" data-player-since></p>
+          </div>
+          <span class="player-hero__share" data-player-share></span>
         </div>
-        <span data-player-share></span>
+        <div class="player-rank" data-player-rank></div>
       </section>
 
       <p class="notice" data-player-own hidden>
-        Das ist dein öffentliches Profil. Profilbild und Namen änderst du unter <a href="/konto/">Mein Konto</a>,
-        dort kannst du dich auch aus den Ranglisten herausnehmen.
+        Das ist dein öffentliches Profil. Banner, Titel und Lieblings-Abzeichen wählst du unter
+        <a href="/konto/#profil">Mein Konto → Profil</a>, dort kannst du dich auch aus den Ranglisten herausnehmen.
       </p>
 
-      <div data-player-games></div>
+      <div class="player-stats" data-player-stats></div>
+
+      <section class="player-section" data-player-pins-box hidden>
+        <h2 class="section-title">Lieblings-Abzeichen</h2>
+        <div class="player-pins" data-player-pins></div>
+      </section>
+
+      <section class="player-section" data-player-records-box hidden>
+        <h2 class="section-title">Rekorde</h2>
+        <div class="record-cards" data-player-records></div>
+      </section>
+
+      <section class="player-section" data-player-badges-box hidden>
+        <h2 class="section-title">Abzeichen-Vitrine</h2>
+        <p class="hint">Seltene Abzeichen leuchten – die Prozentzahl zeigt, wie viele Spieler sie auch haben.</p>
+        <div data-player-badges></div>
+      </section>
+
+      <section class="player-section" data-player-activity-box hidden>
+        <h2 class="section-title">Aktivität</h2>
+        <div class="activity" data-player-activity></div>
+      </section>
+
+      <section class="player-section" data-player-levels-box hidden>
+        <h2 class="section-title">Eigene Community-Level</h2>
+        <div class="level-cards" data-player-levels></div>
+      </section>
+
       <p class="empty" data-player-empty hidden>Noch keine Ergebnisse in den Ranglisten.</p>
     </div>
   </main>
