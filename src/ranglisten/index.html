@@ -31,30 +31,46 @@
       <h1>Ranglisten</h1>
       <span data-rank-share></span>
     </div>
-    <p class="auth__lead">Die besten Ergebnisse – diese Woche und insgesamt. Mit Konto erscheinst du hier automatisch.</p>
 
+    <!-- 1. Spiel wählen -->
     <div class="game-tabs" data-rank-games role="tablist" aria-label="Spiel"></div>
 
-    <div class="ranks__toolbar">
-      <div class="chips" data-rank-boards role="tablist" aria-label="Rangliste"></div>
-      <div class="segmented" role="group" aria-label="Zeitraum">
-        <button type="button" data-rank-period="week" aria-pressed="true">Diese Woche</button>
-        <button type="button" data-rank-period="all" aria-pressed="false">Gesamt</button>
+    <!-- Kopf des gewählten Spiels mit Rekord aller Zeiten -->
+    <section class="rank-hero" data-rank-hero hidden>
+      <img class="rank-hero__icon" data-rank-hero-icon src="/favicon.svg" alt="" width="64" height="64">
+      <div class="rank-hero__text">
+        <span class="rank-hero__label">Rangliste</span>
+        <strong class="rank-hero__title" data-rank-hero-title></strong>
+        <span class="rank-hero__record" data-rank-record></span>
       </div>
+      <a class="button button--small rank-hero__play" data-rank-play href="/">▶ Spielen</a>
+    </section>
+
+    <!-- 2. Modus (Hauptmodus zuerst), Level als Auswahl -->
+    <div class="ranks__toolbar">
+      <div class="chips" data-rank-boards role="tablist" aria-label="Modus"></div>
+      <label class="rank-level" data-rank-level-box hidden>
+        <span>Level</span>
+        <select data-rank-level></select>
+      </label>
     </div>
 
-    <div class="record" data-rank-record hidden></div>
+    <!-- 3. Zeitraum mit Countdown -->
+    <div class="rank-period">
+      <div class="segmented" role="group" aria-label="Zeitraum">
+        <button type="button" data-rank-period="week" aria-pressed="true">Diese Woche</button>
+        <button type="button" data-rank-period="all" aria-pressed="false">Allzeit</button>
+      </div>
+      <span class="rank-period__info" data-rank-countdown></span>
+    </div>
 
     <div class="podium" data-rank-podium hidden></div>
 
     <ol class="ranks__list" data-rank-list></ol>
     <p class="empty" data-rank-empty hidden></p>
 
-    <ol class="ranks__list ranks__pinned" data-rank-me hidden></ol>
-
-    <p class="intro__small ranks__hint" data-rank-hint hidden>
-      Du willst hier auch erscheinen? <a href="/konto/registrieren/">Konto erstellen</a> oder <a href="/konto/anmelden/">anmelden</a> und losspielen.
-    </p>
+    <!-- Eigene Position: immer sichtbar -->
+    <aside class="rank-me" data-rank-me hidden></aside>
   </main>
 
   <footer class="site-footer">

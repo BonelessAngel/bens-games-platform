@@ -28,6 +28,14 @@ final class Leaderboards
         return gmdate('o-\WW', $this->clock->now());
     }
 
+    /** Ende der laufenden Wochen-Rangliste: nächster Montag 00:00 UTC (für den Countdown) */
+    public function weekEnds(): string
+    {
+        $now = $this->clock->now();
+        $days = 8 - (int) gmdate('N', $now);
+        return gmdate('Y-m-d\TH:i:s\Z', gmmktime(0, 0, 0, (int) gmdate('n', $now), (int) gmdate('j', $now) + $days, (int) gmdate('Y', $now)));
+    }
+
     /**
      * Punkte melden. Gespeichert wird nur, wenn es ein neuer Bestwert ist.
      * @param array<string, mixed> $session
@@ -109,20 +117,33 @@ final class Leaderboards
             'board' => $board,
             'period' => $period === 'all' ? 'all' : 'week',
             'week' => $this->currentWeek(),
+            'week_ends' => $this->weekEnds(),
             'page' => $page,
             'entries' => $entries,
             'record' => $board === '' ? null : $this->record($appId, $board),
-            'me' => $me === null || $board === '' ? null : $this->rankOf($appId, $board, $period, $me),
+            'total' => $board === '' ? 0 : $this->total($appId, $board, $period),
+            'me' => $me === null || $board === '' ? null : $this->rankOf($appId, $board, $period, $me) + $this->ahead($appId, $board, $period, $me),
         ]);
     }
 
-    /** @return list<string> Ranglisten eines Spiels, natürlich sortiert */
+    /** Hauptmodi stehen vorne (und sind die Standard-Rangliste), Archiv-Listen hinten. */
+    private const PRIMARY_BOARDS = ['standard', 'normal', 'endlos'];
+    private const ARCHIVE_BOARDS = ['klassisch'];
+
+    /** @return list<string> Ranglisten eines Spiels: Hauptmodus zuerst, dann natürlich sortiert, Archiv zuletzt */
     public function boards(string $appId): array
     {
         $statement = $this->pdo->prepare("SELECT DISTINCT board FROM leaderboard_entries WHERE app_id = ? AND period = 'all'");
         $statement->execute([$appId]);
         $boards = $statement->fetchAll(PDO::FETCH_COLUMN);
-        usort($boards, 'strnatcmp');
+        $weight = static function (string $board): int {
+            $primary = array_search($board, self::PRIMARY_BOARDS, true);
+            if ($primary !== false) {
+                return $primary;
+            }
+            return in_array($board, self::ARCHIVE_BOARDS, true) ? 100 : 10;
+        };
+        usort($boards, static fn (string $a, string $b): int => ($weight($a) <=> $weight($b)) ?: strnatcmp($a, $b));
         return $boards;
     }
 
@@ -212,6 +233,34 @@ final class Leaderboards
         );
         $better->execute([$appId, $board, $period, $row['score'], $row['score'], $row['achieved_at'], $row['achieved_at'], $row['id']]);
         return ['rank' => (int) $better->fetchColumn() + 1, 'score' => (int) $row['score']];
+    }
+
+    /** Wie viele Spieler in dieser Rangliste stehen */
+    private function total(string $appId, string $board, string $period): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM leaderboard_entries l JOIN users u ON u.id = l.user_id
+             WHERE ' . self::VISIBLE . ' AND l.app_id = ? AND l.board = ? AND l.period = ?'
+        );
+        $statement->execute([$appId, $board, $period]);
+        return (int) $statement->fetchColumn();
+    }
+
+    /** Punkte bis zum nächsten besseren Platz (null, wenn man vorne steht oder keinen Eintrag hat) @return array{ahead: int|null} */
+    private function ahead(string $appId, string $board, string $period, int $userId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT MIN(l.score) FROM leaderboard_entries l JOIN users u ON u.id = l.user_id
+             WHERE ' . self::VISIBLE . ' AND l.app_id = ? AND l.board = ? AND l.period = ? AND l.user_id <> ?
+               AND l.score > (SELECT o.score FROM leaderboard_entries o WHERE o.app_id = ? AND o.board = ? AND o.period = ? AND o.user_id = ?)'
+        );
+        $statement->execute([$appId, $board, $period, $userId, $appId, $board, $period, $userId]);
+        $next = $statement->fetchColumn();
+        if ($next === null || $next === false) {
+            return ['ahead' => null];
+        }
+        $own = $this->rankOf($appId, $board, $period, $userId)['score'];
+        return ['ahead' => $own === null ? null : (int) $next - $own + 1];
     }
 
     private function exists(int $id): bool
