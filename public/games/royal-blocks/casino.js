@@ -2,14 +2,17 @@
 // Reine Rechenregeln ohne Anzeige. Bezahlt wird nur mit Chips aus dem Spiel, nie mit echtem Geld.
 // Alle Gewinnchancen stehen hier und werden im Spiel genau so angezeigt.
 
-import { ALL_ITEMS, CHARMS, RARITY } from './shop.js';
+import { ALL_ITEMS, COLLECTION, RARITY, isLimited } from './shop.js';
 
 // ---------- Truhen ----------
 export const CHESTS = {
   bronze: { name: 'Bronze-Truhe', price: 400, odds: { common: 0.7, rare: 0.25, epic: 0.05 } },
   silver: { name: 'Silber-Truhe', price: 1200, odds: { rare: 0.6, epic: 0.32, legendary: 0.08 } },
   gold: { name: 'Gold-Truhe', price: 3000, odds: { epic: 0.75, legendary: 0.25 } },
+  // Erscheint erst, wenn die ganze feste Sammlung komplett ist (prestigeOpen); enthält nur Mythisches
+  prestige: { name: 'Prestige-Truhe', price: 8000, odds: { mythic: 1 } },
 };
+export const prestigeOpen = (owned) => COLLECTION.every((item) => owned.has(item.id));
 
 export function rollRarity(odds, rand) {
   let roll = rand();
@@ -21,8 +24,8 @@ export function rollRarity(odds, rand) {
   return entries[entries.length - 1][0];
 }
 
-// Alles, was aus Truhen kommen kann: keine Gratis-Sachen, keine Set-Boni, keine Extras
-export const dropPool = (rarity) => ALL_ITEMS.filter((item) => item.rarity === rarity && !item.bonus && item.kind !== 'extras');
+// Alles, was aus Truhen kommen kann: keine Gratis-Sachen, keine Set-Boni, keine Extras, nichts zeitlich Begrenztes
+export const dropPool = (rarity) => ALL_ITEMS.filter((item) => item.rarity === rarity && !item.bonus && item.kind !== 'extras' && !isLimited(item));
 
 // Ergebnis einer Truhe. Doppelte Sachen werden zu Chips (Wert je Seltenheit).
 export function openChestRoll(type, owned, rand) {
@@ -112,7 +115,15 @@ export const SLOT_SYMBOLS = [
 ];
 const SLOT_TOTAL = SLOT_SYMBOLS.reduce((sum, s) => sum + s.weight, 0);
 export const SLOT_BETS = [10, 25, 50];
-export const SLOT_DAILY_SPINS = 20;
+// Unbegrenzt drehen: die ersten 20 Drehs am Tag kosten genau den Einsatz, danach alle 10 Drehs 50 % mehr.
+// Gewinne richten sich immer nach dem Einsatz – Vieldrehen lohnt sich also immer weniger.
+export const SLOT_CHEAP_SPINS = 20;
+export const SLOT_STEP_SPINS = 10;
+export const SLOT_STEP_RAISE = 0.5;
+export function slotPrice(bet, spinsToday) {
+  const steps = spinsToday < SLOT_CHEAP_SPINS ? 0 : 1 + Math.floor((spinsToday - SLOT_CHEAP_SPINS) / SLOT_STEP_SPINS);
+  return Math.round(bet * (1 + SLOT_STEP_RAISE * steps));
+}
 export const SLOT_PAYS = { crown: 'jackpot', seven: 50, bell: 20, spade: 8, heart: 8, cherry: 5 };
 export const SLOT_TWO_CHERRIES = 2;
 // Hauptgewinn: ein legendärer Gegenstand – wenn man schon alle hat, 200× Einsatz
@@ -168,7 +179,7 @@ export function casinoDay(casino, today) {
 
 // ---------- Glücksbringer ----------
 export function charmBonus(charmId) {
-  return CHARMS.find((c) => c.id === charmId)?.bonus_chips ?? 0;
+  return ALL_ITEMS.find((c) => c.kind === 'charms' && c.id === charmId)?.bonus_chips ?? 0;
 }
 export function withCharm(chips, charmId) {
   return chips > 0 ? Math.round(chips * (1 + charmBonus(charmId))) : chips;

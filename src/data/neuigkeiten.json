@@ -1,6 +1,19 @@
 [
   {
     "app": "royal-blocks",
+    "version": "1.8",
+    "date": "2026-10-28",
+    "title": "Halloween im Casino 🎃",
+    "points": [
+      "Halloween-Skins nur bis 10. November: Kürbisnacht, Kürbis-Kacheln, Spinnennetz und mehr",
+      "Danach jeden Montag ein neuer Wochen-Artikel",
+      "Prestige-Truhe mit goldenen Sachen für alle, die schon alles haben",
+      "30 neue Erfolge in Bronze, Silber und Gold – mit Chips als Belohnung",
+      "Der Spielautomat läuft jetzt unbegrenzt"
+    ]
+  },
+  {
+    "app": "royal-blocks",
     "version": "1.7",
     "date": "2026-10-27",
     "title": "Casino-Shop, Normal & Hart",

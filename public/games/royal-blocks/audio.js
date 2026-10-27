@@ -144,6 +144,24 @@ const JINGLES = {
   },
   'jingle-harp': () => [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24].forEach((s, k) =>
     rawTone(n(s), { start: k * 0.035, dur: 0.6, type: 'sine', vol: 0.12 })),
+  // Gruselorgel: düsterer Moll-Lauf abwärts mit tiefem Grundton
+  'jingle-spooky': () => {
+    [12, 11, 8, 7, 3, 0].forEach((s, k) => rawTone(n(s - 12), { start: k * 0.11, dur: 0.3, type: 'sawtooth', vol: 0.08 }));
+    rawTone(n(-24), { start: 0.5, dur: 1.1, type: 'sawtooth', vol: 0.1 });
+    rawTone(n(-21), { start: 0.5, dur: 1.1, type: 'triangle', vol: 0.12 });
+  },
+  // Schlittenglocken: helles Klingeln und eine kleine Melodie
+  'jingle-bells': () => {
+    for (let k = 0; k < 10; k++) rawTone(n(31 + (k % 3)), { start: k * 0.045, dur: 0.08, type: 'triangle', vol: 0.08 });
+    [4, 4, 4, 4, 4, 4, 4, 7, 0, 2, 4].forEach((s, k) => rawTone(n(s + 12), { start: 0.12 + k * 0.09, dur: 0.14, type: 'triangle', vol: 0.16 }));
+  },
+  // Königsfanfare: große Fanfare mit Pauke
+  'jingle-midas': () => {
+    rawTone(n(-24), { dur: 0.6, type: 'sine', vol: 0.5, slide: 0.7 });
+    [[0, 0], [0, 0.1], [7, 0.2], [12, 0.38], [16, 0.5], [19, 0.62]].forEach(([s, at], k) =>
+      rawTone(n(s), { start: at, dur: k === 5 ? 0.9 : 0.14, type: 'sawtooth', vol: 0.12 }));
+    [0, 4, 7].forEach((s) => rawTone(n(s + 12), { start: 0.62, dur: 1, type: 'triangle', vol: 0.12 }));
+  },
   'jingle-orchestra': () => {
     [[-12, 0], [-5, 0], [0, 0], [4, 0]].forEach(([s]) => rawTone(n(s), { dur: 1.2, type: 'triangle', vol: 0.14 }));
     [[7, 0.3], [12, 0.45], [16, 0.6]].forEach(([s, at]) => rawTone(n(s), { start: at, dur: 0.9, type: 'sine', vol: 0.2 }));
