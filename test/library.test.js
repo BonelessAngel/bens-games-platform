@@ -60,9 +60,16 @@ test('Bibliothek trennt Spiele und Apps und zeigt Hinweise', () => {
   ]);
   assert.match(html, /<h2 id="spiele"[^>]*>Spiele<\/h2>\s*<ul class="grid"><li class="card-item"><a class="card" href="\/games\/demo\/"/);
   assert.match(html, /<h2 id="apps"[^>]*>Apps<\/h2>\s*<ul class="grid"><li class="card-item"><a class="card" href="\/apps\/notizen\/"/);
-  assert.match(html, /<a class="card__more" href="\/spiele\/demo\/"/, 'Spiele verlinken ihre Spiel-Seite');
+  assert.doesNotMatch(html, /card__play/, 'ohne Info-Seite führt die Karte direkt ins Spiel');
   assert.doesNotMatch(html, /\/spiele\/notizen\//, 'Apps haben keine Spiel-Seite');
   assert.match(html, /badge--beta/);
+});
+
+test('Spiele mit Info-Seite: Karte führt zur Info-Seite, kleiner Knopf startet direkt', () => {
+  const html = renderLibrary([app()], { pages: ['demo'] });
+  assert.match(html, /<a class="card" href="\/spiele\/demo\/">/);
+  assert.match(html, /<a class="card__play" href="\/games\/demo\/"/);
+  assert.doesNotMatch(renderLibrary([app({ type: 'tool', path: '/apps/demo/' })], { pages: ['demo'] }), /card__play/, 'nur Spiele');
 });
 
 test('vom Server gefilterte Listen werden nicht noch einmal gefiltert', () => {

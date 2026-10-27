@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { imageFor, routeOf, seoTags, sitemapRoutes, sitemapXml } from '../lib/seo.js';
-import { formatDay, renderGamePage, renderNews, validateGameContent } from '../lib/game-pages.js';
+import { formatDay, patchNotes, renderGamePage, renderNews, validateGameContent } from '../lib/game-pages.js';
 
 const read = (path) => JSON.parse(readFileSync(new URL(`../src/data/${path}`, import.meta.url), 'utf8'));
 const apps = read('apps.json');
@@ -69,4 +69,16 @@ test('Was ist neu: neueste zuerst, höchstens so viele wie gewünscht, Fehler we
   assert.ok(validateGameContent(apps, info, broken).length >= 2);
   const order = [{ ...news[0], date: '2026-01-01' }, { ...news[0], date: '2026-02-01' }];
   assert.match(validateGameContent(apps, info, order).join(), /neueste Einträge zuerst/);
+});
+
+test('Patchnotes für die Spiele: je Spiel die neuesten Einträge, reinstall als true/false', () => {
+  const notes = patchNotes(news, apps);
+  for (const [id, list] of Object.entries(notes)) {
+    assert.ok(games.some((g) => g.id === id));
+    assert.ok(list.length >= 1 && list.length <= 5);
+    assert.ok(list.every((n) => typeof n.reinstall === 'boolean' && n.title && n.points.length));
+    assert.equal(list[0].version, news.find((n) => n.app === id).version, 'neueste zuerst');
+  }
+  const extra = [{ app: games[0].id, version: '9.9', date: '2030-01-01', title: 'x', points: ['y'], reinstall: 'ja' }, ...news];
+  assert.ok(validateGameContent(apps, info, extra).some((e) => e.includes('reinstall')));
 });

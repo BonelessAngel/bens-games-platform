@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ruhmeshalle – Bens Games</title>
+  <meta name="description" content="Die Wochensiegerinnen und Wochensieger aller Ranglisten von Bens Games.">
+  <meta name="color-scheme" content="dark light">
+  <!-- HEAD -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+  <!-- ENV_BANNER -->
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="/">
+        <img class="brand__logo" src="/favicon.svg" alt="" width="28" height="28">
+        <span>Bens Games</span>
+      </a>
+      <nav aria-label="Hauptnavigation">
+        <a href="/">Bibliothek</a>
+        <a href="/ranglisten/">Ranglisten</a>
+        <!-- ACCOUNT_NAV -->
+      </nav>
+    </div>
+  </header>
+
+  <main class="container hall" data-hall>
+    <div class="ranks__head">
+      <h1>🏆 Ruhmeshalle</h1>
+      <a class="button button--small" href="/ranglisten/">Zu den Ranglisten</a>
+    </div>
+    <p class="auth__lead">Jeden Montag werden die Besten der letzten Woche hier verewigt – mit Pokal im Profil. Wer Platz 1 holt, bekommt den Titel „Wochensieger“.</p>
+    <div class="hall__weeks" data-hall-weeks></div>
+    <p class="empty" data-hall-empty hidden>Noch keine abgeschlossene Woche – am Montag stehen hier die ersten Siegerinnen und Sieger.</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <span>© <!-- YEAR --> Bens Games</span>
+      <nav aria-label="Rechtliches">
+        <a href="/impressum/">Impressum</a>
+        <a href="/datenschutz/">Datenschutz</a>
+      </nav>
+    </div>
+  </footer>
+  <script type="module" src="../scripts/halloffame.js"></script>
+</body>
+</html>

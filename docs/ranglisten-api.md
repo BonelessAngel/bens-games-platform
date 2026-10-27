@@ -37,7 +37,11 @@ Pro Rangliste zählt der **höchste** Wert (mehr Punkte = besser).
   "me": { "rank": 4, "score": 12500 } }
 ```
 
-50 Einträge pro Seite. `me` nur mit Anmeldung.
+50 Einträge pro Seite. `me` nur mit Anmeldung, mit `ahead` = Punkte bis zum nächsten besseren Platz (`null` auf Platz 1).
+Außerdem: `total` (Spieler in dieser Liste), `week_ends` (Ende der Wochenliste, nächster Montag 00:00 UTC) und `record`.
+
+Reihenfolge von `boards`: Hauptmodus zuerst (`standard`, `normal`, `endlos`), dann natürlich sortiert, Archiv (`klassisch`)
+zuletzt. Ohne `board` gilt die erste Liste. Spiele sollten ihren Hauptmodus deshalb `standard`, `normal` oder `endlos` nennen.
 
 ## Empfehlungen
 

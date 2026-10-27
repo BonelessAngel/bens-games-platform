@@ -47,7 +47,10 @@ final class Api
         // [Methode, braucht Anmeldung, Handler] – Routen der Webseite (bens-games.de)
         $siteRoutes = [
             'games/{id}/save' => ['GET', true, fn (array $session): Response => $this->gameSaves()->get($session, $gameId)],
-            'games/{id}/save/put' => ['POST', true, fn (array $session): Response => $this->gameSaves()->put($session, $gameId, $request->json())],
+            'games/{id}/save/put' => ['POST', true, fn (array $session): Response => $this->tracked(
+                $this->gameSaves()->put($session, $gameId, $request->json()),
+                fn (Response $r) => $this->activity()->achievements((int) $session['id'], $gameId, (int) ($r->body['achievements_added'] ?? 0), empty($session['leaderboard_opt_out'])),
+            )],
             'games/{id}/save/delete' => ['POST', true, fn (array $session): Response => $this->gameSaves()->delete($session, $gameId, $request)],
             'account/games' => ['GET', true, fn (array $session): Response => $this->gameSaves()->overview($session)],
             // Spielstatistik: Gäste anonym, Angemeldete mit Konto (außer bei Widerspruch). Kein CSRF-Token nötig,
@@ -64,7 +67,14 @@ final class Api
             'account/leaderboard/settings' => ['POST', true, fn (array $session): Response => $this->leaderboardSettings($session, $request)],
             // Ranglisten: lesen öffentlich (mit Anmeldung zusätzlich der eigene Platz), melden nur angemeldet mit CSRF-Token.
             'games/{id}/leaderboard' => ['GET', false, fn (): Response => $this->leaderboards()->show($gameId, $request->query, $this->sessions()->current($request))],
-            'games/{id}/scores' => ['POST', true, fn (array $session): Response => $this->leaderboards()->submit($session, $gameId, $request->json())],
+            'games/{id}/scores' => ['POST', true, fn (array $session): Response => $this->tracked(
+                $this->leaderboards()->submit($session, $gameId, $request->json()),
+                fn () => $this->activity()->scored((int) $session['id'], $gameId, (string) $request->json()['board'], (int) $request->json()['score'], empty($session['leaderboard_opt_out'])),
+            )],
+            // Tägliche Aufgaben (angemeldet), Ticker und Ruhmeshalle (öffentlich)
+            'account/daily' => ['GET', true, fn (array $session): Response => $this->activity()->daily($session)],
+            'feed' => ['GET', false, fn (): Response => $this->activity()->feedList()],
+            'halloffame' => ['GET', false, fn (): Response => $this->activity()->hall($request->query)],
             // Community (Phase 6): Ankündigungen, Weiterspielen, öffentliche Spielerprofile.
             'announcements' => ['GET', false, fn (): Response => $this->announcements()->active(
                 preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', (string) ($request->query['app'] ?? '')) === 1 ? (string) $request->query['app'] : null,
@@ -75,7 +85,10 @@ final class Api
             // Community-Level (docs/community-level-api.md): spielen für alle, hochladen/Daumen/löschen mit Konto.
             'games/{id}/levels' => ['GET', false, fn (): Response => $this->levels()->list($gameId, $this->sessions()->current($request))],
             'games/{id}/levels/get' => ['GET', false, fn (): Response => $this->levels()->get($gameId, $request->query)],
-            'games/{id}/levels/upload' => ['POST', true, fn (array $session): Response => $this->levels()->upload($session, $gameId, $request->json(), $request)],
+            'games/{id}/levels/upload' => ['POST', true, fn (array $session): Response => $this->tracked(
+                $this->levels()->upload($session, $gameId, $request->json(), $request),
+                fn () => $this->activity()->levelPublished((int) $session['id'], $gameId, (string) ($request->json()['level']['name'] ?? $request->json()['name'] ?? 'Neues Level'), empty($session['leaderboard_opt_out'])),
+            )],
             'games/{id}/levels/like' => ['POST', true, fn (array $session): Response => $this->levels()->like($session, $gameId, $request->json())],
             'games/{id}/levels/delete' => ['POST', true, fn (array $session): Response => $this->levels()->delete($session, $gameId, $request->json(), $request)],
             // Ergebnis auch ohne Konto (wie die Spielstatistik: Herkunftsprüfung statt CSRF-Token).
@@ -334,6 +347,27 @@ final class Api
     {
         $pdo = $this->pdo();
         return new GameStats($pdo, $this->clock, new RateLimiter($pdo, $this->clock));
+    }
+
+    private function activity(): Activity
+    {
+        return new Activity($this->pdo(), $this->clock);
+    }
+
+    /**
+     * Nach einer erfolgreichen Aktion zusätzlich für Aufgaben/Ticker mitzählen.
+     * Ein Fehler dabei darf die eigentliche Aktion nie scheitern lassen.
+     */
+    private function tracked(Response $response, callable $track): Response
+    {
+        if ($response->status === 200) {
+            try {
+                $track($response);
+            } catch (\Throwable $error) {
+                error_log('Aktivität nicht erfasst: ' . $error->getMessage());
+            }
+        }
+        return $response;
     }
 
     private function leaderboards(): Leaderboards

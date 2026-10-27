@@ -89,6 +89,22 @@ Wenn der Service Worker eine neue Version gefunden hat (`registration.onupdatefo
 während schon einer aktiv ist), einen Hinweis zeigen: „Neue Version verfügbar – Neu laden“. Beim Klick den neuen Worker
 aktivieren (`postMessage({ type: 'SKIP_WAITING' })` o. Ä.) und neu laden. Nie mitten in einer Runde automatisch neu laden.
 
+### Patchnotes nach einem Update
+
+Die Webseite veröffentlicht die „Was ist neu?“-Einträge (`src/data/neuigkeiten.json`) für die Spiele unter
+`GET /neuigkeiten.json` (statische Datei, gleiche Herkunft, mit `cache: 'no-store'` abrufen):
+
+```json
+{ "royal-blocks": [ { "version": "1.8", "date": "2026-10-27", "title": "…", "points": ["…"], "reinstall": false } ] }
+```
+
+Nach einem Update (eigene Version weicht von der zuletzt gesehenen ab) zeigt das Spiel **einmal** den Eintrag, dessen
+`version` zur eigenen Version passt (1.8 passt zu 1.8.0 und 1.8.2), mit Titel und Punkten. Beim allerersten Start
+nichts zeigen. Ist `reinstall: true` und läuft das Spiel als installierte App (`display-mode: standalone` bzw.
+`navigator.standalone`), zusätzlich: „Bitte entferne das Spiel vom Home-Bildschirm und füge es neu hinzu“.
+`"reinstall": true` in `neuigkeiten.json` nur setzen, wenn sich Symbol, Name oder Startadresse geändert haben.
+Texte immer mit `textContent` anzeigen.
+
 ## 6. Erfolge mit Namen
 
 Das Spiel kann `achievements.json` im Build-Ordner mitliefern (siehe `ranglisten-api.md`), z. B.

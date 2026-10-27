@@ -61,13 +61,35 @@ dbTest('Neue Woche: „diese Woche“ startet leer, „gesamt“ bleibt; alte Wo
     same(1, (int) $app->pdo->query("SELECT COUNT(*) FROM leaderboard_entries WHERE period = 'all'")->fetchColumn());
 });
 
-dbTest('Ranglisten werden natürlich sortiert aufgelistet', function (): void {
+dbTest('Ranglisten: Hauptmodus zuerst, dann natürlich sortiert, Archiv zuletzt', function (): void {
     $app = new TestApp();
     $anna = $app->signedIn('anna@example.org', 'ein sicheres Passwort', 'Anna');
     foreach (['10', '2', '1', 'endlos'] as $level) {
         $app->postAs($anna, 'games/nova-bastion/scores', ['board' => $level, 'score' => 1]);
     }
-    same(['1', '2', '10', 'endlos'], board($app)->body['boards']);
+    same(['endlos', '1', '2', '10'], board($app)->body['boards']);
+    same('endlos', board($app)->body['board'], 'ohne Auswahl der Hauptmodus');
+    foreach (['klassisch', 'taeglich', 'profi', 'standard'] as $mode) {
+        $app->postAs($anna, 'games/royal-blocks/scores', ['board' => $mode, 'score' => 1]);
+    }
+    same(['standard', 'profi', 'taeglich', 'klassisch'], board($app, [], [], 'royal-blocks')->body['boards']);
+});
+
+dbTest('Eigene Position: Gesamtzahl, Abstand zum nächsten Platz, Wochenende', function (): void {
+    $app = new TestApp();
+    $anna = $app->signedIn('anna@example.org', 'ein sicheres Passwort', 'Anna');
+    $max = $app->signedIn('max@example.org', 'ein sicheres Passwort', 'Max');
+    $lea = $app->signedIn('lea@example.org', 'ein sicheres Passwort', 'Lea');
+    $app->postAs($anna, 'games/nova-bastion/scores', ['board' => '1', 'score' => 900]);
+    $app->postAs($max, 'games/nova-bastion/scores', ['board' => '1', 'score' => 700]);
+    $app->postAs($lea, 'games/nova-bastion/scores', ['board' => '1', 'score' => 500]);
+    $list = board($app, ['board' => '1'], $lea['cookies']);
+    same(3, $list->body['total']);
+    same(3, $list->body['me']['rank']);
+    same(201, $list->body['me']['ahead'], '201 Punkte bis Platz 2');
+    same(null, board($app, ['board' => '1'], $anna['cookies'])->body['me']['ahead'], 'Platz 1 hat niemanden vor sich');
+    check((bool) preg_match('/^\d{4}-\d{2}-\d{2}T00:00:00Z$/', $list->body['week_ends']), 'Wochenende als Zeitpunkt');
+    same('1', gmdate('N', strtotime($list->body['week_ends'])), 'die neue Woche beginnt montags');
 });
 
 dbTest('Widerspruch, gesperrte Konten und gelöschte Konten erscheinen nicht', function (): void {

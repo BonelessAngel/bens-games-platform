@@ -28,8 +28,11 @@ final class Cleanup
     {
         $days = fn (int $n): string => $this->clock->datetime(-$n * 86400);
         $now = $this->clock->datetime();
+        // Ruhmeshalle: abgelaufene Wochen sichern, bevor alte Wochenranglisten gelöscht werden
+        $activity = new Activity($this->pdo, $this->clock);
+        $hall = $activity->archiveWeeks(gmdate('o-\WW', $this->clock->now()));
 
-        return [
+        return $activity->cleanup() + ['hall_weeks_archived' => $hall] + [
             'audit_log' => $this->delete('DELETE FROM audit_log WHERE created_at < ?', [$days(self::AUDIT_DAYS)]),
             'game_events' => $this->delete('DELETE FROM game_events WHERE created_at < ?', [$days(self::GAME_EVENT_DAYS)]),
             'client_errors' => $this->delete('DELETE FROM client_errors WHERE created_at < ?', [$days(ClientErrors::KEEP_DAYS)]),

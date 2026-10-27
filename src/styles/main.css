@@ -1577,24 +1577,25 @@ a.podium__name:hover {
   position: relative;
 }
 
-.card__more {
+/* Kleiner „Spielen“-Knopf: startet direkt, die Karte selbst führt zur Info-Seite */
+.card__play {
   position: absolute;
   top: 14px;
   right: 16px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
+  padding: 5px 12px;
   border-radius: 999px;
-  background: var(--bg);
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  font-size: 0.8rem;
+  font-weight: 700;
   text-decoration: none;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: transform 0.15s ease;
 }
 
-.card__more:hover,
-.card__more:focus-visible {
-  color: var(--accent);
-  border-color: var(--accent);
+.card__play:hover,
+.card__play:focus-visible {
+  transform: scale(1.06);
 }
 
 /* ---- Spiel-Seiten (/spiele/<id>/) ---- */
@@ -2392,3 +2393,201 @@ a.news__game:hover {
 .player .notice {
   margin: 16px 0 0;
 }
+
+/* ======== Ranglisten 2.0 ======== */
+.rank-hero {
+  --game-accent: var(--accent);
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin: 16px 0 14px;
+  padding: 18px 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--game-accent) 45%, var(--border));
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--game-accent) 30%, transparent), transparent 60%),
+    var(--bg-elevated);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--game-accent) 15%, transparent);
+}
+.rank-hero[hidden] { display: none; }
+.rank-hero__icon { width: 64px; height: 64px; border-radius: 16px; box-shadow: 0 6px 18px rgb(0 0 0 / 0.35); }
+.rank-hero__text { display: grid; gap: 3px; min-width: 0; }
+.rank-hero__label { color: var(--text-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.rank-hero__title { font-size: 1.35rem; line-height: 1.15; }
+.rank-hero__record { color: var(--text-muted); font-size: 0.88rem; }
+@media (max-width: 560px) {
+  .rank-hero { grid-template-columns: auto 1fr; }
+  .rank-hero__play { grid-column: 1 / -1; justify-self: stretch; text-align: center; }
+}
+
+.rank-level { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+.rank-level[hidden] { display: none; }
+.rank-level select {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: inherit;
+  font: inherit;
+}
+
+.rank-period { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 4px 0 22px; }
+.rank-period__info { color: var(--text-muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+
+/* Siegertreppchen */
+.podium { margin: 26px 0 20px; }
+.podium__place { position: relative; animation: podium-rise 0.6s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.podium__place--2 { animation-delay: 0.08s; }
+.podium__place--3 { animation-delay: 0.16s; }
+.podium__crown { position: absolute; top: -26px; font-size: 1.6rem; filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.4)); animation: crown-bob 2.4s ease-in-out infinite alternate; }
+.podium__place--1 .ranks__avatar { border-radius: 50%; box-shadow: 0 0 0 3px #f6c453, 0 0 26px rgb(246 196 83 / 0.55); }
+.podium__place--2 .ranks__avatar { border-radius: 50%; box-shadow: 0 0 0 3px #c9d1e6; }
+.podium__place--3 .ranks__avatar { border-radius: 50%; box-shadow: 0 0 0 3px #e0965a; }
+.podium__name { color: inherit; text-decoration: none; }
+.podium__name:hover, .podium__name:focus-visible { color: var(--accent); text-decoration: underline; }
+.podium__place--1 .podium__score { color: #f6c453; font-size: 1.15rem; font-weight: 800; }
+.podium__step { font-size: 1.8rem; }
+.podium__place--1 .podium__step { height: 110px; }
+.podium__place--2 .podium__step { height: 80px; }
+.podium__place--3 .podium__step { height: 62px; }
+.podium__free { color: var(--text-muted); font-size: 0.85rem; padding-bottom: 6px; }
+@keyframes podium-rise { from { transform: translateY(30px); opacity: 0; } }
+@keyframes crown-bob { to { transform: translateY(-4px) rotate(6deg); } }
+
+/* Liste */
+.ranks__item { transition: transform 0.15s ease, border-color 0.15s ease; }
+.ranks__item:hover { transform: translateX(3px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.ranks__item--me { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated)); }
+.ranks__name { color: inherit; font-weight: 700; text-decoration: none; }
+.ranks__name:hover, .ranks__name:focus-visible { color: var(--accent); text-decoration: underline; }
+.ranks__score { font-weight: 800; }
+
+/* Eigene Position unten angeheftet */
+.rank-me {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-elevated));
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(8px);
+}
+.rank-me[hidden] { display: none; }
+.rank-me__text { display: grid; gap: 2px; min-width: 0; }
+.rank-me__text span { color: var(--text-muted); font-size: 0.9rem; }
+.rank-me__rank { font-size: 1.5rem; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
+.rank-me__icon { font-size: 1.8rem; }
+@media (max-width: 560px) {
+  .rank-me { grid-template-columns: auto 1fr; }
+  .rank-me .button { grid-column: 1 / -1; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .podium__place, .podium__crown { animation: none; }
+}
+.ranks .chips { flex-wrap: wrap; overflow: visible; }
+
+/* ======== Tägliche Aufgaben ======== */
+.daily { margin-top: 28px; }
+.daily[hidden], .ticker[hidden] { display: none; }
+.daily__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.daily__streak { color: #ff9f43; font-weight: 800; }
+.daily__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; margin: 12px 0 8px; padding: 0; list-style: none; }
+.daily__task {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-elevated);
+}
+.daily__task--done { border-color: color-mix(in srgb, #2ecc71 60%, var(--border)); background: color-mix(in srgb, #2ecc71 10%, var(--bg-elevated)); }
+.daily__icon { font-size: 1.6rem; }
+.daily__text { display: grid; gap: 7px; min-width: 0; }
+.daily__text strong { font-size: 0.95rem; line-height: 1.3; }
+.daily__bar { display: block; height: 7px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--text-muted) 20%, transparent); }
+.daily__bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #ff6fb0); transition: width 0.6s ease; }
+.daily__task--done .daily__bar i { background: #2ecc71; }
+.daily__state { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.daily__task--done .daily__state { color: #2ecc71; }
+.daily__note { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+.daily--complete .daily__note { color: #2ecc71; font-weight: 700; }
+
+/* ======== Ticker ======== */
+.ticker { margin-top: 32px; }
+.ticker__dot { display: inline-block; width: 10px; height: 10px; margin-right: 10px; border-radius: 50%; background: #ff3b5c; box-shadow: 0 0 10px #ff3b5c; vertical-align: middle; animation: ticker-pulse 1.4s ease-in-out infinite; }
+.ticker__more { font-weight: 700; color: var(--accent); text-decoration: none; }
+.ticker__list { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.ticker__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  animation: ticker-in 0.4s ease both;
+}
+.ticker__item--record { border-left: 4px solid #f6c453; }
+.ticker__item--weekwin { border-left: 4px solid #ff9f43; }
+.ticker__item--level { border-left: 4px solid #3ee8ff; }
+.ticker__item--achievements { border-left: 4px solid var(--accent); }
+.ticker__avatar { display: inline-flex; }
+.ticker__text { display: grid; gap: 2px; min-width: 0; }
+.ticker__text small { color: var(--text-muted); }
+.ticker__name { font-weight: 800; color: inherit; text-decoration: none; }
+.ticker__name:hover, .ticker__name:focus-visible { color: var(--accent); text-decoration: underline; }
+@keyframes ticker-pulse { 50% { opacity: 0.35; } }
+@keyframes ticker-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* ======== Ruhmeshalle ======== */
+.hall__weeks { display: grid; gap: 22px; margin-top: 18px; }
+.hall__week { padding: 18px; border: 1px solid var(--border); border-radius: 20px; background: var(--bg-elevated); }
+.hall__week--latest { border-color: #f6c453; box-shadow: 0 0 30px rgb(246 196 83 / 0.18); background: radial-gradient(circle at 0 0, rgb(246 196 83 / 0.12), transparent 50%), var(--bg-elevated); }
+.hall__title { margin: 0 0 12px; font-size: 1.15rem; }
+.hall__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.hall__board { padding: 12px; border: 1px solid var(--border); border-radius: 14px; }
+.hall__board-title { display: block; margin-bottom: 8px; font-weight: 800; color: inherit; text-decoration: none; }
+.hall__board-title:hover { color: var(--accent); }
+.hall__list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.hall__place { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; }
+.hall__place--1 { font-size: 1.05rem; }
+.hall__medal { font-size: 1.3rem; }
+.hall__name { font-weight: 700; color: inherit; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hall__name:hover { color: var(--accent); text-decoration: underline; }
+.hall__score { font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .ticker__dot, .ticker__item { animation: none; } }
+
+/* Pokale im Spielerprofil */
+.trophies { display: flex; flex-wrap: wrap; gap: 10px; }
+.trophy {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 112px;
+  padding: 10px 8px;
+  border: 1px solid #f6c453;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 0, rgb(246 196 83 / 0.22), transparent 70%), var(--bg-elevated);
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+}
+.trophy__cup { font-size: 2rem; filter: drop-shadow(0 3px 8px rgb(246 196 83 / 0.5)); }
+.trophy__week { font-weight: 800; }
+.trophy__game { color: var(--text-muted); font-size: 0.75rem; line-height: 1.2; }
+.ranks__links { display: inline-flex; align-items: center; gap: 12px; }
+.ranks__hall { font-weight: 700; color: var(--accent); text-decoration: none; }
