@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-version="1.8.0" data-theme="neon" data-tiles="standard">
+<html lang="de" data-version="1.8.1" data-theme="neon" data-tiles="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -338,6 +338,16 @@
       <div id="scratch-area" class="scratch-area"></div>
       <div class="chest-reward" id="scratch-reward"></div>
       <button class="btn primary big" data-action="scratch-done" type="button" id="scratch-done" hidden>Weiter</button>
+    </div>
+  </div>
+
+  <div id="notes" class="overlay" hidden>
+    <div class="panel notes-panel">
+      <span class="notes-badge" id="notes-version">Neu</span>
+      <h2 id="notes-title">Was ist neu?</h2>
+      <ul class="notes-list" id="notes-list"></ul>
+      <p class="notes-reinstall" id="notes-reinstall" hidden>Wichtig: Du spielst Royal Blocks als App vom Home-Bildschirm. Bitte entferne die App einmal und füge sie neu hinzu, damit alles richtig funktioniert.</p>
+      <button class="btn primary big" data-action="notes-done" type="button">Los geht's</button>
     </div>
   </div>
 
