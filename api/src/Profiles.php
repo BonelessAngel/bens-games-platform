@@ -35,6 +35,9 @@ final class Profiles
         'sternenjaeger' => ['Sternenjäger', '60 Sterne in Nova Bastion'],
         'unaufhaltsam' => ['Unaufhaltsam', '100 Sterne in Nova Bastion'],
         'legende' => ['Legende', 'Rang „Legende“'],
+        'albummeister' => ['Albummeister', 'Ein Set im Royal-Blocks-Album komplett'],
+        'glueckspilz' => ['Glückspilz', 'Hauptgewinn am Royal-Blocks-Automaten'],
+        'highroller' => ['Highroller', '50.000 Chips im Royal-Blocks-Shop ausgegeben'],
     ];
 
     /** Banner: id => [Name, Bedingung als Text]. Aussehen: src/styles/main.css (.banner--<id>). */
@@ -47,7 +50,11 @@ final class Profiles
         'royal' => ['Royal Flush', '5 Erfolge in Royal Blocks'],
         'gold' => ['Goldrausch', 'Einmal Platz 1 in einer Rangliste'],
         'galaxie' => ['Galaxie', 'Rang „Admiral“'],
+        'casino' => ['Casino Royale', 'Legendärer Fund in Royal Blocks'],
     ];
+
+    /** Royal-Blocks-Erfolge, die Titel bzw. Banner freischalten (IDs aus dem Spiel, ab v1.7.0) */
+    private const ROYAL_SPECIAL = ['shop_legendary', 'album_set', 'slot_jackpot', 'highroller'];
 
     public function __construct(private PDO $pdo, private Clock $clock, private Leaderboards $leaderboards)
     {
@@ -66,6 +73,12 @@ final class Profiles
         $boards = $this->all("SELECT app_id, board FROM leaderboard_entries WHERE user_id = ? AND period = 'all' AND hidden_at IS NULL", [$userId]);
         $ranks = array_map(fn (array $b): ?int => $this->leaderboards->rankOf($b['app_id'], $b['board'], 'all', $userId)['rank'], $boards);
 
+        $royal = array_column($this->all(
+            "SELECT achievement_id FROM game_achievements WHERE user_id = ? AND app_id = 'royal-blocks' AND achievement_id IN ("
+                . implode(', ', array_fill(0, count(self::ROYAL_SPECIAL), '?')) . ')',
+            [$userId, ...self::ROYAL_SPECIAL]
+        ), 'achievement_id');
+
         $levels = $this->all('SELECT COUNT(*) AS n, COALESCE(SUM(likes), 0) AS likes FROM community_levels WHERE user_id = ? AND hidden_at IS NULL', [$userId])[0];
 
         $stars = 0;
@@ -81,6 +94,7 @@ final class Profiles
             'achievements' => array_sum($perApp),
             'achievement_apps' => count($perApp),
             'royal_achievements' => $perApp['royal-blocks'] ?? 0,
+            'royal_special' => $royal,
             'first_places' => count(array_filter($ranks, static fn (?int $r): bool => $r === 1)),
             'podiums' => count(array_filter($ranks, static fn (?int $r): bool => $r !== null && $r <= 3)),
             'boards' => count($boards),
@@ -133,6 +147,9 @@ final class Profiles
             'sternenjaeger' => $f['nova_stars'] >= 60,
             'unaufhaltsam' => $f['nova_stars'] >= 100,
             'legende' => $rank >= 8,
+            'albummeister' => in_array('album_set', $f['royal_special'] ?? [], true),
+            'glueckspilz' => in_array('slot_jackpot', $f['royal_special'] ?? [], true),
+            'highroller' => in_array('highroller', $f['royal_special'] ?? [], true),
         ]));
         $banners = array_keys(array_filter([
             'nacht' => true,
@@ -143,6 +160,7 @@ final class Profiles
             'royal' => $f['royal_achievements'] >= 5,
             'gold' => $f['first_places'] >= 1,
             'galaxie' => $rank >= 6,
+            'casino' => in_array('shop_legendary', $f['royal_special'] ?? [], true),
         ]));
         return ['titles' => $titles, 'banners' => $banners];
     }

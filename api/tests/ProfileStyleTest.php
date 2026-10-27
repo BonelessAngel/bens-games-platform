@@ -72,3 +72,26 @@ dbTest('Ohne eigene Wahl: Standard-Banner, kein Titel, kein Kalender', function 
     same(null, $profile['activity']);
     same([], $profile['levels']);
 });
+
+dbTest('Besondere Royal-Blocks-Erfolge schalten Casino-Banner und Titel frei', function (): void {
+    $app = new TestApp();
+    $mia = $app->signedIn('mia@example.org', 'ein sicheres Passwort', 'Mia');
+    $app->postAs($mia, 'games/royal-blocks/scores', ['board' => 'standard', 'score' => 1200]);
+    same(200, $app->postAs($mia, 'games/royal-blocks/save/put', [
+        'data' => json_encode(['version' => 1, 't' => 1, 'values' => ['chips' => '10']]),
+        't' => 1,
+        'achievements' => ['shop_legendary', 'slot_jackpot', 'royal_flush'],
+    ])->status);
+    $options = $app->get('account/profile-style', $mia['cookies']);
+    $titles = array_column($options->body['titles'], 'unlocked', 'id');
+    $banners = array_column($options->body['banners'], 'unlocked', 'id');
+    same(true, $banners['casino'], 'Legendärer Fund → Casino Royale');
+    same(true, $titles['glueckspilz'], 'Hauptgewinn am Automaten');
+    same(false, $titles['highroller']);
+    same(false, $titles['albummeister']);
+    same(200, $app->postAs($mia, 'account/profile-style/save', ['banner' => 'casino', 'title' => 'glueckspilz'])->status);
+    $profile = siteGet($app, 'players/profile', ['name' => 'Mia'])->body['profile'];
+    same('casino', $profile['banner']);
+    same('Glückspilz', $profile['title']['name']);
+    same(422, $app->postAs($mia, 'account/profile-style/save', ['title' => 'highroller'])->status, 'noch gesperrt');
+});

@@ -20,20 +20,31 @@ export function levelFromXp(xp) {
 }
 
 export const ACHIEVEMENTS = {
-  royal_flush: { name: 'Königliche Hand', icon: '👑' },
-  jackpots_10: { name: 'Jackpot-Legende', icon: '💰' },
-  level_25: { name: 'Casino-Profi', icon: '🏆' },
-  gift_7: { name: 'Sieben Tage Glück', icon: '🎁' },
-  pro_25000: { name: 'Profi mit 25.000', icon: '🔥' },
+  royal_flush: { name: 'Königliche Hand', icon: '👑', how: 'Räume einen Royal Flush ab' },
+  jackpots_10: { name: 'Jackpot-Legende', icon: '💰', how: 'Gewinne 10 Jackpots' },
+  level_25: { name: 'Casino-Profi', icon: '🏆', how: 'Erreiche Level 25' },
+  gift_7: { name: 'Sieben Tage Glück', icon: '🎁', how: 'Hol 7 Tage in Folge dein Tagesgeschenk' },
+  pro_25000: { name: 'Hart mit 25.000', icon: '🔥', how: 'Schaffe 25.000 Punkte im Modus Hart' },
+  // Diese vier schalten auch etwas im Spielerprofil auf bens-games.de frei
+  shop_legendary: { name: 'Legendärer Fund', icon: '💎', how: 'Besitze einen legendären Gegenstand', profile: true },
+  album_set: { name: 'Sammler', icon: '📖', how: 'Vervollständige ein Set im Sammelalbum', profile: true },
+  slot_jackpot: { name: 'Glückspilz', icon: '🎰', how: 'Hol den Hauptgewinn 👑👑👑 am Spielautomaten', profile: true },
+  highroller: { name: 'Highroller', icon: '🤑', how: 'Gib insgesamt 50.000 Chips im Shop aus', profile: true },
 };
 
-export function earnedAchievements({ stats = {}, xp = 0, gift = null, proBest = 0 } = {}) {
+export const HIGHROLLER_CHIPS = 50_000;
+
+export function earnedAchievements({ stats = {}, xp = 0, gift = null, proBest = 0, casino = {}, legendary = false, setDone = false } = {}) {
   const earned = [];
   if (Number(stats.hands?.[9]) > 0) earned.push('royal_flush');
   if (Number(stats.jackpots) >= 10) earned.push('jackpots_10');
   if (levelFromXp(Math.max(0, Number(xp) || 0)).level >= 25) earned.push('level_25');
   if (Number(gift?.streak) >= 7) earned.push('gift_7');
   if (Number(proBest) >= 25_000) earned.push('pro_25000');
+  if (legendary) earned.push('shop_legendary');
+  if (setDone) earned.push('album_set');
+  if (Number(casino.slotJackpots) > 0) earned.push('slot_jackpot');
+  if (Number(casino.spent) >= HIGHROLLER_CHIPS) earned.push('highroller');
   return earned;
 }
 

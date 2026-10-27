@@ -23,7 +23,25 @@ export function unlockAudio() {
   startMusic();
 }
 
-function tone(freq, { start = 0, dur = 0.15, type = 'sine', vol = 0.5, slide = 0 } = {}) {
+// Sound-Pakete aus dem Shop: verändern Klangfarbe, Tonhöhe und Ausklang aller Spielgeräusche
+let pack = 'sound-classic';
+export function setSoundPack(id) {
+  pack = id;
+}
+const PACKS = {
+  'sound-retro': (o) => ({ ...o, type: 'square', vol: o.vol * 0.55, dur: Math.max(0.05, o.dur * 0.8) }),
+  'sound-casino': (o) => ({ ...o, type: 'triangle', dur: o.dur * 1.4, bell: true }),
+  'sound-jazz': (o) => ({ ...o, type: 'sine', freq: o.freq * 0.84, dur: o.dur * 1.5, vol: o.vol * 0.9 }),
+  'sound-crystal': (o) => ({ ...o, type: 'sine', freq: o.freq * 1.5, dur: o.dur * 2, vol: o.vol * 0.7, bell: true }),
+};
+
+function tone(freq, options = {}) {
+  const o = (PACKS[pack] ?? ((x) => x))({ freq, start: 0, dur: 0.15, type: 'sine', vol: 0.5, slide: 0, ...options });
+  rawTone(o.freq, o);
+  if (o.bell) rawTone(o.freq * 2.76, { ...o, vol: o.vol * 0.18, dur: o.dur * 0.7 });
+}
+
+function rawTone(freq, { start = 0, dur = 0.15, type = 'sine', vol = 0.5, slide = 0 } = {}) {
   if (!enabled || !ctx) return;
   const t = ctx.currentTime + start;
   const osc = ctx.createOscillator();
@@ -112,6 +130,29 @@ export const sounds = {
     [7, 4, 2, 0].forEach((s, k) => tone(note(5 + s), { start: k * 0.16, dur: 0.4, type: 'sine', vol: 0.3 }));
   },
 };
+
+// Sieges-Jingles aus dem Shop: kurze Melodie bei starken Händen und beim Jackpot (unabhängig vom Sound-Paket)
+const n = (semis) => 523.25 * 2 ** (semis / 12); // ab C5
+const JINGLES = {
+  'jingle-fanfare': () => [[0, 0], [4, 0.12], [7, 0.24], [12, 0.36]].forEach(([s, at], k) =>
+    rawTone(n(s), { start: at, dur: k === 3 ? 0.6 : 0.16, type: 'sawtooth', vol: 0.12 })),
+  'jingle-arcade': () => [0, 4, 7, 12, 16, 19, 24].forEach((s, k) =>
+    rawTone(n(s), { start: k * 0.05, dur: 0.07, type: 'square', vol: 0.1 })),
+  'jingle-slot': () => {
+    for (let k = 0; k < 8; k++) rawTone(n(24 + (k % 2 ? 4 : 0)), { start: k * 0.07, dur: 0.12, type: 'triangle', vol: 0.18 });
+    rawTone(n(12), { start: 0.6, dur: 0.5, type: 'triangle', vol: 0.25 });
+  },
+  'jingle-harp': () => [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24].forEach((s, k) =>
+    rawTone(n(s), { start: k * 0.035, dur: 0.6, type: 'sine', vol: 0.12 })),
+  'jingle-orchestra': () => {
+    [[-12, 0], [-5, 0], [0, 0], [4, 0]].forEach(([s]) => rawTone(n(s), { dur: 1.2, type: 'triangle', vol: 0.14 }));
+    [[7, 0.3], [12, 0.45], [16, 0.6]].forEach(([s, at]) => rawTone(n(s), { start: at, dur: 0.9, type: 'sine', vol: 0.2 }));
+    rawTone(n(-24), { dur: 1.4, type: 'sine', vol: 0.4, slide: 0.98 });
+  },
+};
+export function jingle(id) {
+  JINGLES[id]?.();
+}
 
 let vibrationEnabled = true;
 export function setVibrationEnabled(on) {

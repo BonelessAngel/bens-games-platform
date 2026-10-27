@@ -93,7 +93,7 @@ export function usePowerCharge(state, kind) {
 
 export const idx = (x, y) => y * SIZE + x;
 
-// mode: 'free' (freies Spiel) oder 'daily' (Tages-Challenge, gleicher seed für alle).
+// mode: 'free' (Normal), 'pro' (Hart) oder 'daily' (Tages-Challenge, gleicher seed für alle).
 export function createGame(seed, mode = 'free', day = null, { startBonus = false } = {}) {
   const state = {
     mode,

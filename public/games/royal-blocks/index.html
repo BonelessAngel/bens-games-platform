@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-version="1.6.0" data-theme="neon" data-tiles="standard">
+<html lang="de" data-version="1.7.0" data-theme="neon" data-tiles="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -58,10 +58,10 @@
 
     <div class="powers">
       <div class="wallet" title="Chips"><span class="chip-icon"></span><span id="chips">0</span></div>
-      <button class="power" data-power="fold" type="button"><span class="p-icon">⟳</span>Passen <b data-cost="fold"></b></button>
-      <button class="power" data-power="recolor" type="button"><span class="p-icon">◐</span>Farbe <b data-cost="recolor"></b></button>
-      <button class="power" data-power="blast" type="button"><span class="p-icon">✸</span>Sprengen <b data-cost="blast"></b></button>
-      <button class="power" data-power="undo" type="button"><span class="p-icon">↶</span>Zurück <b data-cost="undo"></b></button>
+      <button class="power" data-power="fold" type="button"><span class="p-name"><span class="p-icon">⟳</span>Passen</span><b data-cost="fold"></b></button>
+      <button class="power" data-power="recolor" type="button"><span class="p-name"><span class="p-icon">◐</span>Farbe</span><b data-cost="recolor"></b></button>
+      <button class="power" data-power="blast" type="button"><span class="p-name"><span class="p-icon">✸</span>Sprengen</span><b data-cost="blast"></b></button>
+      <button class="power" data-power="undo" type="button"><span class="p-name"><span class="p-icon">↶</span>Zurück</span><b data-cost="undo"></b></button>
     </div>
 
     <footer id="tray" class="tray" aria-label="Teile">
@@ -80,7 +80,7 @@
       <button class="btn primary" data-action="resume" type="button">Weiterspielen</button>
       <button class="btn" data-action="home" type="button">Hauptmenü</button>
       <button class="btn gold" data-action="switch-mode" type="button" id="mode-btn">Tages-Challenge</button>
-      <button class="btn" data-action="shop" type="button">Designs</button>
+      <button class="btn gold" data-action="shop" type="button">🛒 Casino-Shop</button>
       <button class="btn" data-action="help" type="button">Pokerhände &amp; Regeln</button>
       <div class="toggles">
         <button class="btn small-btn" data-action="sound" type="button">Ton: <b id="sound-state">an</b></button>
@@ -122,7 +122,7 @@
             <li><b>Goldkarte</b>: doppelte Punkte für ihre Reihe.</li>
             <li><b>Fieber</b> ab Serie 5: ein paar Züge alles ×2.</li>
             <li><b>Royal Flush</b> gewinnt den Jackpot.</li>
-            <li><b>Chips</b>: passen, Farbe tauschen, sprengen, Designs.</li>
+            <li><b>Chips</b>: passen, Farbe tauschen, sprengen – und im Casino-Shop Designs, Truhen und mehr.</li>
           </ul>
         </div>
       </div>
@@ -134,20 +134,84 @@
     </div>
   </div>
 
-  <div id="shop" class="overlay" hidden>
-    <div class="panel scroll">
-      <h2>Casino-Shop</h2>
-      <div class="wallet center"><span class="chip-icon"></span><span id="shop-chips">0</span></div>
-      <div id="shop-tabs" class="shop-tabs" role="tablist" aria-label="Shop-Bereiche">
-        <button data-shop-tab="theme" type="button">Designs</button>
-        <button data-shop-tab="tiles" type="button">Kacheln</button>
-        <button data-shop-tab="effects" type="button">Effekte</button>
-        <button data-shop-tab="backgrounds" type="button">Hintergründe</button>
-        <button data-shop-tab="cards" type="button">Karten</button>
-        <button data-shop-tab="extras" type="button">Extras</button>
+  <div id="shop" class="overlay shop-overlay" hidden>
+    <div class="panel shop-panel">
+      <header class="shop-head">
+        <h2>Casino-Shop</h2>
+        <div class="shop-wallet"><span class="chip-icon"></span><span id="shop-chips">0</span></div>
+        <button class="close-btn" data-action="back" type="button" aria-label="Shop schließen">×</button>
+      </header>
+      <nav class="shop-main" role="tablist" aria-label="Shop-Bereiche">
+        <button data-shop-main="buy" type="button" role="tab"><span>🛒</span>Kaufen</button>
+        <button data-shop-main="luck" type="button" role="tab"><span>🎰</span>Glück<i id="luck-dot" class="dot" hidden></i></button>
+        <button data-shop-main="album" type="button" role="tab"><span>📖</span>Album<i id="album-dot" class="dot" hidden></i></button>
+      </nav>
+      <div id="shop-cats" class="shop-cats" role="tablist" aria-label="Kategorien"></div>
+      <div id="shop-body" class="shop-body"></div>
+    </div>
+  </div>
+
+  <div id="reveal" class="overlay" hidden>
+    <div class="panel reveal-panel">
+      <h2 id="reveal-title">Truhe</h2>
+      <div class="big-chest" id="big-chest" data-chest="bronze">
+        <div class="bc-rays"></div><div class="bc-lid"></div><div class="bc-body"><i></i></div>
       </div>
-      <div id="shop-items" class="shop-grid"></div>
-      <button class="btn primary" data-action="back" type="button">Zurück</button>
+      <div id="reveal-card" class="reveal-card" hidden></div>
+      <div class="two-buttons" id="reveal-actions" hidden>
+        <button class="btn" data-action="reveal-equip" type="button" id="reveal-equip">Ausrüsten</button>
+        <button class="btn primary" data-action="reveal-done" type="button">Weiter</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="wheel" class="overlay" hidden>
+    <div class="panel wheel-panel">
+      <h2>Glücksrad</h2>
+      <p class="small" id="wheel-info">Einmal am Tag gratis drehen</p>
+      <div class="wheel-box">
+        <div class="wheel-pointer"></div>
+        <div class="wheel-disc" id="wheel-disc"></div>
+        <div class="wheel-hub">♛</div>
+      </div>
+      <div class="chest-reward" id="wheel-reward"></div>
+      <button class="btn gold big" data-action="wheel-spin" type="button" id="wheel-spin">Drehen!</button>
+      <div class="two-buttons">
+        <button class="btn small-btn" data-odds="wheel" type="button">Gewinnchancen</button>
+        <button class="btn small-btn" data-action="shop-luck" type="button">Zurück</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="slot" class="overlay" hidden>
+    <div class="panel slot-panel">
+      <h2>Spielautomat</h2>
+      <div class="slot-machine">
+        <div class="slot-lights"></div>
+        <div class="slot-window">
+          <div class="slot-reel"><div class="reel-strip"></div></div>
+          <div class="slot-reel"><div class="reel-strip"></div></div>
+          <div class="slot-reel"><div class="reel-strip"></div></div>
+          <div class="slot-line"></div>
+        </div>
+        <div class="slot-result" id="slot-result">Viel Glück!</div>
+      </div>
+      <div class="slot-bets" id="slot-bets"></div>
+      <button class="btn gold big" data-action="slot-spin" type="button" id="slot-spin">Drehen</button>
+      <p class="small" id="slot-left"></p>
+      <div class="two-buttons">
+        <button class="btn small-btn" data-odds="slot" type="button">Gewinntabelle</button>
+        <button class="btn small-btn" data-action="shop-luck" type="button">Zurück</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="odds" class="overlay" hidden>
+    <div class="panel scroll">
+      <h2 id="odds-title">Gewinnchancen</h2>
+      <p class="small" id="odds-note"></p>
+      <table class="odds-table" id="odds-table"></table>
+      <button class="btn primary" data-action="odds-back" type="button">Verstanden</button>
     </div>
   </div>
 
@@ -224,10 +288,10 @@
         <div><b id="start-best">0</b><small>Rekord</small></div>
       </div>
       <button class="btn primary big" data-action="play" type="button" id="start-play">Spielen</button>
-      <button class="btn pro" data-action="play-pro" type="button" id="start-pro">🔒 Profi · ab Level 10</button>
+      <button class="btn pro" data-action="play-pro" type="button" id="start-pro">🔒 Hart · ab Level 10</button>
       <button class="btn gold" data-action="play-daily" type="button" id="start-daily">Tages-Challenge</button>
       <div class="four-buttons">
-        <button class="btn small-btn" data-action="shop" type="button">Designs</button>
+        <button class="btn small-btn shop-btn" data-action="shop" type="button">🛒 Shop<i id="start-shop-dot" class="dot" hidden></i></button>
         <button class="btn small-btn" data-action="achievements" type="button">Erfolge</button>
         <button class="btn small-btn" data-action="stats" type="button">Statistik</button>
         <button class="btn small-btn" data-action="help" type="button">Regeln</button>
@@ -269,11 +333,11 @@
 
   <div id="scratch" class="overlay" hidden>
     <div class="panel">
-      <h2>Rubbellos</h2>
+      <h2 id="scratch-title">Rubbellos</h2>
       <p class="small">3 gleiche Zeichen = großer Gewinn!</p>
       <div id="scratch-area" class="scratch-area"></div>
       <div class="chest-reward" id="scratch-reward"></div>
-      <button class="btn primary big" data-action="scratch-done" type="button" id="scratch-done" hidden>Einsammeln</button>
+      <button class="btn primary big" data-action="scratch-done" type="button" id="scratch-done" hidden>Weiter</button>
     </div>
   </div>
 
