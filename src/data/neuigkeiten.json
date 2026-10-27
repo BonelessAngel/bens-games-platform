@@ -1,6 +1,18 @@
 [
   {
     "app": "nova-bastion",
+    "version": "1.12",
+    "date": "2026-10-27",
+    "title": "Bau-Drohne und legendäre Module",
+    "points": [
+      "Neues Gadget Bau-Drohne: setzt einen zusätzlichen Bauplatz – freigespielt über die Mission „Pionier“",
+      "Werkstatt: drei gleiche Module zu einem besseren zusammenbauen, ganz oben Legendär",
+      "Erfolge sammelst du jetzt selbst unter ERFOLGE ein",
+      "Mehr sprengbare Felsen ab Einsatz 4"
+    ]
+  },
+  {
+    "app": "nova-bastion",
     "version": "1.11",
     "date": "2026-10-25",
     "title": "Neue Kombos und ein Einsatz-Berater",

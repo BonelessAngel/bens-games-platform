@@ -234,6 +234,8 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .badge em{font-style:normal;position:absolute;right:-.8em;top:-.8em;background:var(--mg);color:#fff;border:.15em solid #fff;min-width:2em;height:2em;
   line-height:1.7em;font-size:.75em;display:none;padding:0 .25em}
 .badge em.on{display:block}
+.badge em.hot{background:var(--am);color:#1a1200;animation:acPulse 1s ease-in-out infinite}
+@keyframes acPulse{50%{transform:scale(1.15)}}
 .mbot{position:absolute;left:.7em;right:.7em;bottom:.7em;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
 .mbot .mid{display:flex;gap:.6em}
 .mbot .pb{font-size:.85em}
@@ -387,6 +389,10 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .mod:hover{transform:translateY(-.08em)}
 .mod.sel{border-color:#fff;box-shadow:0 0 0 .14em #fff,0 0 .8em var(--c),.15em .15em 0 .14em #000;background:linear-gradient(180deg,#232c55,#10173a)}
 .mod.eq{opacity:.75}.mod.eq.sel{opacity:1}
+.mod.dim{opacity:.28}
+.mod.leg{background:linear-gradient(180deg,#3a2a0c,#140d02);animation:legGlow 1.6s ease-in-out infinite}
+@keyframes legGlow{50%{box-shadow:0 0 .7em #ffb02e99,.15em .15em 0 #000}}
+.wssel .big:disabled{opacity:.4}
 .wssel{min-height:6.5em;text-align:left;font-size:1.15em;color:#dfe9ff;line-height:1.1}
 .wssel .btns{display:flex;gap:.5em;margin-top:.4em}
 .wssel .big{font-size:.55em;padding:.8em 1em;min-height:0}
@@ -693,6 +699,10 @@ button{font:inherit;color:inherit;margin:0;cursor:pointer;touch-action:manipulat
 .ac.done{border-color:var(--grn);background:#0f2018}
 .ac .ico{width:2.2em;height:2.2em;flex:none;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:.8em;background:#1c2246;color:#8890aa}
 .ac.done .ico{background:var(--grn);color:#0a1a0e}
+.ac.ready{border-color:var(--am);background:#231d0c;animation:acGlow 1.4s ease-in-out infinite}
+.ac.ready .ico{background:var(--am);color:#1a1200}
+.ac button{font-size:.5em;padding:.7em .8em;flex:none}
+@keyframes acGlow{50%{box-shadow:.15em .15em 0 #000,0 0 .8em #ffc23c66}}
 .ac .tx{flex:1;min-width:0}
 .ac .n{font-family:'Press Start 2P',monospace;font-size:.55em;color:var(--am);margin-bottom:.35em}
 .ac .d{font-size:1.1em;color:#dfe9ff;line-height:1}
@@ -1968,8 +1978,8 @@ function autoSpots(L){
   var ix;
   if(L.k>=6&&(ix=pick())>=0)ty[ix]='high';
   if(L.k>=9&&(ix=pick())>=0)ty[ix]='node';
-  /* Späte Level: mehr Felsen, die erst im Laufe des Levels sprengbar werden */
-  if(L.k>=10){var nrk=1+Math.floor((L.k-10)/10)+(L.boss?1:0);for(var ri=0;ri<nrk;ri++)if((ix=pick())>=0)ty[ix]='rock';}
+  /* Felsen, die erst im Laufe des Levels sprengbar werden: ab Einsatz 4, später mehr (höchstens jeder vierte Platz) */
+  if(L.k>=3){var nrk=Math.min(Math.floor(sp.length/4),1+Math.floor((L.k-3)/12)+(L.boss?1:0));for(var ri=0;ri<nrk;ri++)if((ix=pick())>=0)ty[ix]='rock';}
   L.auto=sp.map(function(s,i){return [s[0],s[1],ty[i]];});
   return L.auto;
 }
@@ -2162,7 +2172,11 @@ function makeBG(L,seed){
     if(Math.hypot(x-L.base[0],y-L.base[1])<34)ok=false;
     if(!ok)continue; placed++;
     var rr=rnd();
-    if(rr<0.32)rock(g,x,y,1+Math.floor(rnd()*3),th);
+    /* Große Felsbrocken brauchen mehr Abstand zu Weg und Bauplätzen */
+    if(rr<0.1){var big=free(x,y,24)&&Math.hypot(x-L.base[0],y-L.base[1])>=44;
+      for(k=0;k<L.spots.length&&big;k++)if(Math.hypot(x-L.spots[k][0],y-L.spots[k][1])<25)big=false;
+      if(big)drawDeco(g,x,y,'fels',th,Math.round(x*7+y));else rock(g,x,y,2+Math.floor(rnd()*2),th);}
+    else if(rr<0.4)rock(g,x,y,1+Math.floor(rnd()*3),th);
     else if(rr<0.62)shards(g,x,y,th,rnd);
     else if(rr<0.8){
       if(th.kind==='moon'){R(g,x,y-7,1,7,'#8a93a6');R(g,x-2,y-8,5,1,'#c8d0e0');R(g,x-1,y-9,3,1,'#c8d0e0');R(g,x+1,y-10,1,1,'#ff4d6d');R(g,x-2,y,5,1,'#00000066');}
@@ -2407,7 +2421,7 @@ var TOWERS={
          b:{name:'Brandrakete',cost:240,dmg:55,rate:1.5,range:80,splash:26,burn:16,burnTime:3.5,desc:'Setzt Gegner in Brand. Brand ignoriert jede Abwehr.'},
          c:{name:'Panzerknacker',cost:250,dmg:95,rate:1.7,range:84,splash:16,pen:0.7,desc:'Hohlladung: kleiner Radius, durchschlägt 70% der Panzerung.'}}},
  cryo:{name:'Kryo-Emitter',short:'Kryo',color:'#8fd8ff',dmgType:'Energie',kind:'en',groundOnly:false,
-  desc:'Verlangsamt Boden und Luft, kaum Schaden. Kombo: verlangsamte Gegner nehmen 50% mehr Railgun-Schaden.',
+  desc:'Verlangsamt Boden und Luft, kaum Schaden. Kombo: verlangsamte Gegner nehmen 30% mehr Railgun-Schaden.',
   tiers:[{cost:80,dmg:3,rate:0.8,range:58,slow:0.35,slowTime:1.6},{cost:90,dmg:5,rate:0.75,range:62,slow:0.45,slowTime:1.8},{cost:120,dmg:8,rate:0.7,range:66,slow:0.55,slowTime:2.0}],
   specs:{a:{name:'Tiefkühler',cost:170,dmg:12,rate:0.6,range:70,slow:0.65,slowTime:2.2,freezeEvery:5,freezeTime:1.4,desc:'Starker Frost. Jeder fünfte Schuss friert ein.'},
          b:{name:'Kryonova',cost:170,dmg:14,rate:1.3,range:62,slow:0.5,slowTime:2,nova:true,desc:'Eisimpuls trifft alle Gegner in Reichweite.'},
@@ -2489,6 +2503,7 @@ var SKN=[
  {id:'g4',x:3.3,y:2.5,max:5,cost:1,lv:2,c:'#ffc23c',ic:'-',name:'Logistik',d:'Türme und Ausbauten kosten 2% weniger pro Stufe.'},
  {id:'g5',x:2,y:3.1,max:2,cost:1,lv:3,c:'#c8a050',ic:'!',name:'Sprengmeister',d:'Felsen sprengen kostet 15% weniger pro Stufe.'},
  {id:'g6',x:3.4,y:3.6,max:3,cost:2,lv:6,c:'#ffc23c',ic:'+',name:'Zinsen',d:'Zu jedem Wellenstart +1% deines Goldes pro Stufe (höchstens 25).'},
+ {id:'g8',x:4,y:1.7,max:1,cost:2,lv:8,c:'#6be0c8',ic:'✈',gad:true,name:'Bau-Drohne II',d:'Die Bau-Drohne hat 2 Ladungen pro Einsatz.'},
  {id:'g7',x:0.6,y:3.6,max:5,cost:1,lv:5,c:'#c08cff',ic:'⚡',name:'Fähigkeits-Akku',d:'Fähigkeiten laden 4% schneller pro Stufe.'},
  /* Türme */
  {id:'l1',x:1,y:0,max:5,cost:1,lv:2,c:'#3de8ff',tw:'laser',name:'Kondensator',d:'+4% Laserschaden pro Stufe.'},
@@ -2540,7 +2555,7 @@ var SKN=[
  {id:'q3',x:2,y:1,max:5,cost:1,lv:4,c:'#7fe9a0',tw:'hangar',name:'Fertigungsband',d:'Drohnen feuern 4% schneller und werden 12% schneller neu gebaut pro Stufe.'},
  {id:'q4',x:1,y:2,max:1,cost:3,lv:12,c:'#7fe9a0',tw:'hangar',key:true,name:'Staffel',d:'SCHLÜSSEL: Jeder Hangar startet eine Drohne mehr.'}
 ];
-var SKE=[['core','g1'],['core','g2'],['core','g3'],['core','g4'],['core','g5'],['g5','g6'],['g1','s1'],['g2','s1'],['g3','g7'],['g5','g7']];
+var SKE=[['core','g1'],['core','g2'],['core','g3'],['core','g4'],['core','g5'],['g5','g6'],['g1','s1'],['g2','s1'],['g3','g7'],['g5','g7'],['g4','g8']];
 /* Turmbäume: Wurzel an der Kommandozentrale, dann Wurzel > beide Äste > Schlüssel */
 var SKTW={};
 SKN.forEach(function(n){if(n.tw)(SKTW[n.tw]=SKTW[n.tw]||[]).push(n.id);});
@@ -2648,7 +2663,7 @@ function normProfile(p){
   HKEYS.forEach(function(k){p.heroes[k]=obj(p.heroes[k]);});
   p.heroOwn=obj(p.heroOwn);p.heroOwn.vega=1;
   if(!HEROES[p.heroSel]||!p.heroOwn[p.heroSel])p.heroSel='vega';
-  p.ach=obj(p.ach);
+  p.ach=obj(p.ach);p.achReady=obj(p.achReady);
   p.st=obj(p.st);
   ['kills','wins','bosses','heroic','perfect','towers','specs','daily','time','losses','minis','elite','crysTotal','plays','leaks'].forEach(function(k){if(typeof p.st[k]!=='number')p.st[k]=0;});
   p.st.bt=obj(p.st.bt);p.st.builtBy=obj(p.st.builtBy);
@@ -2815,6 +2830,18 @@ function platformFetch(url,options){
   options=options||{};options.credentials='same-origin';if(typeof AbortController==='undefined')return Promise.reject(new Error('abort unavailable'));
   var c=new AbortController(),t=setTimeout(function(){c.abort();},3000);options.signal=c.signal;
   return fetch(url,options).then(function(r){clearTimeout(t);return r;},function(e){clearTimeout(t);throw e;});
+}
+/* Fehlermeldungen an bens-games.de: ohne Konto, ohne IP, höchstens 5 verschiedene pro Besuch (docs/spiele-anbindung.md der Webseite) */
+var PLATFORM_ERR={n:0,seen:{}};
+function platformError(msg,src,line,col,stack){
+  if(!platformSite()||location.protocol!=='https:'||navigator.globalPrivacyControl===true||PLATFORM_ERR.n>=5)return;
+  var key=String(msg).slice(0,120)+'|'+(line|0);if(PLATFORM_ERR.seen[key])return;PLATFORM_ERR.seen[key]=1;PLATFORM_ERR.n++;
+  try{fetch('/api/errors',{method:'POST',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({app:PLATFORM.app,message:String(msg||'Unbekannter Fehler').slice(0,300),source:String(src||'').slice(0,300),line:Math.max(0,line|0),col:Math.max(0,col|0),stack:String(stack||'').slice(0,3000)})}).catch(function(){});}catch(e){}
+}
+if(typeof window.addEventListener==='function'){
+  window.addEventListener('error',function(e){if(e&&e.message)platformError(e.message,e.filename,e.lineno,e.colno,e.error&&e.error.stack);});
+  window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;platformError(r&&r.message?r.message:String(r),'',0,0,r&&r.stack);});
 }
 function platformEnabled(g){
   return platformHosted()&&location.protocol==='https:'&&!(g&&(g.test||g.mode==='train'))&&navigator.globalPrivacyControl!==true;
@@ -3049,6 +3076,7 @@ var ACH=[
  {id:'laserD',name:'Lichtschmiede',d:'Baue insgesamt 100 Laser.',goal:100,cr:30,skin:'KUPPEL-LASER',v:function(){return PR.st.builtBy.laser||0;}},
  {id:'laserK',name:'Lichtbrecher',d:'Besiege 1500 Gegner mit Lasern.',goal:1500,cr:50,skin:'KRISTALL-LASER',v:function(){return PR.mastery.laser||0;}},
  {id:'laserT',name:'Strahlenmeister',d:'Erreiche Meisterschaft 5 beim Pulslaser.',goal:5,cr:80,skin:'DREIZACK-LASER',v:function(){return mLv('laser');}},
+ {id:'pioneer',name:'Pionier',d:'MISSION: Hole 3 Heldenmedaillen ab der Frostwelt Kryos.',goal:3,cr:40,gadget:'GADGET BAU-DROHNE',v:function(){var s=0;for(var k=wFirst(1);k<LEVELS.length;k++)if(PR.heroic[k])s++;return s;}},
  {id:'finale',name:'Weltenretter',d:'Besiege das letzte Mutterschiff.',goal:1,cr:80,v:function(){return PR.stars[LEVELS.length-1]>0?1:0;}}
 ];
 function achRefresh(){
@@ -3074,15 +3102,28 @@ function applyCampaign(c,force){
 var toastQ=[];
 function queueToast(t,c){toastQ.push([t,c]);if(toastQ.length===1)nextToast();}
 function nextToast(){if(!toastQ.length)return;var q=toastQ[0];toast(q[0],q[1],true);setTimeout(function(){toastQ.shift();nextToast();},2100);}
+/* Erreichte Erfolge warten in PR.achReady, bis man sie unter ERFOLGE einsammelt; PR.ach heißt eingesammelt */
 function checkAch(){
-  var got=false;
+  var got=false,rd=PR.achReady;
   ACH.forEach(function(a){
-    if(PR.ach[a.id])return;
-    if(a.v()>=a.goal){PR.ach[a.id]=1;if(!DEV){PR.crystals+=a.cr;PR.st.crysTotal+=a.cr;}got=true;
-      queueToast('ERFOLG: '+a.name.toUpperCase()+'  +'+a.cr+' KRISTALLE'+(a.skin?'  ·  SKIN '+a.skin:''),'#6be07a');}
+    if(PR.ach[a.id]){if(rd[a.id]){delete rd[a.id];got=true;}return;}
+    if(rd[a.id])return;
+    if(a.v()>=a.goal){rd[a.id]=1;got=true;
+      queueToast('ERFOLG ERREICHT: '+a.name.toUpperCase()+'  ·  UNTER ERFOLGE EINSAMMELN','#6be07a');}
   });
   if(got)persist();
 }
+/* Gadget Bau-Drohne: gibt es nur über die Mission „Pionier“ */
+function gadgetOpen(){return DEV||!!PR.ach.pioneer;}
+function gadgetCharges(){return 1+(rk('g8')>0?1:0);}
+function achReadyN(){var n=0;ACH.forEach(function(a){if(PR.achReady[a.id]&&!PR.ach[a.id])n++;});return n;}
+function achClaim(a){
+  if(PR.ach[a.id]||!PR.achReady[a.id])return false;
+  PR.ach[a.id]=1;delete PR.achReady[a.id];
+  if(!DEV){PR.crystals+=a.cr;PR.st.crysTotal+=a.cr;}
+  return true;
+}
+function achReward(a){return '◆ '+a.cr+(a.skin?' + '+a.skin:'')+(a.gadget?' + '+a.gadget:'');}
 function skinOpen(s){return !s.ach||DEV||!!PR.ach[s.ach];}
 
 /* =============== Tägliche Herausforderung =============== */
@@ -3163,7 +3204,7 @@ function modById(id){for(var i=0;i<PR.mods.length;i++)if(PR.mods[i].id===id)retu
 function modBonus(type){
   var b={dmg:0,range:0,rate:0,crit:0};
   if(STDL)return b;
-  (PR.equip[type]||[]).slice(0,mSlots(type)).forEach(function(id){var m=modById(id);if(m)b[m.s]+=m.v/100;});
+  (PR.equip[type]||[]).slice(0,mSlots(type)).forEach(function(id){var m=modById(id);if(m){b[m.s]+=m.v/100;if(m.s2)b[m.s2]+=m.v2/100;}});
   return b;
 }
 function buildStats(){
@@ -3215,7 +3256,7 @@ function drawRank(t){
 }
 var COMBOS={'laser|rail':['SCHILDBRUCH','#ff9ad0','Laser brechen Schilde, die Railgun trifft dann voll.'],
   'barracks|missile':['FESTGENAGELT','#ffa23c','Von Soldaten festgehaltene Gegner nehmen 25% mehr Raketenschaden.'],
-  'cryo|rail':['KÄLTESCHUSS','#8fd8ff','Verlangsamte Gegner nehmen 50% mehr Railgun-Schaden.'],
+  'cryo|rail':['KÄLTESCHUSS','#8fd8ff','Verlangsamte Gegner nehmen 30% mehr Railgun-Schaden.'],
   'cryo|missile':['KÄLTEBRUCH','#9fe8ff','Verlangsamte und vereiste Gegner nehmen 25% mehr Raketenschaden.'],
   'radar|rail':['ZIELERFASSUNG','#6be0c8','Vom Radar markierte Gegner nehmen 30% mehr Railgun-Schaden.'],
   'cryo|tesla':['SUPRALEITER','#b8a8ff','Tesla-Blitze springen auf kalte Gegner weiter über und verlieren dabei keine Kraft.']};
@@ -3901,12 +3942,13 @@ function startLevel(k,mode,Lx){
   var alist=[];
   if(!mod('nohero')){alist.push({k:'hero',name:HEROES[hk].name,c:HEROES[hk].col,aim:true});alist.push({k:'hab',name:HABIL[hk].short,c:HEROES[hk].col,aim:false,cd:habCd(hk)});}
   if(!mod('noab'))abSel().forEach(function(k){alist.push({k:k,name:ABX[k].name,c:ABX[k].c,aim:!!ABX[k].aim,cd:abCd(k)});});
+  if(!mod('noab')&&mode!=='train'&&gadgetOpen())alist.push({k:'drone',name:'BAU-DROHNE',c:'#6be0c8',aim:true});
   alist.forEach(function(a){
     var b=document.createElement('button');b.className='ab'+(a.k==='hab'?' hab':'');b.style.setProperty('--c',a.c);
     b.innerHTML='<i></i><em></em><span>'+a.name+'</span>';b.insertBefore(abilIconFor(a.k,hk),b.children[1]);
     fastTap(b,function(ev){ev.stopPropagation();abilClick(a);});
     ab.appendChild(b);
-    G.abil[a.k]={cd:a.k==='hab'?4:0,max:a.cd||1,el:b,p:-1};G.abilList.push(a);
+    G.abil[a.k]={cd:a.k==='hab'?4:0,max:a.cd||1,el:b,p:-1,n:a.k==='drone'?gadgetCharges():0};G.abilList.push(a);
   });
   G.gravs=[];G.planes=[];G.bombs=[];G.pickups=[];G.mines=[];G.wvIdx=null;
   initObjective(L);
@@ -4017,9 +4059,10 @@ function updateHud(){
   G.abilList.forEach(function(a){
     var st=G.abil[a.k],p;
     if(a.k==='hero')p=G.hero.dead?Math.round(G.hero.respawnT/G.heroSt.respawn*100):0;
+    else if(a.k==='drone')p=st.n>0?0:100;
     else p=Math.round(st.cd/st.max*100);
     if(st.p!==p){st.p=p;st.el.firstChild.style.setProperty('--p',p+'%');st.el.classList.toggle('cool',p>0);}
-    var sec=a.k==='hero'?(G.hero.dead?Math.ceil(G.hero.respawnT):0):Math.ceil(st.cd);
+    var sec=a.k==='hero'?(G.hero.dead?Math.ceil(G.hero.respawnT):0):a.k==='drone'?st.n:Math.ceil(st.cd);
     if(st.sec!==sec){st.sec=sec;st.el.children[2].textContent=sec>0?sec:'';}
     st.el.classList.toggle('on',G.aim===a.k);
   });
@@ -4087,7 +4130,7 @@ function openShop(){
 }
 function closeShop(){disp('shopScr',false);if(G){G.paused=false;updateHud();}}
 $('shopSkip').addEventListener('click',function(){Snd.play('tick');closeShop();});
-function banner(t,s,c){G.ban={t:t,s:s||'',c:c||'#ffc23c',life:2.4,max:2.4};}
+function banner(t,s,c){G.ban={t:t,s:s||'',c:c||'#ffc23c',life:1.7,max:1.7};}
 function makeEnemy(type,route,d,hp,wm){
   var D=ENEMIES[type],L=G.L,p=posAt(route,d);
   if(PR.lexS&&!PR.lexS[type])PR.lexS[type]=1;
@@ -4127,18 +4170,26 @@ function spawn(ev,hard){
 }
 /* Beute */
 var MSTAT={dmg:['Verstärkerkern','Schaden','#ff7a5a'],range:['Fokuslinse','Reichweite','#3de8ff'],rate:['Kühlrippen','Feuerrate','#ffe14d'],crit:['Zielchip','Krit-Chance','#ff4fa3']};
-var MRAR=[['Gewöhnlich','#9aa3b8'],['Selten','#5fa8ff'],['Episch','#c08cff']];
-function genModule(k){
+var MRAR=[['Gewöhnlich','#9aa3b8'],['Selten','#5fa8ff'],['Episch','#c08cff'],['Legendär','#ffb02e']];
+/* Wertebereiche je Seltenheit, Zerlege-Wert und Kosten fürs Zusammenbauen (3 gleiche → 1 nächsthöhere) */
+var MRNG={n:[[3,5],[6,9],[10,14],[16,20]],crit:[[2,3],[4,6],[7,9],[11,13]]},MSELL=[2,5,12,30],MMERGE=[15,40,120];
+function modRoll(st,rar){var g=(st==='crit'?MRNG.crit:MRNG.n)[rar];return g[0]+Math.floor(Math.random()*(g[1]-g[0]+1));}
+/* Legendär gibt es nur durchs Zusammenbauen oder sehr selten vom Mutterschiff; es bringt einen kleinen Zweitwert mit */
+function makeModule(st,rar){
+  var m={id:Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),s:st,v:modRoll(st,rar),r:rar};
+  if(rar===3){var o=['dmg','range','rate','crit'].filter(function(x){return x!==st;});m.s2=o[Math.floor(Math.random()*o.length)];m.v2=m.s2==='crit'?3:5;}
+  return m;
+}
+function genModule(k,boss){
   var r=Math.random(),ep=Math.min(0.12,Math.max(0,(k-10)*0.006)),ra=Math.min(0.4,0.15+k*0.012);
   var rar=r<ep?2:r<ep+ra?1:0,st=['dmg','range','rate','crit'][Math.floor(Math.random()*4)];
-  var rng0=st==='crit'?[[2,3],[4,6],[7,9]][rar]:[[3,5],[6,9],[10,14]][rar];
-  var v=rng0[0]+Math.floor(Math.random()*(rng0[1]-rng0[0]+1));
-  return {id:Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),s:st,v:v,r:rar};
+  if(boss&&k>=16&&Math.random()<0.04)rar=3;
+  return makeModule(st,rar);
 }
-function modName(m){return MSTAT[m.s][0]+' +'+m.v+'% '+MSTAT[m.s][1];}
+function modName(m){return MSTAT[m.s][0]+' +'+m.v+'% '+MSTAT[m.s][1]+(m.s2?' · +'+m.v2+'% '+MSTAT[m.s2][1]:'');}
 /* Module fallen als schwebende Beute: antippen zum Einsammeln, sonst nach 12 echten Sekunden weg */
-function dropModule(x,y){
-  var m=genModule(G.L.k);
+function dropModule(x,y,boss){
+  var m=genModule(G.L.k,boss);
   G.pickups=G.pickups||[];
   G.pickups.push({x:clamp(x,16,W-16),y:clamp(y-14,46,H-24),m:m,t:12,max:12,a:Math.random()*6});
   floatText(x,y-24,'MODUL! ANTIPPEN','#ffffff');
@@ -4257,7 +4308,7 @@ function kill(e){
     if(e.mb){G.crysGain+=2;G.miniKills=(G.miniKills||0)+1;if(Math.random()<0.35)dropModule(p[0],p[1]);G.slowmo=0.8;banner((e.wk?WKIND[e.wk].n:'WÄCHTER')+' BESIEGT','+2 Kristalle','#6be07a');}
     else if(e.mini){if(Math.random()<0.3)dropModule(p[0],p[1]);}
     else if(bossLeft){banner('EINE HÄLFTE ZERSTÖRT','Die andere Hälfte ist noch unterwegs!','#ffc23c');}
-    else{dropModule(p[0],p[1]);G.slowmo=1.6;banner('MUTTERSCHIFF ZERSTÖRT','','#6be07a');(G.btKilled=G.btKilled||[]).push(e.btype||'classic');}
+    else{dropModule(p[0],p[1],true);G.slowmo=1.6;banner('MUTTERSCHIFF ZERSTÖRT','','#6be07a');(G.btKilled=G.btKilled||[]).push(e.btype||'classic');}
   }
   for(var i=0;i<n;i++){var a=Math.random()*6.28,s=15+Math.random()*(e.def.boss?60:35);
     G.parts.push({x:p[0],y:p[1],vx:Math.cos(a)*s,vy:Math.sin(a)*s-10,t:0,life:0.4+Math.random()*0.3,c:e.def.col,s:2,g:60});}
@@ -4475,7 +4526,7 @@ function fire0(t,s,tg){
       var ux=Math.cos(a),uy=Math.sin(a),len=s.range+6,crit=s.crit&&Math.random()<s.crit,dm=crit?s.dmg*2:s.dmg,frostHit=false;
       var railHit=function(en){
         var cold=en.freezeT>0||en.slowT>0;if(cold)frostHit=true;
-        hurt(en,dm*(cold?1.5:1)*(en.mark>0?1.3:1),'kin',s.pen);
+        hurt(en,dm*(cold?1.3:1)*(en.mark>0?1.3:1),'kin',s.pen);
         if(s.knock&&!en.dead&&!en.def.boss&&!en.def.fly){en.d=Math.max(0,en.d-s.knock);en.blockers.slice().forEach(release);}
       };
       if(s.pierce){
@@ -4867,9 +4918,10 @@ function abilClick(a){
     G.aim=G.aim==='hero'?null:'hero';setHint(G.aim?'WOHIN SOLL '+hn+' LAUFEN?':'');Snd.play('tick');updateHud();return;
   }
   if(st.cd>0){Snd.play('no');return;}
+  if(a.k==='drone'&&st.n<=0){Snd.play('no');toast('DIE BAU-DROHNE IST VERBRAUCHT','#6be0c8');return;}
   if(a.k==='hab'&&G.hero.dead){Snd.play('no');toast(HEROES[G.heroKey].name+' IST GEFALLEN',HEROES[G.heroKey].col);return;}
   if(a.aim){G.aim=G.aim===a.k?null:a.k;
-    setHint(G.aim?({orbital:'ZIEL FÜR ORBITALSCHLAG WÄHLEN',air:'HÖHE FÜR DEN LUFTANGRIFF WÄHLEN',grav:'STELLE AUF DEM WEG FÜR DIE FALLE WÄHLEN'}[a.k]||'LANDEPUNKT AUF DEM WEG WÄHLEN'):'');Snd.play('tick');}
+    setHint(G.aim?({orbital:'ZIEL FÜR ORBITALSCHLAG WÄHLEN',air:'HÖHE FÜR DEN LUFTANGRIFF WÄHLEN',grav:'STELLE AUF DEM WEG FÜR DIE FALLE WÄHLEN',drone:'FREIE STELLE NEBEN DEM WEG FÜR DEN NEUEN BAUPLATZ'}[a.k]||'LANDEPUNKT AUF DEM WEG WÄHLEN'):'');Snd.play('tick');}
   else useAbility(a.k);
   updateHud();
 }
@@ -4904,6 +4956,21 @@ function heroAbility(){
   }
   return true;
 }
+/* Gadget Bau-Drohne: setzt einen zusätzlichen Bauplatz neben den Weg (Ladungen pro Einsatz, kein Gold) */
+function droneSpot(x,y){
+  var p=nearestPath(x,y),why=null,base=G.L.base;
+  if(x<14||x>W-14||y<34||y>H-16)why='HIER KANN DIE DROHNE NICHT LANDEN';
+  else if(p.d<13)why='ZU NAH AM WEG';
+  else if(p.d>45)why='ZU WEIT VOM WEG ENTFERNT';
+  else if(Math.hypot(x-base[0],y-base[1])<30)why='ZU NAH AN DER STATION';
+  else if(G.spots.some(function(s){return Math.hypot(s.x-x,s.y-y)<22;}))why='ZU NAH AN EINEM BAUPLATZ';
+  if(why){Snd.play('no');toast(why,'#ff8a8a');return;}
+  var s={x:Math.round(x),y:Math.round(y),tower:null,sb:null,rock:false,only:null,pre:null,pt:1,gad:true,landT:0.6};
+  G.spots.push(s);G.abil.drone.n--;G.aim=null;setHint('');G.abUsed++;
+  G.fx.push({k:'ring',x:s.x,y:s.y,r:16,t:0,life:0.5,c:'#6be0c8',fill:true});
+  for(var i=0;i<10;i++){var a=i/10*6.28;G.parts.push({x:s.x,y:s.y,vx:Math.cos(a)*30,vy:Math.sin(a)*20-10,t:0,life:0.5,c:i%2?'#6be0c8':'#ffffff',s:1,g:40});}
+  floatText(s.x,s.y-16,'NEUER BAUPLATZ','#6be0c8');Snd.play('up');buzz(30);updateHud();
+}
 function useAbility(k,x,y){
   var ok=true,i,p;
   if(k==='hero'){
@@ -4914,6 +4981,7 @@ function useAbility(k,x,y){
     G.aim=null;setHint('');return;
   }
   if(k==='hab'){ok=heroAbility();if(ok)G.abil.hab.cd=G.abil.hab.max;updateHud();return;}
+  if(k==='drone'){droneSpot(x,y);return;}
   if(k==='orbital'){G.strikes.push({x:x,y:y,t:0.7,max:0.7});Snd.play('aim');}
   else if(k==='troops'){
     p=nearestPath(x,y);
@@ -5389,7 +5457,7 @@ function flushStats(){
   (G.btKilled||[]).forEach(function(t){PR.st.bt[t]=(PR.st.bt[t]||0)+1;});
   if(!DEV){PR.crystals+=G.crysGain;PR.st.crysTotal+=G.crysGain;}
   G.loot.forEach(function(m){
-    if(PR.mods.length>=40){if(!DEV)PR.crystals+=[2,5,12][m.r];}
+    if(PR.mods.length>=40){if(!DEV)PR.crystals+=MSELL[m.r];}
     else PR.mods.push(m);
   });
 }
@@ -6363,7 +6431,10 @@ function drawPreview(){
   otext(lab,x+4,y+7,10,'#cfe0ff');
   var mbW=w.ev.some(function(e){return e.mb;}),realBoss=w.ev.some(function(e){return e.type==='boss'&&!e.mini;});
   var tip=waveTip(cnt,mbW,realBoss);
-  if(tip)drawTip(tip,x,y+h+2);
+  /* Hinweis nur kurz zeigen, damit er nicht die Sicht verdeckt */
+  if(G.tipFor!==G.nextWave){G.tipFor=G.nextWave;G.tipAt=T0;}
+  var tAge=T0-G.tipAt;
+  if(tip&&tAge<4.5){ctx.globalAlpha=octx.globalAlpha=tAge>3.9?(4.5-tAge)/0.6:1;drawTip(tip,x,y+h+2);ctx.globalAlpha=octx.globalAlpha=1;}
   if(!open)return;
   R(ctx,x+2,y+hh,hw-4,1,'#2c3566');
   order.forEach(function(k,i){
@@ -6442,6 +6513,12 @@ function renderPlay(){
   if(G.shake>0&&SAVE.opt.shake){sx=Math.round((Math.random()-0.5)*G.shake*8);sy=Math.round((Math.random()-0.5)*G.shake*8);}
   ctx.save();ctx.translate(sx,sy);
   ctx.drawImage(L.bg,0,0);
+  G.spots.forEach(function(s){if(!s.gad)return;
+    var sx=s.x,sy=s.y,k=s.landT>0?s.landT/0.6:0;if(s.landT>0)s.landT=Math.max(0,s.landT-1/60);
+    disc(ctx,sx+1,sy+2,11,'#00000066');disc(ctx,sx,sy,11,'#0b101c');disc(ctx,sx,sy,10,'#1f3a3a');disc(ctx,sx,sy,8,'#2a4d4b');disc(ctx,sx,sy,6,'#15282a');
+    R(ctx,sx-10,sy-1,3,2,'#6be0c8');R(ctx,sx+8,sy-1,3,2,'#6be0c8');R(ctx,sx-1,sy-10,2,3,'#6be0c8');R(ctx,sx-1,sy+8,2,3,'#6be0c8');
+    if(k>0)R(ctx,sx-4,sy-12-Math.round(k*30),8,3,'#8a93a6');
+  });
   if(L.amb)drawAmbient(L);
   var wait=G.nextWave===0;
   if(wait||G.routeT>0)drawRoutes();
@@ -6631,7 +6708,7 @@ function refreshMapUI(){
   $('mXp').style.width=DEV?'100%':Math.round(pi.cur/pi.need*100)+'%';
   var em=$('mPts');em.textContent=DEV?'99+':f;em.classList.toggle('on',DEV||f>0);
   var ad=0;ACH.forEach(function(a){if(PR.ach[a.id])ad++;});
-  var ea=$('mAch');ea.textContent=ad+'/'+ACH.length;ea.classList.add('on');
+  var ar=achReadyN(),ea=$('mAch');ea.textContent=ar?ar+' NEU':ad+'/'+ACH.length;ea.classList.add('on');ea.classList.toggle('hot',ar>0);
   var free=featOn('ws')?PR.mods.filter(function(m){return !equippedIn(m.id);}).length:0,mm=$('mMods');mm.textContent=free;mm.classList.toggle('on',free>0);
   var mb=$('mBase'),todo=DEV?0:f+free;mb.textContent=todo>9?'9+':todo;mb.classList.toggle('on',todo>0);
   $('bPrevW').style.visibility=mapW>0?'visible':'hidden';
@@ -7793,11 +7870,12 @@ function skState(n){
   var r=rk(n.id);
   if(r>=n.max)return 'max';
   if(n.tw&&!towerOpen(n.tw))return 'twl';
+  if(n.gad&&!gadgetOpen())return 'gad';
   if(n.id!=='core'&&!n.nb.some(function(id){return rk(id)>0;}))return 'pre';
   if(plInfo().lv<n.lv)return 'lvl';
   return ptsFree()>=n.cost?'can':'poor';
 }
-var SKPOS={s1:[50,10],g1:[27,22],g2:[73,22],core:[50,37],g3:[22,55],g4:[78,55],g5:[50,69],g7:[30,78],g6:[70,78]};
+var SKPOS={s1:[50,10],g1:[27,22],g2:[73,22],core:[50,37],g3:[22,55],g4:[78,55],g5:[50,69],g7:[30,78],g6:[70,78],g8:[88,39]};
 function skPos(n){return n.tw?[22+n.x*28,29+n.y*25]:SKPOS[n.id]||[12+n.x/4*76,9+n.y/3.6*67];}
 function skVisible(n){return SKV.tab==='g'?!n.tw:n.tw===SKV.tw;}
 function skTwSum(k){var a=0,m=0,can=false;(SKTW[k]||[]).forEach(function(id){var n=SKBY[id];a+=rk(id);m+=n.max;if(skState(n)==='can')can=true;});return {a:a,m:m,can:can};}
@@ -7843,11 +7921,11 @@ function renderSkills(){
   SKN.forEach(function(n){
     if(!skVisible(n))return;
     var s=skState(n),r=rk(n.id),e=document.createElement('button'),p=skPos(n);
-    e.className='skn '+(s==='twl'?'pre':s)+(r>0?' got':'')+(n.key?' key':'')+(n.id==='core'?' core':'')+(skSel===n.id?' sel':'');
+    e.className='skn '+(s==='twl'||s==='gad'?'pre':s)+(r>0?' got':'')+(n.key?' key':'')+(n.id==='core'?' core':'')+(skSel===n.id?' sel':'');
     e.style.left=p[0]+'%';e.style.top=p[1]+'%';e.style.setProperty('--c',n.c);e.style.setProperty('--p',Math.round(r/n.max*100)+'%');
     if(n.tw){var li=SKTW[n.tw].indexOf(n.id),ic=iconCanvas({k:'tower',type:n.tw,tier:li===0?0:li===3?2:1,spec:li===3?'a':null});e.appendChild(ic);}else{var sp=document.createElement('span');sp.className='ic';sp.textContent=n.ic;e.appendChild(sp);}
     var rr=document.createElement('em');rr.textContent=s==='lvl'&&!r?'AB LV '+n.lv:r+'/'+n.max;e.appendChild(rr);
-    if((s==='pre'||s==='twl'||s==='lvl')&&!r){var lk=document.createElement('b');lk.className='sklock';lk.textContent='🔒';e.appendChild(lk);}
+    if((s==='pre'||s==='twl'||s==='gad'||s==='lvl')&&!r){var lk=document.createElement('b');lk.className='sklock';lk.textContent='🔒';e.appendChild(lk);}
     var nm=document.createElement('i');nm.textContent=n.name;e.appendChild(nm);
     e.addEventListener('click',function(){
       if(skSel===n.id&&skState(n)==='can'){learn();return;}
@@ -7860,7 +7938,7 @@ function renderSkills(){
     var N=SKBY[skSel],S=skState(N),R0=rk(N.id);
     tx.querySelector('.t').textContent=N.name+'  ('+R0+'/'+N.max+')'+(N.key?'  ·  SCHLÜSSEL':'');
     tx.querySelector('.d').textContent=N.d;
-    tx.querySelector('.s').textContent=S==='max'?'Maximal ausgebaut.':S==='twl'?'Der Turm ist noch nicht freigeschaltet (Level '+(TUNLOCK[N.tw]+1)+').':S==='pre'?'Noch nicht erreichbar: Lerne zuerst einen verbundenen Knoten.':S==='lvl'?'Benötigt Spielerlevel '+N.lv+'.':S==='poor'?'Kostet '+N.cost+' Punkte. Du hast '+f+'.':'Kostet '+N.cost+(N.cost>1?' Punkte.':' Punkt.')+' Tippe nochmal oder auf LERNEN.';
+    tx.querySelector('.s').textContent=S==='max'?'Maximal ausgebaut.':S==='twl'?'Der Turm ist noch nicht freigeschaltet (Level '+(TUNLOCK[N.tw]+1)+').':S==='gad'?'Erst die Mission PIONIER unter ERFOLGE schaffen, dann gibt es die Bau-Drohne.':S==='pre'?'Noch nicht erreichbar: Lerne zuerst einen verbundenen Knoten.':S==='lvl'?'Benötigt Spielerlevel '+N.lv+'.':S==='poor'?'Kostet '+N.cost+' Punkte. Du hast '+f+'.':'Kostet '+N.cost+(N.cost>1?' Punkte.':' Punkt.')+' Tippe nochmal oder auf LERNEN.';
     bl.disabled=S!=='can';
   }else{
     tx.querySelector('.t').textContent=tw?'TURM-BAUM: '+TOWERS[SKV.tw].name.toUpperCase():'ALLGEMEIN';
@@ -8046,14 +8124,29 @@ function renderAch(){
     $('achCount').textContent='';
     return renderSkins();
   }
+  var rdy=ACH.filter(function(a){return PR.achReady[a.id]&&!PR.ach[a.id];});
+  var claim=function(as){
+    var cr=0,ex=[];as.forEach(function(a){if(achClaim(a)){cr+=a.cr;if(a.skin)ex.push('SKIN '+a.skin);if(a.gadget)ex.push(a.gadget);}});
+    if(!cr&&!ex.length)return;
+    persist();Snd.play('coin');buzz(30);toast('+'+cr+' KRISTALLE'+(ex.length?'  ·  '+ex.join('  ·  '):''),'#c08cff');renderAch();
+  };
+  if(rdy.length>1){
+    var all=document.createElement('div');all.className='ac ready';all.style.gridColumn='span 2';
+    all.innerHTML='<div class="ico">!</div><div class="tx"><div class="n"></div><div class="d"></div></div>';
+    all.querySelector('.n').textContent=rdy.length+' ERFOLGE BEREIT';
+    var sum=0;rdy.forEach(function(a){sum+=a.cr;});all.querySelector('.d').textContent='Zusammen ◆ '+sum+' Kristalle';
+    var ab=document.createElement('button');ab.className='pb go';ab.textContent='ALLE EINSAMMELN';ab.addEventListener('click',function(){claim(rdy);});
+    all.appendChild(ab);list.appendChild(all);
+  }
   ACH.forEach(function(a){
-    var v=Math.min(a.goal,a.v()),ok=!!PR.ach[a.id];if(ok)done++;
-    var c=document.createElement('div');c.className='ac'+(ok?' done':'');
-    c.innerHTML='<div class="ico">'+(ok?'✓':'?')+'</div><div class="tx"><div class="n"></div><div class="d"></div><div class="xpbar"><i></i></div></div><div class="rw"></div>';
+    var v=Math.min(a.goal,a.v()),ok=!!PR.ach[a.id],rd=!ok&&!!PR.achReady[a.id];if(ok)done++;
+    var c=document.createElement('div');c.className='ac'+(ok?' done':rd?' ready':'');
+    c.innerHTML='<div class="ico">'+(ok?'✓':rd?'!':'?')+'</div><div class="tx"><div class="n"></div><div class="d"></div><div class="xpbar"><i></i></div></div><div class="rw"></div>';
     c.querySelector('.n').textContent=a.name.toUpperCase();
-    c.querySelector('.d').textContent=a.d+'  ('+v+'/'+a.goal+')';
-    c.querySelector('.xpbar i').style.width=Math.round(v/a.goal*100)+'%';
-    c.querySelector('.rw').textContent='◆ '+a.cr+(a.skin?' + '+a.skin:'');
+    c.querySelector('.d').textContent=a.d+'  ('+(rd?a.goal:v)+'/'+a.goal+')';
+    c.querySelector('.xpbar i').style.width=(rd?100:Math.round(v/a.goal*100))+'%';
+    c.querySelector('.rw').textContent=achReward(a);
+    if(rd){var b=document.createElement('button');b.className='pb go';b.textContent='EINSAMMELN';b.addEventListener('click',function(){claim([a]);});c.appendChild(b);}
     list.appendChild(c);
   });
   $('achCount').textContent=done+'/'+ACH.length;
@@ -8079,7 +8172,7 @@ function renderSkins(){
 }
 
 /* =============== Werkstatt =============== */
-var WS={tower:'laser',mod:null},WSTOW=['laser','missile','cryo','rail','tesla','barracks','flak','mine','lance','hangar'];
+var WS={tower:'laser',mod:null,merge:null},WSTOW=['laser','missile','cryo','rail','tesla','barracks','flak','mine','lance','hangar'];
 function equippedIn(id){var r=null;Object.keys(PR.equip).forEach(function(k){if((PR.equip[k]||[]).indexOf(id)>=0)r=k;});return r;}
 function unequip(id){Object.keys(PR.equip).forEach(function(k){PR.equip[k]=(PR.equip[k]||[]).filter(function(x){return x!==id;});});}
 var WSF='all',MODIC={};
@@ -8127,7 +8220,7 @@ function renderWs(){
     var b=document.createElement('button'),m=modById(eq[i]),ok=i<n;
     if(m){b.className='full';b.style.borderColor=MRAR[m.r][1];b.style.background='linear-gradient(180deg,#1a2246,#0b1024)';
       b.appendChild(modIcon(m.s));b.insertAdjacentHTML('beforeend','<b></b><span></span><span style="color:#8890aa">antippen = ausbauen</span>');
-      b.children[1].textContent='+'+m.v+'% '+MSTAT[m.s][1].toUpperCase();b.children[1].style.color=MSTAT[m.s][2];b.children[2].textContent=MRAR[m.r][0];b.children[2].style.color=MRAR[m.r][1];}
+      b.children[1].textContent='+'+m.v+'% '+MSTAT[m.s][1].toUpperCase()+(m.s2?' +'+m.v2+'%':'');b.children[1].style.color=MSTAT[m.s][2];b.children[2].textContent=MRAR[m.r][0];b.children[2].style.color=MRAR[m.r][1];}
     else if(ok){b.className=m0?'hint':'';b.innerHTML='<span>FREIER PLATZ</span><span>'+(m0?'antippen = einbauen':'Modul unten wählen')+'</span>';}
     else{b.className='lock';b.innerHTML='<span>GESPERRT</span><span>ab Meisterschaft '+(i===1?4:8)+'</span>';}
     b.addEventListener('click',function(){if(m){unequip(m.id);persist();Snd.play('sell');renderWs();}else if(ok&&m0){wsEquip(k);}else Snd.play('no');});
@@ -8136,36 +8229,73 @@ function renderWs(){
   card.appendChild(slots);
   var tot=document.createElement('div');tot.className='wstot';
   var line=function(lab,val,pre){return lab+' <b>+'+Math.round(val*100)+'%</b>'+(pre?' <span style="color:var(--am)">'+pre+'</span>':'')+'<br>';};
-  var pv2=m0&&!equippedIn(m0.id)?m0:null,add=function(s){return pv2&&pv2.s===s?'(+'+pv2.v+')':'';};
+  var pv2=m0&&!equippedIn(m0.id)?m0:null,add=function(s){return pv2&&pv2.s===s?'(+'+pv2.v+')':pv2&&pv2.s2===s?'(+'+pv2.v2+')':'';};
   tot.innerHTML='BONI GESAMT<br>'+line('Schaden',mb.dmg+0.02*lv,add('dmg'))+line('Reichweite',mb.range,add('range'))+line('Feuerrate',mb.rate,add('rate'))+line('Krit',mb.crit,add('crit'));
   card.appendChild(tot);
   /* Lager mit Filter */
-  $('wsInvH').innerHTML='LAGER <b>'+PR.mods.length+'/40</b>  ·  Module sammelst du im Spiel ein, wenn sie herumschweben.';
+  $('wsInvH').innerHTML='LAGER <b>'+PR.mods.length+'/40</b>  ·  '+(WS.merge?'Wähle 3 Module der gleichen Seltenheit.':'3 gleicher Seltenheit ergeben 1 besseres: ZUSAMMENBAUEN.');
   var fl=$('wsFilt');fl.innerHTML='';
   [['all','ALLE'],['dmg','SCHADEN'],['range','REICHW.'],['rate','FEUERRATE'],['crit','KRIT']].forEach(function(f){var b=document.createElement('button');b.className=WSF===f[0]?'on':'';b.textContent=f[1];
     b.addEventListener('click',function(){WSF=f[0];Snd.play('tick');renderWs();});fl.appendChild(b);});
   var inv=$('wsInv');inv.innerHTML='';
   PR.mods.filter(function(m){return WSF==='all'||m.s===WSF;}).sort(function(a,b){return b.r-a.r||b.v-a.v;}).forEach(function(m){
-    var b=document.createElement('button'),where=equippedIn(m.id);b.className='mod'+(WS.mod===m.id?' sel':'')+(where?' eq':'');
+    var b=document.createElement('button'),where=equippedIn(m.id),mg=WS.merge,mr=mg&&modById(mg[0]);
+    b.className='mod'+(m.r===3?' leg':'')+(mg?(mg.indexOf(m.id)>=0?' sel':(where||!mr||m.r!==mr.r)?' dim':''):(WS.mod===m.id?' sel':'')+(where?' eq':''));
     b.style.setProperty('--r',MRAR[m.r][1]);b.style.setProperty('--c',MSTAT[m.s][2]);
     b.appendChild(modIcon(m.s));
     var gem='';for(var gi=0;gi<=m.r;gi++)gem+='<i></i>';
     b.insertAdjacentHTML('beforeend','<span class="mt"><span class="mv">+'+m.v+'%</span><span class="mn">'+MSTAT[m.s][1]+'</span></span><span class="gem">'+gem+'</span>'+(where?'<span class="eqb">'+TOWERS[where].short.toUpperCase()+'</span>':''));
     b.title=MRAR[m.r][0]+': '+modName(m);
-    b.addEventListener('click',function(){WS.mod=WS.mod===m.id?null:m.id;Snd.play('tick');renderWs();});
+    b.addEventListener('click',function(){if(WS.merge){wsMergePick(m);return;}WS.mod=WS.mod===m.id?null:m.id;Snd.play('tick');renderWs();});
     inv.appendChild(b);
   });
   var sel=$('wsSel');
+  if(WS.merge)return wsMergeUI(sel);
   if(!m0){sel.innerHTML=PR.mods.length?'Modul im Lager antippen, dann einen freien Platz am Turm antippen. Ein belegter Platz baut das Modul wieder aus.':'Noch keine Module. Elite-Gegner und Bosse lassen sie fallen: im Spiel antippen zum Einsammeln!';return;}
-  var where=equippedIn(m0.id),val=[2,5,12][m0.r];
-  sel.innerHTML='<div class="btns"><span style="flex:1;color:'+MRAR[m0.r][1]+'">'+MRAR[m0.r][0].toUpperCase()+': '+modName(m0)+(where?'  ·  in '+TOWERS[where].short:'')+'</span><button class="big" id="wsEq">IN '+TOWERS[k].short.toUpperCase()+' EINBAUEN</button><button class="big alt" id="wsDel">ZERLEGEN +'+val+' ◆</button></div>';
+  var where=equippedIn(m0.id),val=MSELL[m0.r];
+  sel.innerHTML='<div class="btns"><span style="flex:1;color:'+MRAR[m0.r][1]+'">'+MRAR[m0.r][0].toUpperCase()+': '+modName(m0)+(where?'  ·  in '+TOWERS[where].short:'')+'</span><button class="big" id="wsEq">IN '+TOWERS[k].short.toUpperCase()+' EINBAUEN</button>'+(m0.r<3?'<button class="big alt" id="wsMg">ZUSAMMENBAUEN</button>':'')+'<button class="big alt" id="wsDel">ZERLEGEN +'+val+' ◆</button></div>';
+  if(m0.r<3)$('wsMg').addEventListener('click',function(){
+    if(where){Snd.play('no');toast('ERST AUSBAUEN, DANN ZUSAMMENBAUEN');return;}
+    WS.merge=[m0.id];WS.mod=null;Snd.play('tick');renderWs();});
   $('wsEq').addEventListener('click',function(){wsEquip(k);});
   $('wsDel').addEventListener('click',function(){
     unequip(m0.id);PR.mods=PR.mods.filter(function(x){return x.id!==m0.id;});if(!DEV)PR.crystals+=val;WS.mod=null;persist();Snd.play('sell');renderWs();
   });
 }
+/* Zusammenbauen: 3 freie Module gleicher Seltenheit → 1 Modul der nächsten Stufe mit der Werteart des ersten */
+function wsMergePick(m){
+  var mg=WS.merge,f=modById(mg[0]),i=mg.indexOf(m.id);
+  if(i===0){WS.merge=null;Snd.play('tick');renderWs();return;}
+  if(i>0)mg.splice(i,1);
+  else if(equippedIn(m.id)){Snd.play('no');toast('EINGEBAUTE MODULE ERST AUSBAUEN');return;}
+  else if(!f||m.r!==f.r){Snd.play('no');toast('NUR GLEICHE SELTENHEIT: '+MRAR[f.r][0].toUpperCase());return;}
+  else if(mg.length>=3){Snd.play('no');return;}
+  else mg.push(m.id);
+  Snd.play('tick');renderWs();
+}
+function wsMergeUI(sel){
+  var mg=WS.merge.map(modById).filter(Boolean);
+  if(!mg.length){WS.merge=null;return renderWs();}
+  var r0=mg[0].r,cost=MMERGE[r0],ok=mg.length===3&&(DEV||PR.crystals>=cost),nx=MRAR[r0+1];
+  var free=PR.mods.filter(function(m){return m.r===r0&&!equippedIn(m.id);}).length;
+  sel.innerHTML='<div><b style="color:'+MRAR[r0][1]+'"></b> <span></span></div><div class="btns"><span style="flex:1"></span><button class="big" id="wsMgGo"></button><button class="big alt" id="wsMgX">ABBRECHEN</button></div>';
+  sel.querySelector('b').textContent='ZUSAMMENBAUEN '+mg.length+'/3';
+  sel.querySelector('span').textContent=free<3?'Du hast nur '+free+' freie '+MRAR[r0][0]+'-Module. Sammle mehr!':'Ergebnis: 1 '+nx[0].toUpperCase()+'-Modul mit '+MSTAT[mg[0].s][1]+(r0+1===3?' und einem Zweitwert. Höchstens 1 Legendäres pro Turm.':'.');
+  var go=$('wsMgGo');go.textContent='BAUEN −'+cost+' ◆';go.disabled=!ok;
+  go.addEventListener('click',function(){
+    if(!ok){Snd.play('no');return;}
+    var ids=mg.map(function(m){return m.id;});
+    PR.mods=PR.mods.filter(function(m){return ids.indexOf(m.id)<0;});
+    if(!DEV)PR.crystals-=cost;
+    var n=makeModule(mg[0].s,r0+1);PR.mods.push(n);WS.merge=null;WS.mod=n.id;persist();
+    Snd.play('lvup');buzz(r0+1===3?[40,40,90]:40);
+    toast((r0+1===3?'LEGENDÄR! ':'')+modName(n).toUpperCase(),nx[1]);renderWs();
+  });
+  $('wsMgX').addEventListener('click',function(){WS.merge=null;Snd.play('tick');renderWs();});
+}
 function wsEquip(k){
   var m=modById(WS.mod);if(!m||!towerOpen(k)){Snd.play('no');return;}
+  if(m.r===3&&(PR.equip[k]||[]).some(function(id){var o=modById(id);return o&&o.r===3&&o.id!==m.id;})){Snd.play('no');toast('NUR 1 LEGENDÄRES MODUL PRO TURM');return;}
   unequip(m.id);
   var eq=(PR.equip[k]||[]).filter(function(id){return modById(id);}),n=mSlots(k);
   if(eq.length>=n)eq[n-1]=m.id;else eq.push(m.id);
@@ -8220,9 +8350,10 @@ ABK.forEach(function(k){var A=ABX[k];ABDESC[k]=[A.full.toUpperCase(),A.d,'Ab Spi
 var RULES={
  dmg:['SCHADENSARTEN','Energie (Laser, Kryo) ist stark gegen Schilde und schwach gegen Panzerung. Kinetisch (Railgun, Kaserne) ist stark gegen Panzerung, prallt aber an Schilden ab. Explosiv (Raketen, Flak) ist stark gegen Gruppen, wird von Panzerung und Schilden gebremst.'],
  badge:['ABWEHR-SYMBOLE','Die farbigen Quadrate über Gegnern und in der Wellenvorschau zeigen ihre Abwehr: hellblau = Schild, grau = Panzerung, rosa = Reflektor, lila = Tarnung. Ein roter Winkel bedeutet: vom Radar markiert.'],
- combo:['KOMBOS','Stehen zwei passende Türme nah beieinander, zeigt eine gestrichelte Linie ihre KOMBO. SCHILDBRUCH (Laser + Railgun): Laser brechen Schilde, die Railgun trifft dann voll. KÄLTESCHUSS (Kryo + Railgun): verlangsamte Gegner nehmen 50% mehr Railgun-Schaden. FESTGENAGELT (Kaserne + Raketen): festgehaltene Gegner nehmen 25% mehr Raketenschaden. KÄLTEBRUCH (Kryo + Raketen): kalte Gegner nehmen 25% mehr Raketenschaden. ZIELERFASSUNG (Radar + Railgun): markierte Gegner nehmen 30% mehr Railgun-Schaden. SUPRALEITER (Kryo + Tesla): Blitze springen auf kalte Gegner weiter und verlieren keine Kraft. Der Verstärker macht alle Türme in seiner Nähe stärker.'],
+ combo:['KOMBOS','Stehen zwei passende Türme nah beieinander, zeigt eine gestrichelte Linie ihre KOMBO. SCHILDBRUCH (Laser + Railgun): Laser brechen Schilde, die Railgun trifft dann voll. KÄLTESCHUSS (Kryo + Railgun): verlangsamte Gegner nehmen 30% mehr Railgun-Schaden. FESTGENAGELT (Kaserne + Raketen): festgehaltene Gegner nehmen 25% mehr Raketenschaden. KÄLTEBRUCH (Kryo + Raketen): kalte Gegner nehmen 25% mehr Raketenschaden. ZIELERFASSUNG (Radar + Railgun): markierte Gegner nehmen 30% mehr Railgun-Schaden. SUPRALEITER (Kryo + Tesla): Blitze springen auf kalte Gegner weiter und verlieren keine Kraft. Der Verstärker macht alle Türme in seiner Nähe stärker.'],
+ drone:['BAU-DROHNE (GADGET)','Gibt es nur über die Mission PIONIER unter ERFOLGE. Im Kampf erscheint der Knopf BAU-DROHNE: antippen, dann eine freie Stelle neben dem Weg wählen. Dort entsteht ein zusätzlicher Bauplatz. 1 Ladung pro Einsatz, mit dem Skill BAU-DROHNE II zwei.'],
  arsenal:['ARSENAL','Neue Türme werden mit dem Kampagnen-Fortschritt freigeschaltet. Sobald du mehr als 5 hast, wählst du vor jedem Level 5 aus. Schau dir vorher die Gegnerliste an.'],
- elite:['ELITE & BEUTE','Ab Level 3 tauchen leuchtende Elite-Gegner auf (Schnell, Regeneriert, Schutzaura, Zäh). Sie geben Kristalle und können Module fallen lassen. Mutterschiffe lassen immer ein Modul fallen. Module baust du in der Werkstatt in Türme ein.'],
+ elite:['ELITE & BEUTE','Ab Level 3 tauchen leuchtende Elite-Gegner auf (Schnell, Regeneriert, Schutzaura, Zäh). Sie geben Kristalle und können Module fallen lassen. Mutterschiffe lassen immer ein Modul fallen. Module baust du in der Werkstatt in Türme ein. Drei Module gleicher Seltenheit lassen sich dort zu einem besseren ZUSAMMENBAUEN. Ganz oben steht LEGENDÄR: mit Zweitwert, höchstens eins pro Turm.'],
  events:['EREIGNISSE','Ab Level 2 passieren zwischen den Wellen Ereignisse: Versorgungsabwurf, Sonnensturm, Ionensturm, Meteorschauer und Stromausfall. Mit HART rufst du eine verstärkte Welle für mehr XP und etwas mehr Gold.'],
  spots:['BAUPLÄTZE','Ab Level 7 gibt es Hochplateaus (+15% Reichweite), ab Level 10 Energieknoten (+15% Schaden). Ab Level 11 blockieren Felsen manche Bauplätze, die du für Gold sprengen kannst.'],
  gates:['TORE','In Welt 4 ist immer nur ein Weg offen. Alle 4 Wellen wechselt das Tor, die Pfeile zeigen dann den neuen Weg.'],
@@ -8263,6 +8394,8 @@ function abIcon(id){
   if(id==='grav'){disc(g,15,16,11,'#3a1466');for(var i=0;i<3;i++)ring(g,15,16,4+i*3,i%2?'#c08cff':'#ffffff');disc(g,15,16,3,'#05060f');}
   else if(id==='gold'){[[8,8],[18,12],[12,20],[22,22]].forEach(function(q){disc(g,q[0],q[1],4,'#7a4f00');disc(g,q[0],q[1],3,'#ffc23c');R(g,q[0]-1,q[1]-1,1,1,'#fff4a8');});}
   else if(id==='air'){R(g,4,13,22,5,'#3a4258');R(g,4,13,22,1,'#8a93a6');R(g,11,7,6,17,'#4a5262');R(g,24,14,4,3,'#c8d0e0');R(g,13,25,3,4,'#2a2f3a');R(g,14,28,1,1,'#ff7a2f');}
+  else if(id==='drone'){R(g,5,9,20,3,'#3a4258');R(g,5,9,20,1,'#8a93a6');R(g,3,7,6,1,'#c8d0e0');R(g,21,7,6,1,'#c8d0e0');R(g,11,11,8,6,'#4a5262');R(g,12,12,6,1,'#6be0c8');
+    line(g,15,17,15,21,'#8a93a6',1);disc(g,15,25,5,'#1b2232');disc(g,15,25,4,'#323d57');ring(g,15,25,4,'#6be0c8');R(g,14,24,2,2,'#6be0c8');}
   else if(id==='emp'){ring(g,15,16,12,'#7fe9ff');ring(g,15,16,8,'#bff6ff');line(g,13,6,10,16,'#ffffff',2);line(g,10,16,18,15,'#ffffff',2);line(g,18,15,14,26,'#ffffff',2);}
   return c;
 }
@@ -9096,7 +9229,7 @@ var GINTRO={
   {say:'Hier siehst du, was der gewählte Turm gerade eingebaut hat. Seltene und epische Module sind stärker.',el:function(){return $('wsCard');},next:true,pad:2,nextLabel:'VERSTANDEN'}
  ];},
  ach:function(){return [
-  {say:'Hier sind alle ERFOLGE. Jeder bringt Kristalle, sobald du ihn schaffst.',el:function(){return $('achList');},next:true,pad:2},
+  {say:'Hier sind alle ERFOLGE. Hast du einen geschafft, leuchtet er gelb: Tippe EINSAMMELN für deine Kristalle.',el:function(){return $('achList');},next:true,pad:2},
   {say:'Oben wechselst du zwischen den Bereichen, zum Beispiel den WOCHEN-MISSIONEN.',el:function(){return $('achTabs');},next:true},
   {say:'Unten wählst du Skins für deine Station. Neue schaltest du mit Erfolgen frei.',el:function(){return $('skinRow');},next:true,nextLabel:'VERSTANDEN'}
  ];},
@@ -9132,7 +9265,7 @@ function drawerIntro(){
   PR.tour=PR.tour||{};if(DEV||GUIDE||PR.tour.drawer)return;PR.tour.drawer=1;persist();
   var open=function(){return $('mDrawer').classList.contains('on');};
   setTimeout(function(){guideStart([
-   {say:'ERFOLGE: Ziele für unterwegs, jedes bringt Kristalle. Dort findest du auch die Wochen-Missionen.',el:function(){return $('bAch');},next:true},
+   {say:'ERFOLGE: Ziele für unterwegs. Geschaffte sammelst du dort ein und bekommst Kristalle. Dort findest du auch die Wochen-Missionen.',el:function(){return $('bAch');},next:true},
    {say:'LEXIKON: Alles, was du schon entdeckt hast – Türme mit allen Stufen, Gegner, Helden und Kombos.',el:function(){return $('bLex');},next:true},
    {say:'STORY: Hier schaust du dir alle Story-Szenen noch einmal an.',el:function(){return $('bStory');},next:true},
    {say:'EINSTELLUNGEN: Ton, Textgröße, Training wiederholen und den Spielstand auf ein anderes Gerät mitnehmen.',el:function(){return $('bOptM');},next:true,nextLabel:'VERSTANDEN'}
@@ -10797,7 +10930,8 @@ if(window.visualViewport)window.visualViewport.addEventListener('resize',fit);
 window.__nb={econ:econ,ECON:ECON,rt:function(dt){realTick(dt);},get LEVELS(){return LEVELS;},get WORLDS(){return WORLDS;},get PR(){return PR;},ED:ED,get CAMP(){return CAMP;},edDown:edDown,edMove:edMove,edUp:edUp,get G(){return G;},get SAVE(){return SAVE;},startLevel:startLevel,goMap:goMap,setMode:setMode,show:show,update:function(dt){update(dt);},dailyInfo:dailyInfo,openLevel:openLevel};
 /* Für die automatischen Tests (tests/ablauf.test.mjs): weitere Spielteile erreichbar machen */
 Object.assign(window.__nb,{trBegin:trBegin,endGame:endGame,checkUnlocks:checkUnlocks,ulPending:ulPending,featOn:featOn,abOpen:abOpen,openMenu:openMenu,closeMenu:closeMenu,
-  botInit:botInit,botThink:botThink,halfSkills:halfSkills,arsAdvice:arsAdvice,arsApply:arsApply,Mus:Mus,COMBOS:COMBOS,waveAsking:waveAsking,lexSeen:lexSeen,persist:persist,normSave:normSave,CADET:CADET,UNLOCKS:UNLOCKS,TRAIN:TRAIN,buildStats:buildStats});
+  botInit:botInit,botThink:botThink,platformError:platformError,halfSkills:halfSkills,arsAdvice:arsAdvice,arsApply:arsApply,Mus:Mus,COMBOS:COMBOS,waveAsking:waveAsking,lexSeen:lexSeen,persist:persist,normSave:normSave,CADET:CADET,UNLOCKS:UNLOCKS,TRAIN:TRAIN,buildStats:buildStats,
+  checkAch:checkAch,ACH:ACH,renderWs:renderWs,WS:WS,wsEquip:wsEquip,makeModule:makeModule,modBonus:modBonus,droneSpot:droneSpot,nearestPath:nearestPath,gadgetOpen:gadgetOpen});
 Object.defineProperties(window.__nb,{menu:{get:function(){return menu;}},scene:{get:function(){return scene;}},GUIDE:{get:function(){return GUIDE;}},TR:{get:function(){return TR;}},
   ULV:{get:function(){return ULV;},set:function(v){ULV=v;}},DEV:{get:function(){return DEV;}}});
 fit();show('title');requestAnimationFrame(frame);

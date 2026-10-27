@@ -2374,4 +2374,10 @@ a.news__game:hover {
 /* Das Spielerprofil darf breiter sein als die Konto-Formulare */
 .konto.player {
   max-width: 1040px;
+  padding-top: 32px;
+  padding-bottom: 72px;
+}
+
+.player .notice {
+  margin: 16px 0 0;
 }
