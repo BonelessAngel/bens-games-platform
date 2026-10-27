@@ -245,6 +245,42 @@ export function createPlatformClient({
     }
   }
 
+  // Fehlermeldungen an die Zentrale (docs/spiele-anbindung.md der Webseite, Abschnitt 7):
+  // nur auf der Plattform per https, ohne GPC, gleiche Fehler einmal, höchstens 5 pro Besuch, keine Spieler- oder Spielstanddaten.
+  const reportedErrors = new Set();
+  const text = (value, max) => String(value ?? '').slice(0, max);
+  function reportError({ message, source = '', line = 0, col = 0, stack = '' } = {}) {
+    if (!enabled || locationObject?.protocol !== 'https:' || reportedErrors.size >= 5) return false;
+    const key = `${text(message, 120)}|${integer(line)}`;
+    if (reportedErrors.has(key)) return false;
+    reportedErrors.add(key);
+    try {
+      void Promise.resolve(fetchImpl('/api/errors', {
+        method: 'POST', credentials: 'same-origin', keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          app, message: text(message || 'Unbekannter Fehler', 300), source: text(source, 300),
+          line: integer(line), col: integer(col), stack: text(stack, 3000),
+        }),
+      })).catch(() => {});
+    } catch {
+      // Melden darf nie selbst einen Fehler auslösen.
+    }
+    return true;
+  }
+
+  function watchErrors(target = globalThis) {
+    if (!enabled || typeof target?.addEventListener !== 'function') return false;
+    target.addEventListener('error', (event) => {
+      if (event?.message) reportError({ message: event.message, source: event.filename, line: event.lineno, col: event.colno, stack: event.error?.stack });
+    });
+    target.addEventListener('unhandledrejection', (event) => {
+      const reason = event?.reason;
+      reportError({ message: reason?.message ?? String(reason), stack: reason?.stack });
+    });
+    return true;
+  }
+
   function stop() {
     if (timer !== null && clearIntervalImpl) clearIntervalImpl(timer);
     documentObject?.removeEventListener?.('visibilitychange', onVisibilityChange);
@@ -253,7 +289,7 @@ export function createPlatformClient({
 
   return {
     hosted, enabled, visit, start, stop, beginLevel, endLevel, heartbeat, flush, fetchHub, prepareAccount,
-    loadCloudSave, putCloudSave, submitScore,
+    loadCloudSave, putCloudSave, submitScore, reportError, watchErrors,
     pending: () => queue.map((event) => ({ ...event })),
   };
 }

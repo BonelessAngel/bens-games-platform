@@ -3,5 +3,9 @@
   "jackpots_10": { "name": "Jackpot-Legende", "icon": "💰" },
   "level_25": { "name": "Casino-Profi", "icon": "🏆" },
   "gift_7": { "name": "Sieben Tage Glück", "icon": "🎁" },
-  "pro_25000": { "name": "Profi mit 25.000", "icon": "🔥" }
+  "pro_25000": { "name": "Hart mit 25.000", "icon": "🔥" },
+  "shop_legendary": { "name": "Legendärer Fund", "icon": "💎" },
+  "album_set": { "name": "Sammler", "icon": "📖" },
+  "slot_jackpot": { "name": "Glückspilz", "icon": "🎰" },
+  "highroller": { "name": "Highroller", "icon": "🤑" }
 }

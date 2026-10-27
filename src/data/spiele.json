@@ -29,15 +29,16 @@
     "tagline": "Block-Puzzle mit Pokerhänden",
     "intro": [
       "Zieh die Teile aufs Feld und fülle Reihen. Jede volle Reihe wird zur Pokerhand – je besser die Hand, desto mehr Punkte.",
-      "Sammle Chips, schalte Designs frei und hol dir den Highscore in der Tages-Challenge und im Profi-Modus."
+      "Sammle Chips, öffne Truhen im Casino-Shop und hol dir den Highscore in Normal, Hart und der Tages-Challenge."
     ],
     "features": [
       "Volle Reihen werden zu Pokerhänden – vom Paar bis zum Royal Flush",
       "Kombos, wenn mehrere Reihen auf einmal fallen",
+      "Zwei Modi: Normal und Hart (ab Level 10)",
       "Tages-Challenge mit eigener Rangliste",
-      "Profi-Modus ab Level 10",
-      "Shop mit Designs, Kacheln, Effekten und Hintergründen",
-      "Erfolge und Level-Aufstieg",
+      "Casino-Shop mit Truhen, Glücksrad, Spielautomat und Sammelalbum",
+      "Rahmen, Sound-Pakete, Jingles, Chip-Designs und Glücksbringer",
+      "Erfolge – besondere schalten Banner und Titel im Profil frei",
       "Spielstand im Konto – auf jedem Gerät weiterspielen"
     ],
     "controls": {

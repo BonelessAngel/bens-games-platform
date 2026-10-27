@@ -10,10 +10,16 @@ import {
   emptyStats, jackpotWin, levelFromXp, levelReward, praiseFor, recordMove, recordRound, scratchPrize, xpForRound,
 } from './progress.js';
 import { createScratchCard } from './scratch.js';
-import { SHOP_ITEMS, SHOP_SETTING, THEMES } from './shop.js';
+import {
+  ALL_ITEMS, FREE_ITEMS, RARITY, SETS, SHOP_ITEMS, SHOP_LABELS, SHOP_SETTING, THEMES, buyable, setBonus, setItems, setProgress,
+} from './shop.js';
+import {
+  CHESTS, SLOT_BETS, SLOT_DAILY_SPINS, SLOT_SYMBOLS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, dropPool, openChestRoll,
+  slotOdds, slotReturn, spinSlot, spinWheel, ticketPrize, wheelAngle, withCharm,
+} from './casino.js';
 import { HANDS, SUITS, rankLabel } from './poker.js';
 import {
-  setMusicEnabled, setMusicIntensity, setSoundEnabled, setVibrationEnabled, sounds, startMusic, stopMusic, unlockAudio, vibrate,
+  jingle, setMusicEnabled, setMusicIntensity, setSoundEnabled, setSoundPack, setVibrationEnabled, sounds, startMusic, stopMusic, unlockAudio, vibrate,
 } from './audio.js';
 import { burst, chips as chipBurst, initFx, setFxStyle, suitColor } from './fx.js';
 import { createPlatformClient, leaderboardPath } from './platform.js';
@@ -23,6 +29,7 @@ const $ = (id) => document.getElementById(id);
 const root = document.documentElement;
 const version = root.dataset.version;
 const platform = createPlatformClient({ version });
+platform.watchErrors(window);
 platform.start();
 $('platform-home').hidden = !platform.hosted;
 
@@ -53,6 +60,7 @@ const els = {
 const settings = {
   sound: true, music: true, vibration: true, seenHelp: false, theme: 'neon', tiles: 'standard', mode: 'free',
   effect: 'effect-classic', background: 'bg-classic', cards: 'card-classic',
+  frame: 'frame-classic', soundPack: 'sound-classic', jingle: 'jingle-none', chipStyle: 'chip-gold', charm: 'charm-none',
   ...load('settings', {}),
 };
 const saveSettings = () => save('settings', settings);
@@ -63,7 +71,7 @@ const stats = { ...emptyStats(), ...load('stats', {}) };
 let scratchReady = Boolean(load('scratch-ready', false));
 let returnTo = 'menu'; // wohin "Zurück" aus Designs/Statistik führt
 const owned = new Set(load('owned', ['neon', 'standard']));
-owned.add('neon').add('standard').add('effect-classic').add('bg-classic').add('card-classic');
+for (const id of FREE_ITEMS) owned.add(id);
 let startBonusReady = Boolean(load('start-bonus', false));
 const achievements = new Set(load('achievements', []).filter((id) => id in ACHIEVEMENTS));
 
@@ -219,18 +227,21 @@ let gap = 3;
 
 // Handy und Tablet hochkant: alles untereinander. Breite Bildschirme quer (z. B. iPad): Feld links, Rest rechts.
 function layout() {
+  // Breite des Rahmens (je nach Shop-Rahmen 1 bis 6 Pixel) auf beiden Seiten
+  const edge = 2 * (parseFloat(getComputedStyle(els.board).borderLeftWidth) || 1);
   const W = window.innerWidth;
   const H = window.innerHeight;
   const wide = W >= 900 && W > H * 1.15;
   const tablet = W >= 700;
   els.app.classList.toggle('wide', wide);
   root.classList.toggle('tablet', tablet);
+  els.tray.style.gridTemplateColumns = !wide && trayCols ? trayCols.map((w) => `minmax(0, ${w}fr)`).join(' ') : '';
   gap = W < 380 ? 2 : tablet ? 4 : 3;
   let pieceSize;
   if (wide) {
     const side = Math.round(Math.min(440, Math.max(340, W * 0.32)));
-    const byHeight = (H - 48 - 2 - 9 * gap) / 8;
-    const byWidth = (W - side - 80 - 2 - 9 * gap) / 8;
+    const byHeight = (H - 48 - edge - 9 * gap) / 8;
+    const byWidth = (W - side - 80 - edge - 9 * gap) / 8;
     cell = Math.max(28, Math.floor(Math.min(byHeight, byWidth, 100)));
     root.style.setProperty('--side', `${side}px`);
     // Teile stehen rechts untereinander: jedes Teil (bis 5 Kästchen) muss in ein Drittel der Ablage passen
@@ -238,10 +249,15 @@ function layout() {
     pieceSize = Math.floor(Math.min(cell * 0.6, (side - 24) / 5.3, (trayHeight / 3 - 10) / 5.3));
   } else {
     const w = Math.min(W, tablet ? 780 : 560) - 24;
-    // Kopfzeile, Mindesthand + Auftrag, Vorschau, Spezialzüge, Abstände
-    const h = H - (tablet ? 74 : 60) - (tablet ? 58 : 50) - 26 - (tablet ? 50 : 42) - 8 - 30;
-    const byWidth = (w - 2 - 9 * gap) / 8;
-    const byHeight = (h - 2 - 9 * gap) / 11.2; // 8 Feld-Reihen + Ablage
+    // Alles außer Feld und Ablage tatsächlich messen (Kopfzeile, Mindesthand + Auftrag, Vorschau, Spezialzüge, Ränder)
+    const style = getComputedStyle(els.app);
+    const fixed = ['.top', '.info', '.preview', '.powers'].reduce((sum, sel) => {
+      const el = els.app.querySelector(sel);
+      const cs = getComputedStyle(el);
+      return sum + el.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+    }, 0) + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + 14;
+    const byWidth = (w - edge - 9 * gap) / 8;
+    const byHeight = (H - fixed - edge - 9 * gap) / 11; // 8 Feld-Reihen + mindestens 3 für die Ablage
     cell = Math.max(22, Math.floor(Math.min(byWidth, byHeight, tablet ? 92 : 60)));
     pieceSize = Math.floor(cell * 0.56);
   }
@@ -305,7 +321,14 @@ function pieceEl(piece) {
   return el;
 }
 
+// Breite der drei Fächer passend zu den Teilen: lange Teile bekommen mehr Platz.
+// Nur beim Austeilen neu verteilt, damit nichts springt, wenn ein Teil abgelegt wird.
+let trayCols = null;
 function renderTray(deal = false) {
+  if (deal || !trayCols) {
+    trayCols = state.tray.map((piece) => Math.max(piece?.w ?? 2, 2) + 0.6);
+    if (!els.app.classList.contains('wide')) els.tray.style.gridTemplateColumns = trayCols.map((w) => `minmax(0, ${w}fr)`).join(' ');
+  }
   els.slots.forEach((slot, i) => {
     const piece = state.tray[i];
     slot.replaceChildren();
@@ -315,8 +338,29 @@ function renderTray(deal = false) {
     if (piece) {
       const el = pieceEl(piece);
       if (deal) el.classList.add('deal');
+      el.style.setProperty('--size', `${traySize(slot, piece)}px`);
       slot.append(el);
     }
+  });
+}
+
+// Größe der Kästchen in der Ablage: so groß wie möglich, aber jedes Teil passt in sein Fach.
+// Kleine Teile werden also größer (gut greifbar), lange Teile passen trotzdem hinein.
+function traySize(slot, piece) {
+  const box = slot.getBoundingClientRect();
+  const g = gap * 0.7;
+  const max = cell * (els.app.classList.contains('wide') ? 0.62 : 0.8);
+  if (!box.width || !box.height) return Math.floor(max);
+  const byW = (box.width - 8 - (piece.w - 1) * g) / piece.w;
+  const byH = (box.height - 8 - (piece.h - 1) * g) / piece.h;
+  return Math.max(12, Math.floor(Math.min(max, byW, byH)));
+}
+
+// Nach einer Größenänderung die Teile in der Ablage neu einpassen
+function fitTray() {
+  els.slots.forEach((slot, i) => {
+    const el = slot.querySelector('.piece');
+    if (el && state.tray[i]) el.style.setProperty('--size', `${traySize(slot, state.tray[i])}px`);
   });
 }
 
@@ -333,10 +377,21 @@ function renderStreak() {
 const fmt = (n) => n.toLocaleString('de-DE');
 
 function renderScore() {
-  els.bestLabel.textContent = mode === 'daily' ? `Tagesrekord ${dayLabel(today())}` : mode === 'pro' ? 'Profi-Rekord' : 'Rekord';
+  els.bestLabel.textContent = mode === 'daily' ? `Tagesrekord ${dayLabel(today())}` : mode === 'pro' ? 'Hart-Rekord' : 'Rekord';
   els.best.textContent = fmt(best);
   const from = shownScore;
   const to = state.score;
+  // Lange Punktzahlen etwas kleiner, damit sie nie in Rekord oder Jackpot hineinragen
+  // Platz in der Mitte: Breite der Kopfzeile minus Rekord links und Jackpot + Menü rechts
+  const natural = (sel) => [...els.app.querySelector(sel).children].map((c) => {
+    const range = document.createRange();
+    range.selectNodeContents(c);
+    return range.getBoundingClientRect().width;
+  });
+  const room = (els.app.querySelector('.top').clientWidth || window.innerWidth) - Math.max(...natural('.best')) -
+    natural('.top-right').reduce((sum, w) => sum + w, 8) - 20;
+  const base = root.classList.contains('tablet') ? 56 : 42;
+  els.score.style.fontSize = fmt(to).length > 5 ? `${Math.max(24, Math.min(base, Math.floor(room / (fmt(to).length * 0.66))))}px` : '';
   shownScore = to;
   if (from === to) {
     els.score.textContent = fmt(to);
@@ -358,7 +413,7 @@ function renderReq() {
   const { level, next } = requirementFor(state.lines, state.mode);
   els.reqHand.textContent = HANDS[level].name;
   const left = next ? next.lines - state.lines : 0;
-  els.reqNext.textContent = next ? `noch ${left} ${left === 1 ? 'Reihe' : 'Reihen'} bis ${HANDS[next.level].name}` : '';
+  els.reqNext.textContent = next ? `${HANDS[next.level].name} in ${left} ${left === 1 ? 'Reihe' : 'Reihen'}` : '';
 }
 
 function renderMission() {
@@ -377,7 +432,7 @@ function renderWallet() {
     const funds = kind === 'undo' ? state.undoMeta?.wallet ?? wallet : wallet;
     btn.disabled = remaining <= 0 || funds < cost || !targetReady;
     const costLabel = btn.querySelector('[data-cost]');
-    if (costLabel) costLabel.textContent = remaining > 0 ? `${fmt(cost)} · noch ${remaining}` : 'aufgebraucht';
+    if (costLabel) costLabel.textContent = remaining > 0 ? `${fmt(cost)} · ${remaining}×` : 'aufgebraucht';
     btn.classList.toggle('active', powerMode === kind);
   }
 }
@@ -471,7 +526,8 @@ function showGhost(piece, x, y) {
 
 function boardOrigin() {
   const r = els.board.getBoundingClientRect();
-  return { x: r.left + 1 + gap, y: r.top + 1 + gap };
+  const border = parseFloat(getComputedStyle(els.board).borderLeftWidth) || 0;
+  return { x: r.left + border + gap, y: r.top + border + gap };
 }
 
 const DRAG_LIFT = 0.5; // Abstand Teil–Finger in Kästchen
@@ -564,7 +620,7 @@ function endDrag(e) {
     const pw = d.piece.w * cell;
     const ph = d.piece.h * cell;
     els.drag.classList.add('back');
-    els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(${(parseFloat(root.style.getPropertyValue('--piece')) || cell * 0.56) / cell})`;
+    els.drag.style.transform = `translate(${r.left + r.width / 2 - pw / 2}px, ${r.top + r.height / 2 - ph / 2}px) scale(${traySize(els.slots[d.slot], d.piece) / cell})`;
     setTimeout(() => {
       if (!drag) els.drag.className = 'drag';
       els.slots[d.slot].classList.remove('dragging');
@@ -611,7 +667,7 @@ function place(slot, x, y) {
   renderReq();
 
   if (res.chips) {
-    addChips(res.chips);
+    addChips(withCharm(res.chips, settings.charm));
     sounds.chips(res.chips);
   }
   if (res.golden) goldEffects(res);
@@ -748,6 +804,7 @@ function clearEffects(res) {
   );
 
   sounds.clear(level, res.streak, res.combo);
+  if (level >= 4 || mega) setTimeout(() => jingle(settings.jingle), 550);
   if (res.tableClear) setTimeout(() => sounds.tableClear(), 400);
   vibrate(level >= 4 || res.combo > 1 ? [25, 40, 45] : 22);
   shake(level >= 7 || res.tableClear ? 'shake-big' : level >= 4 || res.combo > 1 ? 'shake' : null);
@@ -824,6 +881,7 @@ function feverEffects() {
 
 function jackpotEffects(win, full) {
   sounds.record();
+  setTimeout(() => jingle(settings.jingle), 500);
   setTimeout(() => sounds.tableClear(), 300);
   vibrate([50, 40, 50, 40, 120]);
   const box = els.board.getBoundingClientRect();
@@ -1010,7 +1068,22 @@ function chooseSuit(s) {
   if (state.over) setTimeout(gameOver, 600);
 }
 
-// ---------- Designs ----------
+// ---------- Shop ----------
+
+// Tageswerte und Zähler der Glücks-Ecke (Glücksrad, Automat, ausgegebene Chips, Sets)
+let casino = casinoDay(load('casino', {}), today());
+const saveCasino = () => save('casino', casino);
+function refreshCasinoDay() {
+  casino = casinoDay(casino, today());
+}
+
+// Im Shop ausgegebene Chips zählen für „Highroller“
+function spend(n) {
+  if (!spendChips(n)) return false;
+  casino.spent = (casino.spent || 0) + n;
+  saveCasino();
+  return true;
+}
 
 function applyDesign(preview = {}) {
   root.dataset.theme = preview.theme ?? settings.theme;
@@ -1018,71 +1091,273 @@ function applyDesign(preview = {}) {
   root.dataset.effect = preview.effects ?? settings.effect;
   root.dataset.background = preview.backgrounds ?? settings.background;
   root.dataset.cards = preview.cards ?? settings.cards;
+  root.dataset.frame = preview.frames ?? settings.frame;
+  root.dataset.chip = preview.chips ?? settings.chipStyle;
   setFxStyle(root.dataset.effect);
+  setSoundPack(preview.sounds ?? settings.soundPack);
   const theme = THEMES.find((t) => t.id === root.dataset.theme);
   document.querySelector('meta[name="theme-color"]').setAttribute('content', theme?.color ?? '#0d0420');
 }
 
-function shopItem(item, kind) {
-  const el = document.createElement('div');
-  el.className = 'shop-item';
-  const swatch = document.createElement('div');
-  swatch.className = 'swatch';
-  swatch.dataset.style = item.id;
-  if (kind === 'theme' || kind === 'tiles') {
-    swatch.dataset.theme = kind === 'theme' ? item.id : settings.theme;
-    const style = kind === 'tiles' ? item.id : settings.tiles;
-    [[14, 0], [13, 1], [12, 2], [11, 3]].forEach(([r, s]) => swatch.append(tile({ r, s }, style)));
-  } else {
-    const icons = { effects: '✦ ✧ ✦', backgrounds: '▦ ✦ ▦', cards: 'A ♠ K', extras: '⟳ +1' };
-    swatch.textContent = icons[kind];
+const el = (tag, className, text) => {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+
+const KIND_ICONS = {
+  theme: '🎨', tiles: '🟦', effects: '✨', backgrounds: '🌌', cards: '🃏', frames: '🖼️',
+  sounds: '🔊', jingles: '🎺', chips: '🪙', charms: '🍀', extras: '➕',
+};
+const ITEM_ICONS = {
+  'effect-classic': '✦', 'effect-confetti': '🎊', 'effect-pixel': '▦', 'effect-fireworks': '🎆', 'effect-sparks': '✨',
+  'sound-classic': '🎹', 'sound-retro': '👾', 'sound-casino': '🔔', 'sound-jazz': '🎷', 'sound-crystal': '💠',
+  'jingle-none': '🔇', 'jingle-fanfare': '🎺', 'jingle-arcade': '🕹️', 'jingle-slot': '🎰', 'jingle-harp': '🪕', 'jingle-orchestra': '🎻',
+  'start-bonus': '⟳+1',
+};
+
+// Kleine Bühne mit Mini-Spielfeld im Stil des Artikels (übrige Einstellungen wie gerade gewählt)
+function stage(kind, id, big = false) {
+  const look = {
+    theme: settings.theme, tiles: settings.tiles, cards: settings.cards, backgrounds: settings.background, frames: settings.frame,
+    [kind]: id,
+  };
+  const box = el('div', `stage${big ? ' big' : ''}`);
+  box.dataset.theme = look.theme;
+  box.dataset.cards = look.cards;
+  box.dataset.background = look.backgrounds;
+  box.dataset.frame = look.frames;
+  const board = el('div', 'board mini-board');
+  const cards = [[14, 0], [13, 1], null, [12, 2], null, [11, 3], [10, 0], null];
+  for (const card of cards) {
+    const c = el('div', 'cell');
+    if (card) c.append(tile({ r: card[0], s: card[1] }, look.tiles));
+    board.append(c);
   }
-  const name = document.createElement('div');
-  name.className = 'shop-name';
-  name.textContent = item.name;
-  const price = document.createElement('small');
-  price.textContent = item.price ? `${fmt(item.price)} Chips` : 'Inklusive';
-  const actions = document.createElement('div');
-  actions.className = 'shop-actions';
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn small-btn';
-  const setting = SHOP_SETTING[kind];
-  const active = setting ? settings[setting] === item.id : kind === 'extras' && startBonusReady;
-  if (active) {
-    btn.textContent = kind === 'extras' ? 'Bereit' : 'Aktiv';
-    btn.disabled = true;
-    el.classList.add('active');
-  } else if (owned.has(item.id)) {
-    btn.textContent = 'Gekauft · aktivieren';
-    btn.dataset.use = `${kind}:${item.id}`;
-  } else {
-    btn.textContent = 'Kaufen';
-    btn.dataset.buy = `${kind}:${item.id}`;
-    btn.disabled = wallet < item.price;
-    btn.classList.add('gold');
-  }
-  if (kind !== 'extras') {
-    const preview = document.createElement('button');
-    preview.type = 'button';
-    preview.className = 'btn small-btn';
-    preview.textContent = 'Ausprobieren';
-    preview.dataset.preview = `${kind}:${item.id}`;
-    actions.append(preview);
-  }
-  actions.append(btn);
-  el.append(swatch, name, price, actions);
-  return el;
+  box.append(board);
+  return box;
 }
 
-let shopTab = 'theme';
-function renderShop() {
-  $('shop-items').replaceChildren(...SHOP_ITEMS[shopTab].map((item) => shopItem(item, shopTab)));
-  for (const tab of document.querySelectorAll('[data-shop-tab]')) {
-    tab.classList.toggle('active', tab.dataset.shopTab === shopTab);
-    tab.setAttribute('aria-selected', String(tab.dataset.shopTab === shopTab));
+function swatch(item, kind) {
+  if (['theme', 'tiles', 'cards', 'backgrounds', 'frames'].includes(kind)) return stage(kind, item.id);
+  const box = el('div', 'swatch-icon');
+  if (kind === 'chips') {
+    const chip = el('span', 'chip-icon big');
+    chip.dataset.chip = item.id;
+    box.append(chip);
+  } else if (kind === 'charms') {
+    box.append(el('span', 'charm-icon', item.icon));
+    if (item.bonus_chips) box.append(el('small', 'charm-bonus', `+${Math.round(item.bonus_chips * 100)} % Chips`));
+  } else {
+    box.textContent = ITEM_ICONS[item.id] ?? KIND_ICONS[kind];
   }
+  return box;
+}
+
+function rarityTag(item) {
+  if (!item.rarity) return el('span', 'rarity-tag r-free', 'Gratis');
+  return el('span', `rarity-tag r-${item.rarity}`, RARITY[item.rarity].name);
+}
+
+let confirmBuy = null; // Kauf erst beim zweiten Tippen
+function shopItem(item, kind) {
+  const card = el('div', `shop-item${item.rarity ? ` r-${item.rarity}` : ''}`);
+  const setting = SHOP_SETTING[kind];
+  const active = setting ? settings[setting] === item.id : kind === 'extras' && startBonusReady;
+  const has = kind === 'extras' ? startBonusReady : owned.has(item.id);
+  if (active) card.classList.add('active');
+  if (!has && !buyable(item)) card.classList.add('locked');
+  card.append(swatch(item, kind));
+  const head = el('div', 'shop-item-head');
+  head.append(el('strong', 'shop-name', item.name), rarityTag(item));
+  card.append(head);
+  if (item.set) card.append(el('small', 'set-tag', `${SETS[item.set].icon} ${SETS[item.set].name}`));
+  if (item.animated) card.append(el('small', 'set-tag', '✦ animiert'));
+
+  const actions = el('div', 'shop-actions');
+  if (['effects', 'sounds', 'jingles'].includes(kind) && item.id !== 'jingle-none') {
+    const play = el('button', 'btn small-btn', kind === 'effects' ? 'Ansehen' : 'Anhören');
+    play.type = 'button';
+    play.dataset.preview = `${kind}:${item.id}`;
+    actions.append(play);
+  }
+  const btn = el('button', 'btn small-btn');
+  btn.type = 'button';
+  if (active) {
+    btn.textContent = kind === 'extras' ? 'Bereit' : 'Aktiv ✓';
+    btn.disabled = true;
+  } else if (has) {
+    btn.textContent = 'Ausrüsten';
+    btn.dataset.use = `${kind}:${item.id}`;
+  } else if (item.bonus) {
+    btn.textContent = `📖 Set ${SETS[item.bonus].name}`;
+    btn.disabled = true;
+  } else if (!buyable(item)) {
+    btn.textContent = '🎁 Nur aus Truhen';
+    btn.disabled = true;
+  } else {
+    const sure = confirmBuy === `${kind}:${item.id}`;
+    btn.textContent = sure ? `Sicher? ${fmt(item.price)}` : fmt(item.price);
+    btn.prepend(el('span', 'chip-icon'));
+    btn.dataset.buy = `${kind}:${item.id}`;
+    btn.disabled = wallet < item.price;
+    btn.classList.add('gold', 'price');
+    if (sure) btn.classList.add('sure');
+  }
+  actions.append(btn);
+  card.append(actions);
+  return card;
+}
+
+let shopMain = 'buy';
+let shopCat = 'theme';
+
+function luckReady() {
+  refreshCasinoDay();
+  return !casino.wheel;
+}
+function albumReady() {
+  return Object.keys(SETS).some((id) => setProgress(id, owned).complete && !owned.has(setBonus(id)?.id));
+}
+function renderDots() {
+  $('luck-dot').hidden = !luckReady();
+  $('album-dot').hidden = !albumReady();
+  $('start-shop-dot').hidden = !luckReady() && !albumReady();
+}
+
+function renderShop() {
+  refreshCasinoDay();
+  for (const tab of document.querySelectorAll('[data-shop-main]')) {
+    const on = tab.dataset.shopMain === shopMain;
+    tab.classList.toggle('active', on);
+    tab.setAttribute('aria-selected', String(on));
+  }
+  const cats = $('shop-cats');
+  cats.hidden = shopMain !== 'buy';
+  if (shopMain === 'buy') {
+    cats.replaceChildren(...Object.keys(SHOP_ITEMS).map((kind) => {
+      const b = el('button', kind === shopCat ? 'active' : '');
+      b.type = 'button';
+      b.dataset.shopCat = kind;
+      b.setAttribute('role', 'tab');
+      b.append(el('span', '', KIND_ICONS[kind]), document.createTextNode(SHOP_LABELS[kind]));
+      return b;
+    }));
+  }
+  const body = $('shop-body');
+  if (shopMain === 'buy') body.replaceChildren(buyView());
+  else if (shopMain === 'luck') body.replaceChildren(luckView());
+  else body.replaceChildren(albumView());
+  renderDots();
   renderWallet();
+}
+
+function buyView() {
+  const wrap = el('div');
+  const notes = {
+    charms: 'Ein Glücksbringer bringt mehr Chips (nicht mehr Punkte). Es wirkt immer nur einer.',
+    sounds: 'Sound-Pakete ändern den Klang aller Spielgeräusche.',
+    jingles: 'Jingles spielen bei starken Pokerhänden und beim Jackpot.',
+    extras: 'Der Start-Bonus gibt dir in der nächsten Normal-Runde einmal Passen extra.',
+  };
+  if (notes[shopCat]) wrap.append(el('p', 'shop-note', notes[shopCat]));
+  const grid = el('div', 'shop-grid');
+  grid.append(...SHOP_ITEMS[shopCat].map((item) => shopItem(item, shopCat)));
+  wrap.append(grid);
+  return wrap;
+}
+
+function luckCard({ cls, icon, title, text, button, data, disabled, odds }) {
+  const card = el('div', `luck-card ${cls}`);
+  const art = el('div', 'luck-art', icon);
+  const copy = el('div', 'luck-copy');
+  copy.append(el('strong', '', title), el('small', '', text));
+  const actions = el('div', 'luck-actions');
+  const btn = el('button', 'btn small-btn gold price');
+  btn.type = 'button';
+  Object.assign(btn.dataset, data);
+  btn.disabled = Boolean(disabled);
+  btn.append(...button);
+  actions.append(btn);
+  if (odds) {
+    const o = el('button', 'link-btn', 'Chancen');
+    o.type = 'button';
+    o.dataset.odds = odds;
+    actions.append(o);
+  }
+  card.append(art, copy, actions);
+  return card;
+}
+const priceLabel = (price) => [el('span', 'chip-icon'), document.createTextNode(fmt(price))];
+
+function luckView() {
+  const wrap = el('div', 'luck');
+  wrap.append(el('h3', '', 'Jeden Tag'));
+  const wheelFree = !casino.wheel;
+  wrap.append(luckCard({
+    cls: 'wheel-card', icon: '🎡', title: 'Glücksrad', text: wheelFree ? 'Heute gratis drehen!' : 'Morgen wieder gratis',
+    button: [document.createTextNode(wheelFree ? 'Gratis drehen' : 'Ansehen')], data: { action: 'open-wheel' }, odds: 'wheel',
+  }));
+  const spinsLeft = SLOT_DAILY_SPINS - casino.spins;
+  wrap.append(luckCard({
+    cls: 'slot-card', icon: '🎰', title: 'Spielautomat', text: `Einsatz ${SLOT_BETS.join(' / ')} · noch ${spinsLeft} von ${SLOT_DAILY_SPINS} Drehs heute`,
+    button: [document.createTextNode('Spielen')], data: { action: 'open-slot' }, odds: 'slot',
+  }));
+  wrap.append(el('h3', '', 'Truhen'));
+  for (const [type, chest] of Object.entries(CHESTS)) {
+    const best = Object.keys(chest.odds).at(-1);
+    wrap.append(luckCard({
+      cls: `chest-card c-${type}`, icon: '', title: chest.name,
+      text: `${Object.keys(chest.odds).map((r) => RARITY[r].name).join(' · ')}${best === 'legendary' ? ` – ${Math.round(chest.odds.legendary * 100)} % Legendär` : ''}`,
+      button: priceLabel(chest.price), data: { chest: type }, disabled: wallet < chest.price, odds: `chest:${type}`,
+    }));
+  }
+  wrap.append(el('h3', '', 'Rubbellose'));
+  for (const [type, ticket] of Object.entries(TICKETS)) {
+    wrap.append(luckCard({
+      cls: `ticket-card t-${type}`, icon: '🎟️', title: ticket.name, text: `Bis zu ${fmt(ticket.price * 10)} Chips`,
+      button: priceLabel(ticket.price), data: { ticket: type }, disabled: wallet < ticket.price, odds: `ticket:${type}`,
+    }));
+  }
+  wrap.append(el('p', 'shop-note', 'Hier wird nur mit Chips aus dem Spiel gespielt – nie mit echtem Geld. Alle Gewinnchancen findest du unter „Chancen“.'));
+  return wrap;
+}
+
+function albumView() {
+  const wrap = el('div', 'album');
+  wrap.append(el('p', 'shop-note', 'Sammle alle Teile eines Sets – dann gibt es einen exklusiven Bonus, den man nirgends kaufen kann.'));
+  for (const [id, set] of Object.entries(SETS)) {
+    const progress = setProgress(id, owned);
+    const bonus = setBonus(id);
+    const card = el('div', `album-set${progress.complete ? ' complete' : ''}`);
+    const head = el('div', 'album-head');
+    head.append(el('span', 'album-icon', set.icon), el('strong', '', set.name), el('span', 'album-count', `${progress.have}/${progress.total}`));
+    const bar = el('div', 'xp-bar');
+    const fill = el('i');
+    fill.style.width = `${Math.round((100 * progress.have) / progress.total)}%`;
+    bar.append(fill);
+    const items = el('div', 'album-items');
+    for (const item of setItems(id)) {
+      const has = owned.has(item.id);
+      const slot = el('div', `album-item${has ? ' have' : ''}${item.rarity ? ` r-${item.rarity}` : ''}`);
+      slot.append(el('span', '', has ? KIND_ICONS[item.kind] : '?'), el('small', '', has ? item.name : SHOP_LABELS[item.kind]));
+      slot.title = `${item.name} (${SHOP_LABELS[item.kind]})`;
+      items.append(slot);
+    }
+    const reward = el('div', 'album-reward');
+    reward.append(el('span', '', `Bonus: ${bonus.name} (${SHOP_LABELS[bonus.kind]})`));
+    if (owned.has(bonus.id)) reward.append(el('b', 'done', 'Freigeschaltet ✓'));
+    else if (progress.complete) {
+      const claim = el('button', 'btn small-btn gold', 'Abholen!');
+      claim.type = 'button';
+      claim.dataset.claimSet = id;
+      reward.append(claim);
+    } else reward.append(el('b', '', '🔒'));
+    card.append(head, bar, items, reward);
+    wrap.append(card);
+  }
+  return wrap;
 }
 
 function useDesign(kind, id) {
@@ -1091,14 +1366,29 @@ function useDesign(kind, id) {
   settings[setting] = id;
   saveSettings();
   applyDesign();
+  layout();
   renderShop();
   renderBoard();
   renderTray();
+  renderWallet();
 }
 
 function buyDesign(kind, id) {
   const item = SHOP_ITEMS[kind]?.find((entry) => entry.id === id);
-  if (!item || (kind === 'extras' ? startBonusReady : owned.has(id)) || !spendChips(item.price)) return;
+  if (!item || !buyable(item) || (kind === 'extras' ? startBonusReady : owned.has(id))) return;
+  const key = `${kind}:${id}`;
+  if (confirmBuy !== key) {
+    confirmBuy = key;
+    clearTimeout(buyDesign.timer);
+    buyDesign.timer = setTimeout(() => {
+      confirmBuy = null;
+      if (!$('shop').hidden) renderShop();
+    }, 3000);
+    renderShop();
+    return;
+  }
+  confirmBuy = null;
+  if (!spend(item.price)) return;
   if (kind === 'extras') {
     startBonusReady = true;
     save('start-bonus', true);
@@ -1109,21 +1399,298 @@ function buyDesign(kind, id) {
   owned.add(id);
   save('owned', [...owned]);
   sounds.record();
+  toast(`${item.name} gekauft!`);
+  refreshAchievements();
   useDesign(kind, id);
 }
 
+// Effekte, Sounds und Jingles kurz vorführen
 function previewDesign(kind, id) {
-  if (!SHOP_SETTING[kind] || !SHOP_ITEMS[kind]?.some((item) => item.id === id)) return;
-  clearTimeout(previewDesign.timer);
-  applyDesign({ [kind]: id });
-  renderBoard();
-  renderTray();
-  toast(`${SHOP_ITEMS[kind].find((item) => item.id === id).name} · Vorschau`);
-  previewDesign.timer = setTimeout(() => {
-    applyDesign();
-    renderBoard();
-    renderTray();
-  }, 4_000);
+  unlockAudio();
+  if (kind === 'effects') {
+    const box = document.querySelector(`[data-preview="${kind}:${id}"]`)?.getBoundingClientRect();
+    setFxStyle(id);
+    if (box) {
+      burst(box.left + box.width / 2, box.top - 40, suitColor(1), 2.5);
+      setTimeout(() => burst(box.left + box.width / 2, box.top - 40, suitColor(0), 2), 250);
+    }
+    setTimeout(() => setFxStyle(settings.effect), 900);
+  } else if (kind === 'sounds') {
+    setSoundPack(id);
+    sounds.place();
+    setTimeout(() => sounds.clear(4, 2, 1), 200);
+    setTimeout(() => setSoundPack(settings.soundPack), 1800);
+  } else if (kind === 'jingles') {
+    jingle(id);
+  }
+}
+
+// ---------- Glücks-Ecke ----------
+
+let reveal = null; // gerade gezeigter Truhen-Inhalt
+function grantItem(item) {
+  owned.add(item.id);
+  save('owned', [...owned]);
+  refreshAchievements();
+}
+
+function showChest(type, result) {
+  reveal = result;
+  $('reveal-title').textContent = CHESTS[type].name;
+  const chest = $('big-chest');
+  chest.dataset.chest = type;
+  chest.className = 'big-chest shaking';
+  $('reveal-card').hidden = true;
+  $('reveal-actions').hidden = true;
+  openOverlay('reveal');
+  sounds.power();
+  vibrate([20, 60, 20, 60, 20]);
+  setTimeout(() => {
+    chest.className = `big-chest open glow-${result.rarity}`;
+    const box = chest.getBoundingClientRect();
+    chipBurst(box.left + box.width / 2, box.top + box.height / 3, result.rarity === 'legendary' ? 60 : 24);
+    if (result.rarity === 'legendary' || result.rarity === 'epic') {
+      sounds.record();
+      jingle(settings.jingle === 'jingle-none' ? 'jingle-fanfare' : settings.jingle);
+    } else sounds.mission();
+    vibrate(result.rarity === 'legendary' ? [40, 30, 40, 30, 120] : [30, 40, 60]);
+    const card = $('reveal-card');
+    card.className = `reveal-card r-${result.rarity}`;
+    card.replaceChildren(
+      swatch(result.item, result.item.kind),
+      el('strong', 'reveal-name', result.item.name),
+      rarityTag(result.item),
+      el('small', '', SHOP_LABELS[result.item.kind]),
+    );
+    if (result.duplicate) {
+      card.append(el('div', 'dupe', `Schon im Besitz → +${fmt(result.chips)} Chips`));
+      addChips(result.chips);
+    } else {
+      grantItem(result.item);
+      card.append(el('div', 'new-item', 'NEU!'));
+    }
+    card.hidden = false;
+    $('reveal-actions').hidden = false;
+    $('reveal-equip').hidden = result.duplicate || !SHOP_SETTING[result.item.kind];
+  }, 1400);
+}
+
+function buyChest(type) {
+  const chest = CHESTS[type];
+  if (!chest || !spend(chest.price)) return;
+  casino.chests = (casino.chests || 0) + 1;
+  saveCasino();
+  showChest(type, openChestRoll(type, owned, Math.random));
+}
+
+let scratchSource = 'round'; // 'round' (Rundenende) oder 'shop'
+function startTicket(type, paid = true) {
+  const ticket = TICKETS[type];
+  if (!ticket || (paid && !spend(ticket.price))) return;
+  scratchSource = 'shop';
+  showScratch(ticketPrize(type, Math.random), ticket.name);
+}
+
+// Glücksrad: Felder so groß wie ihre Chance
+const WHEEL_COLORS = ['#ff3d8b', '#3ee8ff', '#9a2bff', '#ffb52e', '#4dff88', '#ff8a3d', '#ffd34d', '#c8f4ff'];
+const WHEEL_ICONS = { 'Bronze-Truhe': '📦', 'Silber-Truhe': '💎', Glückslos: '🎟️' };
+let wheelTurn = 0;
+function buildWheel() {
+  const disc = $('wheel-disc');
+  let from = 0;
+  const stops = WHEEL.map((field, k) => {
+    const to = from + (field.weight / WHEEL_TOTAL) * 360;
+    const stop = `${WHEEL_COLORS[k % WHEEL_COLORS.length]} ${from}deg ${to}deg`;
+    from = to;
+    return stop;
+  });
+  disc.style.background = `conic-gradient(${stops.join(', ')})`;
+  disc.replaceChildren(...WHEEL.map((field, k) => {
+    const label = el('span', 'wheel-label', WHEEL_ICONS[field.label] ?? field.label);
+    label.style.transform = `rotate(${wheelAngle(k)}deg)`;
+    return label;
+  }));
+}
+
+function openWheel() {
+  refreshCasinoDay();
+  buildWheel();
+  $('wheel-reward').textContent = '';
+  $('wheel-spin').disabled = Boolean(casino.wheel);
+  $('wheel-spin').textContent = casino.wheel ? 'Morgen wieder' : 'Gratis drehen!';
+  $('wheel-info').textContent = casino.wheel ? 'Heute schon gedreht – morgen gibt es den nächsten Gratis-Dreh.' : 'Einmal am Tag gratis drehen';
+  openOverlay('wheel');
+}
+
+function spinTheWheel() {
+  refreshCasinoDay();
+  if (casino.wheel) return;
+  casino.wheel = true;
+  saveCasino();
+  const index = spinWheel(Math.random);
+  const field = WHEEL[index];
+  $('wheel-spin').disabled = true;
+  wheelTurn += 360 * 6 + ((360 - wheelAngle(index) - (wheelTurn % 360)) % 360 + 360) % 360;
+  $('wheel-disc').style.transform = `rotate(${wheelTurn}deg)`;
+  sounds.power();
+  for (let k = 0; k < 14; k++) setTimeout(() => sounds.pickup(), 120 + k * k * 18);
+  setTimeout(() => {
+    $('wheel-spin').textContent = 'Morgen wieder';
+    if (field.chips) {
+      addChips(field.chips);
+      sounds.chips(field.chips);
+      $('wheel-reward').textContent = `+${fmt(field.chips)} Chips`;
+      const box = $('wheel-disc').getBoundingClientRect();
+      chipBurst(box.left + box.width / 2, box.top + box.height / 2, 20);
+    } else if (field.chest) {
+      $('wheel-reward').textContent = field.label;
+      setTimeout(() => showChest(field.chest, openChestRoll(field.chest, owned, Math.random)), 700);
+    } else if (field.ticket) {
+      $('wheel-reward').textContent = field.label;
+      setTimeout(() => startTicket(field.ticket, false), 700);
+    }
+    renderDots();
+  }, 4300);
+}
+
+// Spielautomat
+let slotBet = SLOT_BETS[0];
+let slotBusy = false;
+const SLOT_ICON = Object.fromEntries(SLOT_SYMBOLS.map((s) => [s.id, s.icon]));
+function renderSlot() {
+  refreshCasinoDay();
+  const left = SLOT_DAILY_SPINS - casino.spins;
+  $('slot-bets').replaceChildren(...SLOT_BETS.map((bet) => {
+    const b = el('button', `btn small-btn${bet === slotBet ? ' active' : ''}`);
+    b.type = 'button';
+    b.dataset.bet = String(bet);
+    b.append(...priceLabel(bet));
+    return b;
+  }));
+  $('slot-spin').disabled = slotBusy || left <= 0 || wallet < slotBet;
+  $('slot-spin').textContent = left <= 0 ? 'Morgen wieder' : `Drehen · ${slotBet}`;
+  $('slot-left').textContent = `Noch ${left} von ${SLOT_DAILY_SPINS} Drehs heute · Guthaben ${fmt(wallet)} Chips`;
+}
+function openSlot() {
+  for (const strip of document.querySelectorAll('.reel-strip')) {
+    if (!strip.childElementCount) strip.replaceChildren(el('div', 'reel-sym', '7'));
+  }
+  $('slot-result').textContent = 'Viel Glück!';
+  $('slot-result').className = 'slot-result';
+  renderSlot();
+  openOverlay('slot');
+}
+function spinTheSlot() {
+  refreshCasinoDay();
+  if (slotBusy || casino.spins >= SLOT_DAILY_SPINS || !spend(slotBet)) return;
+  casino.spins++;
+  saveCasino();
+  const bet = slotBet;
+  const result = spinSlot(bet, Math.random);
+  slotBusy = true;
+  renderSlot();
+  $('slot-result').textContent = '…';
+  $('slot-result').className = 'slot-result';
+  sounds.power();
+  const strips = [...document.querySelectorAll('.reel-strip')];
+  strips.forEach((strip, k) => {
+    const n = 14 + k * 6;
+    const symbols = Array.from({ length: n }, () => SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)].id);
+    symbols.push(result.reels[k]);
+    strip.style.transition = 'none';
+    strip.style.transform = 'translateY(0)';
+    strip.replaceChildren(...symbols.map((s) => el('div', `reel-sym s-${s}`, SLOT_ICON[s])));
+    void strip.offsetHeight;
+    strip.style.transition = `transform ${1.1 + k * 0.45}s cubic-bezier(0.15, 0.6, 0.25, 1.04)`;
+    strip.style.transform = `translateY(calc(-${n} * var(--sym)))`;
+    setTimeout(() => {
+      sounds.place();
+      vibrate(10);
+    }, (1.1 + k * 0.45) * 1000);
+  });
+  setTimeout(() => {
+    slotBusy = false;
+    const box = $('slot-result');
+    if (result.jackpot) {
+      casino.slotJackpots = (casino.slotJackpots || 0) + 1;
+      saveCasino();
+      const missing = dropPool('legendary').filter((item) => !owned.has(item.id));
+      jingle('jingle-orchestra');
+      shake('shake-big');
+      if (missing.length) {
+        const item = missing[Math.floor(Math.random() * missing.length)];
+        grantItem(item);
+        box.textContent = `👑 JACKPOT! ${item.name} (Legendär)`;
+      } else {
+        addChips(result.win);
+        box.textContent = `👑 JACKPOT! +${fmt(result.win)} Chips`;
+      }
+      box.className = 'slot-result win big';
+      refreshAchievements();
+    } else if (result.win) {
+      addChips(result.win);
+      sounds.chips(result.win);
+      sounds.mission();
+      box.textContent = `Gewinn: +${fmt(result.win)} Chips`;
+      box.className = `slot-result win${result.win >= bet * 8 ? ' big' : ''}`;
+    } else {
+      box.textContent = 'Leider nichts – nochmal?';
+      box.className = 'slot-result';
+    }
+    if (result.win || result.jackpot) {
+      const r = box.getBoundingClientRect();
+      chipBurst(r.left + r.width / 2, r.top, result.jackpot ? 60 : Math.min(40, 8 + result.win / bet * 2));
+    }
+    renderSlot();
+  }, (1.1 + 2 * 0.45) * 1000 + 250);
+}
+
+// Gewinnchancen offen anzeigen
+const pct = (p) => (p >= 0.1 ? `${Math.round(p * 1000) / 10} %` : p >= 0.001 ? `${Math.round(p * 10000) / 100} %` : `${Math.round(p * 100000) / 1000} %`);
+let oddsReturn = 'shop';
+function showOdds(what) {
+  oddsReturn = visibleOverlay() ?? 'shop';
+  const table = $('odds-table');
+  const rows = [];
+  let title = 'Gewinnchancen';
+  let note = '';
+  if (what.startsWith('chest:')) {
+    const chest = CHESTS[what.slice(6)];
+    title = chest.name;
+    note = 'Jede Truhe enthält einen Gegenstand. Was du schon hast, wird zu Chips.';
+    for (const [rarity, chance] of Object.entries(chest.odds)) rows.push([RARITY[rarity].name, pct(chance), `doppelt: ${fmt(RARITY[rarity].dupe)} Chips`]);
+  } else if (what.startsWith('ticket:')) {
+    const ticket = TICKETS[what.slice(7)];
+    title = ticket.name;
+    note = `Preis ${fmt(ticket.price)} Chips.`;
+    for (const row of TICKET_ODDS) rows.push([row.label, pct(row.chance), row.times ? `${fmt(ticket.price * row.times)} Chips` : '–']);
+  } else if (what === 'wheel') {
+    title = 'Glücksrad';
+    note = 'Jedes Feld ist so groß wie seine Chance.';
+    for (const field of WHEEL) rows.push([`${WHEEL_ICONS[field.label] ?? '◉'} ${field.label}${field.chips ? ' Chips' : ''}`, pct(field.weight / WHEEL_TOTAL), '']);
+  } else if (what === 'slot') {
+    title = 'Gewinntabelle';
+    note = `Jede Walze dreht unabhängig. Höchstens ${SLOT_DAILY_SPINS} Drehs am Tag. Im Schnitt gibt der Automat ${Math.round(slotReturn() * 100)} von 100 gesetzten Chips zurück.`;
+    for (const row of slotOdds()) rows.push([row.label, pct(row.chance), row.pays === 'jackpot' ? 'Legendärer Gegenstand' : `${row.pays} × Einsatz`]);
+  }
+  $('odds-title').textContent = title;
+  $('odds-note').textContent = note;
+  table.replaceChildren(...rows.map((cells) => {
+    const tr = el('tr');
+    tr.append(...cells.map((c) => el('td', '', c)));
+    return tr;
+  }));
+  openOverlay('odds');
+}
+
+function claimSet(id) {
+  const bonus = setBonus(id);
+  if (!bonus || owned.has(bonus.id) || !setProgress(id, owned).complete) return;
+  grantItem(bonus);
+  casino.sets = [...new Set([...(casino.sets || []), id])];
+  saveCasino();
+  showChest('gold', { rarity: 'legendary', item: bonus, duplicate: false, chips: 0 });
+  $('reveal-title').textContent = `Set ${SETS[id].name} komplett!`;
 }
 
 // ---------- Fenster ----------
@@ -1139,7 +1706,7 @@ function renderSettings() {
   $('sound-state').textContent = settings.sound ? 'an' : 'aus';
   $('music-state').textContent = settings.music ? 'an' : 'aus';
   $('vibration-state').textContent = settings.vibration ? 'an' : 'aus';
-  $('mode-btn').textContent = mode === 'pro' ? 'Freies Spiel' : levelFromXp(xp).level >= 10 ? 'Profi-Modus' : 'Profi · ab Level 10';
+  $('mode-btn').textContent = mode === 'pro' ? 'Zu Normal wechseln' : levelFromXp(xp).level >= 10 ? 'Zu Hart wechseln' : 'Hart · ab Level 10';
   $('mode-btn').disabled = mode !== 'pro' && levelFromXp(xp).level < 10;
 }
 
@@ -1148,7 +1715,9 @@ function startGame(newMode, fresh) {
   mode = newMode;
   settings.mode = mode;
   saveSettings();
-  state = (!fresh && loadGame(mode)) || freshGame(mode);
+  const saved = fresh ? null : loadGame(mode);
+  // Eine fertige Runde, deren Truhe schon geöffnet ist, nicht wieder anzeigen: dann neu beginnen
+  state = saved && !(saved.over && saved.rewarded) ? saved : freshGame(mode);
   best = getBest(mode);
   bestAtStart = best;
   shownScore = state.score;
@@ -1170,7 +1739,7 @@ function gameOver() {
   sounds.gameOver();
   vibrate([40, 60, 40]);
   $('final-score').textContent = fmt(state.score);
-  $('final-best-label').textContent = mode === 'daily' ? 'Tagesrekord' : mode === 'pro' ? 'Profi-Rekord' : 'Rekord';
+  $('final-best-label').textContent = mode === 'daily' ? 'Tagesrekord' : mode === 'pro' ? 'Hart-Rekord' : 'Rekord';
   $('final-best').textContent = fmt(best);
   $('final-hand').textContent = state.bestHand >= 0 ? HANDS[state.bestHand].name : '–';
   $('final-lines').textContent = fmt(state.lines);
@@ -1191,9 +1760,9 @@ function gameOver() {
 
 // Das nächste noch nicht freigeschaltete Design (günstigstes zuerst) – Geschenk für jedes 5. Level
 function nextLockedDesign() {
-  const all = Object.entries(SHOP_ITEMS).filter(([kind]) => kind !== 'extras')
+  const all = Object.entries(SHOP_ITEMS).filter(([kind]) => kind !== 'extras' && kind !== 'charms')
     .flatMap(([kind, items]) => items.map((item) => ({ ...item, kind })));
-  return all.filter((d) => !owned.has(d.id)).sort((a, b) => a.price - b.price)[0] ?? null;
+  return all.filter((d) => buyable(d) && !owned.has(d.id)).sort((a, b) => a.price - b.price)[0] ?? null;
 }
 
 // Runde beenden: Truhe öffnen, Erfahrung gutschreiben, Level-Belohnungen verteilen.
@@ -1202,6 +1771,7 @@ function openChest() {
   finishPlatformRound('lose', { showRank: true });
   state.rewarded = true;
   const reward = chestReward(state, Math.random);
+  reward.chips = withCharm(reward.chips, settings.charm);
   const before = xp;
   xp += xpForRound(state);
   save('xp', xp);
@@ -1353,6 +1923,8 @@ function platformLink(text, href) {
 function boardLabel(board) {
   if (board === 'klassisch') return 'Klassisch';
   if (board === 'taeglich') return 'Täglich';
+  if (board === 'standard') return 'Normal';
+  if (board === 'profi') return 'Hart';
   return board;
 }
 
@@ -1549,12 +2121,12 @@ function renderStart() {
   $('start-best').textContent = fmt(getBest('free'));
   renderJackpot();
   const freeGame = mode === 'free' ? state : loadGame('free');
-  $('start-play').textContent = freeGame && freeGame.moves > 0 && !freeGame.over ? 'Weiterspielen' : 'Spielen';
+  $('start-play').textContent = freeGame && freeGame.moves > 0 && !freeGame.over ? 'Normal · weiterspielen' : 'Normal spielen';
   const dailyBest = getBest('daily');
   $('start-daily').textContent = `Tages-Challenge ${dayLabel(today())}${dailyBest ? ` · Rekord ${fmt(dailyBest)}` : ''}`;
   const proLevel = levelFromXp(xp).level;
   $('start-pro').disabled = proLevel < 10;
-  $('start-pro').textContent = proLevel < 10 ? `🔒 Profi · ab Level 10 (du: ${proLevel})` : `♛ Profi${getBest('pro') ? ` · Rekord ${fmt(getBest('pro'))}` : ''}`;
+  $('start-pro').textContent = proLevel < 10 ? `🔒 Hart · ab Level 10 (du: ${proLevel})` : `🔥 Hart${getBest('pro') ? ` · Rekord ${fmt(getBest('pro'))}` : ''}`;
 }
 
 function showHome() {
@@ -1562,6 +2134,7 @@ function showHome() {
   renderUpdateNotice();
   setPowerMode(null);
   renderStart();
+  renderDots();
   openOverlay('start');
 }
 
@@ -1601,12 +2174,16 @@ function renderStats() {
 }
 
 function refreshAchievements(announce = true) {
-  const unlocked = earnedAchievements({ stats, xp, gift: load('gift', null), proBest: getBest('pro') });
+  const unlocked = earnedAchievements({
+    stats, xp, gift: load('gift', null), proBest: getBest('pro'), casino,
+    legendary: ALL_ITEMS.some((item) => item.rarity === 'legendary' && owned.has(item.id)),
+    setDone: Object.keys(SETS).some((id) => setProgress(id, owned).complete),
+  });
   const added = unlocked.filter((id) => !achievements.has(id));
   if (!added.length) return;
   for (const id of added) achievements.add(id);
   save('achievements', [...achievements]);
-  if (announce) toast(`${ACHIEVEMENTS[added[0]].icon} Erfolg: ${ACHIEVEMENTS[added[0]].name}`);
+  if (announce) toast(`${ACHIEVEMENTS[added[0]].icon} Erfolg: ${ACHIEVEMENTS[added[0]].name}${ACHIEVEMENTS[added[0]].profile ? ' · auch im Profil!' : ''}`);
 }
 
 function renderAchievements() {
@@ -1618,8 +2195,12 @@ function renderAchievements() {
     item.append(
       Object.assign(document.createElement('span'), { className: 'achievement-icon', textContent: unlocked ? achievement.icon : '🔒' }),
       Object.assign(document.createElement('strong'), { textContent: achievement.name }),
-      Object.assign(document.createElement('small'), { textContent: unlocked ? 'Freigeschaltet' : 'Noch offen' }),
+      Object.assign(document.createElement('small'), { textContent: unlocked ? 'Freigeschaltet ✓' : achievement.how }),
     );
+    if (achievement.profile) {
+      item.classList.add('profile');
+      item.append(Object.assign(document.createElement('em'), { textContent: 'Schaltet auch etwas in deinem Profil auf bens-games.de frei' }));
+    }
     return item;
   }));
 }
@@ -1652,24 +2233,33 @@ async function shareScore() {
   }
 }
 
+// Gratis-Los nach jeder 3. Runde
 function openScratch() {
   if (!scratchReady) return;
-  const prize = scratchPrize(Math.random);
+  scratchSource = 'round';
+  showScratch(scratchPrize(Math.random), 'Rubbellos', () => {
+    scratchReady = false;
+    save('scratch-ready', false);
+    $('scratch-btn').hidden = true;
+  });
+}
+
+function showScratch(prize, title, onReveal = () => {}) {
+  $('scratch-title').textContent = title;
   $('scratch-reward').textContent = '';
   $('scratch-done').hidden = true;
   openOverlay('scratch');
   createScratchCard($('scratch-area'), prize, (card) => {
-    scratchReady = false;
-    save('scratch-ready', false);
-    $('scratch-btn').hidden = true;
-    addChips(prize.chips);
-    $('scratch-reward').textContent = `+${fmt(prize.chips)} Chips${prize.tier >= 2 ? ' – Volltreffer!' : ''}`;
+    onReveal();
+    if (prize.chips) addChips(prize.chips);
+    $('scratch-reward').textContent = prize.chips ? `+${fmt(prize.chips)} Chips${prize.tier >= 2 ? ' – Volltreffer!' : ''}` : 'Leider nichts – beim nächsten Mal!';
     $('scratch-done').hidden = false;
     const box = card.getBoundingClientRect();
-    chipBurst(box.left + box.width / 2, box.top + box.height / 2, 12 + prize.tier * 12);
+    if (prize.chips) chipBurst(box.left + box.width / 2, box.top + box.height / 2, 12 + prize.tier * 12);
     if (prize.tier >= 2) sounds.record();
-    else sounds.mission();
-    sounds.chips(prize.chips);
+    else if (prize.chips) sounds.mission();
+    else sounds.invalid();
+    if (prize.chips) sounds.chips(prize.chips);
     vibrate(prize.tier >= 2 ? [40, 30, 40, 30, 80] : [20, 30, 20]);
   });
 }
@@ -1698,14 +2288,14 @@ const actions = {
   'claim-gift': claimGift,
   home: showHome,
   play() {
-    if (mode !== 'free') startGame('free', false);
+    if (mode !== 'free' || (state.over && state.rewarded)) return startGame('free', false);
     closeOverlays();
     if (state.over) gameOver();
     else startPlatformRound();
   },
   'play-daily': () => startGame('daily', false),
   'play-pro': () => {
-    if (levelFromXp(xp).level < 10) return toast('Profi wird ab Level 10 freigeschaltet');
+    if (levelFromXp(xp).level < 10) return toast('Hart wird ab Level 10 freigeschaltet');
     startGame('pro', false);
   },
   async 'choose-local-save'() {
@@ -1736,7 +2326,7 @@ const actions = {
   },
   share: shareScore,
   scratch: openScratch,
-  'scratch-done': () => openOverlay('gameover'),
+  'scratch-done': () => (scratchSource === 'shop' ? actions['shop-luck']() : openOverlay('gameover')),
   back: () => {
     if (returnTo === 'start') renderStart();
     openOverlay(returnTo);
@@ -1744,10 +2334,33 @@ const actions = {
   help: () => showHelp(1),
   'help-page': () => showHelp(helpPage === 1 ? 2 : 1),
   shop() {
-    returnTo = visibleOverlay() ?? 'menu';
+    const from = visibleOverlay();
+    if (from !== 'shop') returnTo = from ?? 'menu';
+    shopMain = 'buy';
     renderShop();
     openOverlay('shop');
   },
+  'shop-luck'() {
+    shopMain = 'luck';
+    renderShop();
+    openOverlay('shop');
+  },
+  'open-wheel': openWheel,
+  'wheel-spin': spinTheWheel,
+  'open-slot': openSlot,
+  'slot-spin': spinTheSlot,
+  'reveal-equip'() {
+    if (reveal && !reveal.duplicate) useDesign(reveal.item.kind, reveal.item.id);
+    actions['reveal-done']();
+  },
+  'reveal-done'() {
+    reveal = null;
+    if (shopMain === 'album') renderShop();
+    else shopMain = 'luck';
+    renderShop();
+    openOverlay('shop');
+  },
+  'odds-back': () => openOverlay(oddsReturn),
   sound() {
     settings.sound = !settings.sound;
     setSoundEnabled(settings.sound);
@@ -1822,7 +2435,10 @@ window.addEventListener('pointermove', (e) => {
 });
 window.addEventListener('pointerup', endDrag);
 window.addEventListener('pointercancel', endDrag);
-window.addEventListener('resize', layout);
+window.addEventListener('resize', () => {
+  layout();
+  fitTray();
+});
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 $('menu-btn').addEventListener('click', () => {
@@ -1831,19 +2447,35 @@ $('menu-btn').addEventListener('click', () => {
   openOverlay('menu');
 });
 document.addEventListener('click', (e) => {
-  const target = e.target.closest('[data-action], [data-power], [data-suit], [data-buy], [data-use], [data-preview], [data-shop-tab]');
+  const target = e.target.closest(
+    '[data-action], [data-power], [data-suit], [data-buy], [data-use], [data-preview], [data-shop-main], [data-shop-cat], [data-chest], [data-ticket], [data-odds], [data-bet], [data-claim-set]',
+  );
   if (!target || target.disabled) return;
   unlockAudio();
-  if (target.dataset.action) actions[target.dataset.action]?.();
-  else if (target.dataset.power) usePower(target.dataset.power);
-  else if (target.dataset.suit) chooseSuit(Number(target.dataset.suit));
-  else if (target.dataset.buy) buyDesign(...target.dataset.buy.split(':'));
-  else if (target.dataset.use) useDesign(...target.dataset.use.split(':'));
-  else if (target.dataset.preview) previewDesign(...target.dataset.preview.split(':'));
-  else if (target.dataset.shopTab) {
-    shopTab = target.dataset.shopTab;
+  const d = target.dataset;
+  if (d.action) actions[d.action]?.();
+  else if (d.power) usePower(d.power);
+  else if (d.suit) chooseSuit(Number(d.suit));
+  else if (d.buy) buyDesign(...d.buy.split(':'));
+  else if (d.use) useDesign(...d.use.split(':'));
+  else if (d.preview) previewDesign(...d.preview.split(':'));
+  else if (d.shopMain) {
+    shopMain = d.shopMain;
+    confirmBuy = null;
     renderShop();
-  }
+    $('shop-body').scrollTop = 0;
+  } else if (d.shopCat) {
+    shopCat = d.shopCat;
+    confirmBuy = null;
+    renderShop();
+    $('shop-body').scrollTop = 0;
+  } else if (d.chest) buyChest(d.chest);
+  else if (d.ticket) startTicket(d.ticket);
+  else if (d.odds) showOdds(d.odds);
+  else if (d.bet) {
+    slotBet = Number(d.bet);
+    renderSlot();
+  } else if (d.claimSet) claimSet(d.claimSet);
 });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
@@ -1876,7 +2508,7 @@ window.addEventListener('pageshow', () => {
 // iPhone/iPad: Ton erst nach einer echten Berührung freischalten – bei jeder Art von Eingabe versuchen
 for (const type of ['pointerdown', 'touchend', 'keydown']) document.addEventListener(type, unlockAudio, { capture: true, passive: true });
 
-if (state.over) gameOver();
+if (state.over && !state.rewarded) gameOver();
 else if (!settings.seenHelp) showHelp(1);
 else {
   showHome();

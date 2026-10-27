@@ -2016,6 +2016,17 @@ a.news__game:hover {
 }
 .banner--galaxie::after { background: radial-gradient(circle at 50% 50%, transparent 30%, rgb(7 5 26 / 0.6)); }
 
+/* Casino Royale (Royal Blocks: legendärer Fund) – roter Samt, goldene Lichterkette, Glanz */
+.banner--casino { background: radial-gradient(circle at 50% 0%, #a3123d, #3a0414 60%, #1a0109); }
+.banner--casino::before {
+  background:
+    radial-gradient(circle, rgb(255 211 77 / 0.75) 0 2px, transparent 3px) 0 0 / 22px 22px,
+    linear-gradient(105deg, transparent 30%, rgb(255 230 150 / 0.35) 45%, transparent 60%) 0 0 / 250% 100%;
+  mask: linear-gradient(#000 0 18%, transparent 30% 70%, #000 82%);
+  animation: banner-shine 5s ease-in-out infinite;
+}
+.banner--casino::after { background: radial-gradient(circle at 80% 70%, rgb(255 211 77 / 0.18), transparent 45%); }
+
 @keyframes banner-drift { to { transform: translate(4%, -6%) scale(1.08); } }
 @keyframes banner-twinkle { to { opacity: 0.45; } }
 @keyframes banner-shine { from { background-position: 150% 0; } to { background-position: -100% 0; } }
