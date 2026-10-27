@@ -55,7 +55,8 @@ function platform() {
         .replace(/<!-- SPIELSEITE:([a-z0-9-]+) -->/, (_, id) => renderGamePage(apps.find((app) => app.id === id), info[id], news, apps))
         .replace('<!-- ENV_BANNER -->', environmentBanner(mode))
         .replace('<!-- ACCOUNT_NAV -->', accountNav(mode))
-        .replace('<!-- LIBRARY -->', () => renderLibrary(apps))
+        .replace('<!-- LIBRARY -->', () => renderLibrary(apps, { pages: Object.keys(info) }))
+        .replace('<!-- SPIELSEITEN -->', () => Object.keys(info).join(','))
         .replace('<!-- YEAR -->', String(new Date().getFullYear()));
       assertNoPlaceholders(result, ctx.filename, mode);
       return result;

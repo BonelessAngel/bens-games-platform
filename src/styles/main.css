@@ -1577,24 +1577,25 @@ a.podium__name:hover {
   position: relative;
 }
 
-.card__more {
+/* Kleiner „Spielen“-Knopf: startet direkt, die Karte selbst führt zur Info-Seite */
+.card__play {
   position: absolute;
   top: 14px;
   right: 16px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
+  padding: 5px 12px;
   border-radius: 999px;
-  background: var(--bg);
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+  font-size: 0.8rem;
+  font-weight: 700;
   text-decoration: none;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: transform 0.15s ease;
 }
 
-.card__more:hover,
-.card__more:focus-visible {
-  color: var(--accent);
-  border-color: var(--accent);
+.card__play:hover,
+.card__play:focus-visible {
+  transform: scale(1.06);
 }
 
 /* ---- Spiel-Seiten (/spiele/<id>/) ---- */

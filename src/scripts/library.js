@@ -12,7 +12,7 @@ if (container && document.querySelector('meta[name="bg-accounts"]')) {
   fetch('/api/apps', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
     .then((response) => (response.ok ? response.json() : null))
     .then((data) => {
-      if (Array.isArray(data?.apps)) container.innerHTML = renderLibrary(data.apps, { filter: false });
+      if (Array.isArray(data?.apps)) container.innerHTML = renderLibrary(data.apps, { filter: false, pages: (container.dataset.pages ?? '').split(',').filter(Boolean) });
     })
     .catch(() => {
       // Ohne API bleibt die beim Build erzeugte Liste stehen.
