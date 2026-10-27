@@ -5,6 +5,7 @@ import { renderLibrary } from '../../lib/library.js';
 import { boardLabel } from '../../lib/boards.js';
 import { userReady } from './nav.js';
 import './intro.js';
+import './home.js';
 
 const container = document.querySelector('[data-library]');
 

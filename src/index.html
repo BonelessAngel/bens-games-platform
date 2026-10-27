@@ -45,9 +45,26 @@
       <div class="continue__list" data-continue-list></div>
     </section>
 
+    <section class="container daily" data-daily hidden aria-labelledby="titel-aufgaben">
+      <div class="daily__head">
+        <h2 class="section-title" id="titel-aufgaben">Tägliche Aufgaben</h2>
+        <span class="daily__streak" data-daily-streak></span>
+      </div>
+      <ol class="daily__list" data-daily-list></ol>
+      <p class="daily__note" data-daily-note></p>
+    </section>
+
     <div class="container library" data-library data-pages="<!-- SPIELSEITEN -->">
       <!-- LIBRARY -->
     </div>
+
+    <section class="container ticker" data-ticker hidden aria-labelledby="titel-live">
+      <div class="daily__head">
+        <h2 class="section-title" id="titel-live"><span class="ticker__dot" aria-hidden="true"></span>Gerade bei Bens Games</h2>
+        <a class="ticker__more" href="/ruhmeshalle/">🏆 Ruhmeshalle →</a>
+      </div>
+      <ol class="ticker__list" data-ticker-list></ol>
+    </section>
 
     <section class="container library__section" aria-labelledby="titel-neu">
       <h2 class="section-title" id="titel-neu">Was ist neu?</h2>

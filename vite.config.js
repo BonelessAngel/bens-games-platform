@@ -89,6 +89,7 @@ export default defineConfig(({ mode }) => {
     for (const [name, path] of Object.entries(ACCOUNT_PAGES)) input[name] = src(path);
     // Öffentliche Spielerprofile gibt es nur mit Konten.
     input.spieler = src('spieler/index.html');
+    input.ruhmeshalle = src('ruhmeshalle/index.html');
   }
 
   return {

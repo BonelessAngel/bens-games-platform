@@ -50,6 +50,8 @@ function renderStats(stats) {
     [stats.podiums, 'Mal auf dem Treppchen'],
     [stats.levels, 'eigene Level'],
     [stats.nova_stars, 'Sterne in Nova Bastion'],
+    [stats.week_wins ?? 0, 'Wochensiege'],
+    [stats.task_days ?? 0, 'Tage alle Aufgaben'],
   ].filter(([value], i) => value > 0 || i === 0);
   $('[data-player-stats]').replaceChildren(...items.map(([value, label]) => {
     const tile = el('div', 'player-stat');
@@ -92,6 +94,19 @@ function renderRecords(profile) {
   cards.sort((a, b) => a.rank - b.rank);
   $('[data-player-records]').replaceChildren(...cards.slice(0, 12).map((c) => c.card));
   show('[data-player-records-box]', cards.length > 0);
+}
+
+// Pokale aus der Ruhmeshalle: jeder Wochensieg ein Pokal
+function renderTrophies(profile) {
+  const trophies = profile.trophies ?? [];
+  $('[data-player-trophies]').replaceChildren(...trophies.slice(0, 24).map((t) => {
+    const cup = el('a', 'trophy');
+    cup.href = '/ruhmeshalle/';
+    cup.title = `Wochensieg ${t.week.replace('-W', ' · KW ')} – ${t.app_name} · ${boardLabel(t.board)} mit ${points(t.score)} Punkten`;
+    cup.append(el('span', 'trophy__cup', '🏆'), el('span', 'trophy__week', `KW ${t.week.split('-W')[1]}`), el('span', 'trophy__game', `${t.app_name} · ${boardLabel(t.board)}`));
+    return cup;
+  }));
+  show('[data-player-trophies-box]', trophies.length > 0);
 }
 
 async function renderBadges(profile) {
@@ -191,6 +206,7 @@ async function load() {
   profile.rarity ??= {};
   await Promise.all([renderPins(profile), renderBadges(profile)]);
   renderRecords(profile);
+  renderTrophies(profile);
   renderActivity(profile.activity ?? null);
   renderLevels(profile.levels ?? []);
   show('[data-player-empty]', !profile.games.length && !(profile.levels ?? []).length);

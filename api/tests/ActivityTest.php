@@ -26,7 +26,8 @@ function playEverything(TestApp $app, array $session): void
 
 dbTest('Tägliche Aufgaben: 3 am Tag für alle gleich, Fortschritt aus gemeldeten Runden, Serie', function (): void {
     $app = new TestApp();
-    $lea = $app->signedIn('lea@example.org', 'ein sicheres Passwort', 'Lea');
+    $app->signedIn('lea@example.org', 'ein sicheres Passwort', 'Lea');
+    $lea = $app->login('lea@example.org', 'ein sicheres Passwort', true);
     same(401, $app->get('account/daily')->status, 'nur angemeldet');
 
     $before = $app->get('account/daily', $lea['cookies']);
@@ -34,7 +35,7 @@ dbTest('Tägliche Aufgaben: 3 am Tag für alle gleich, Fortschritt aus gemeldete
     same(3, count($before->body['tasks']));
     same(3, count(array_unique(array_column($before->body['tasks'], 'id'))));
     check(!array_filter($before->body['tasks'], static fn (array $t): bool => $t['done']), 'am Anfang nichts erledigt');
-    check(!(in_array('rounds3', array_column($before->body['tasks'], 'id'), true) && in_array('rounds10', array_column($before->body['tasks'], 'id'), true)));
+    check(!(in_array('rounds3', array_column($before->body['tasks'], 'id'), true) && in_array('rounds10', array_column($before->body['tasks'], 'id'), true)), '3er und 10er nie zusammen');
     $activity = new Activity($app->pdo, new BensGames\Clock(fn (): int => $app->time));
     same(array_column($before->body['tasks'], 'id'), $activity->tasksFor($before->body['day']), 'für alle gleich');
 
@@ -61,7 +62,8 @@ dbTest('Tägliche Aufgaben: 3 am Tag für alle gleich, Fortschritt aus gemeldete
 
 dbTest('Ticker: neuer Rekord, neue Erfolge, neues Level – ohne Konten mit Widerspruch', function (): void {
     $app = new TestApp();
-    $lea = $app->signedIn('lea@example.org', 'ein sicheres Passwort', 'Lea');
+    $app->signedIn('lea@example.org', 'ein sicheres Passwort', 'Lea');
+    $lea = $app->login('lea@example.org', 'ein sicheres Passwort', true);
     $max = $app->signedIn('max@example.org', 'ein sicheres Passwort', 'Max');
     $app->postAs($lea, 'games/royal-blocks/scores', ['board' => 'standard', 'score' => 5000]);
     $app->time += 5;
@@ -84,12 +86,13 @@ dbTest('Ticker: neuer Rekord, neue Erfolge, neues Level – ohne Konten mit Wide
 
     // Widerspruch gegen Ranglisten blendet auch den Ticker aus
     same(200, $app->postAs($max, 'account/leaderboard/settings', ['opt_out' => true])->status);
-    check(!in_array('Max', array_column($app->get('feed')->body['events'], 'display_name'), true));
+    check(!in_array('Max', array_column($app->get('feed')->body['events'], 'display_name'), true), 'Widerspruch blendet aus');
 });
 
 dbTest('Ruhmeshalle: abgelaufene Woche wird gesichert, Pokal und Titel im Profil, Aufräumen nach Fristen', function (): void {
     $app = new TestApp();
-    $lea = $app->signedIn('lea@example.org', 'ein sicheres Passwort', 'Lea');
+    $app->signedIn('lea@example.org', 'ein sicheres Passwort', 'Lea');
+    $lea = $app->login('lea@example.org', 'ein sicheres Passwort', true);
     $max = $app->signedIn('max@example.org', 'ein sicheres Passwort', 'Max');
     $app->postAs($lea, 'games/nova-bastion/scores', ['board' => 'endlos', 'score' => 40]);
     $app->postAs($max, 'games/nova-bastion/scores', ['board' => 'endlos', 'score' => 25]);
