@@ -13,7 +13,7 @@ import {
 } from './lib/environment.js';
 import { fillImpressum } from './lib/impressum.js';
 import { avatarFiles } from './lib/avatars.js';
-import { renderGamePage, renderNews, validateGameContent } from './lib/game-pages.js';
+import { patchNotes, renderGamePage, renderNews, validateGameContent } from './lib/game-pages.js';
 import { routeOf, seoTags, sitemapRoutes, sitemapXml, siteUrl } from './lib/seo.js';
 
 const src = (path) => fileURLToPath(new URL(`./src/${path}`, import.meta.url));
@@ -65,6 +65,9 @@ function platform() {
       const sitemap = mode === 'staging' ? '' : `Sitemap: ${siteUrl(mode)}/sitemap.xml\n`;
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(mode) + sitemap });
       this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(mode, sitemapRoutes(loadApps())) });
+      // Patchnotes für die Spiele (docs/spiele-anbindung.md, Abschnitt „Patchnotes“)
+      const apps = loadApps();
+      this.emitFile({ type: 'asset', fileName: 'neuigkeiten.json', source: JSON.stringify(patchNotes(loadContent(apps).news, apps)) });
       // Profilbilder für die Startbildschirme der Spiele (docs/spiele-anbindung.md)
       for (const file of avatarFiles()) this.emitFile({ type: 'asset', ...file });
     },
