@@ -38,6 +38,8 @@ final class Profiles
         'albummeister' => ['Albummeister', 'Ein Set im Royal-Blocks-Album komplett'],
         'glueckspilz' => ['Glückspilz', 'Hauptgewinn am Royal-Blocks-Automaten'],
         'highroller' => ['Highroller', '50.000 Chips im Royal-Blocks-Shop ausgegeben'],
+        'wochensieger' => ['Wochensieger', 'Einmal Platz 1 einer Wochenrangliste'],
+        'fleissig' => ['Fleißig', '30 Tage alle täglichen Aufgaben'],
     ];
 
     /** Banner: id => [Name, Bedingung als Text]. Aussehen: src/styles/main.css (.banner--<id>). */
@@ -102,9 +104,14 @@ final class Profiles
             'likes' => (int) $levels['likes'],
             'nova_stars' => $stars,
         ];
+        // Tägliche Aufgaben und Wochensiege (Ruhmeshalle)
+        $tasks = $this->all('SELECT tasks_done, task_days FROM users WHERE id = ?', [$userId])[0] ?? ['tasks_done' => 0, 'task_days' => 0];
+        $facts['task_days'] = (int) $tasks['task_days'];
+        $facts['week_wins'] = (int) ($this->all('SELECT COUNT(*) AS n FROM hall_of_fame WHERE user_id = ? AND place = 1', [$userId])[0]['n'] ?? 0);
         $points = $facts['achievements'] * 10
             + array_sum(array_map(static fn (?int $r): int => $r === null ? 0 : ($r === 1 ? 60 : ($r <= 3 ? 30 : ($r <= 10 ? 10 : 3))), $ranks))
-            + $facts['levels'] * 15 + min(200, $facts['likes'] * 2) + $facts['nova_stars'];
+            + $facts['levels'] * 15 + min(200, $facts['likes'] * 2) + $facts['nova_stars']
+            + Activity::rankPoints((int) $tasks['tasks_done'], $facts['task_days']) + $facts['week_wins'] * 40;
         $facts['points'] = $points;
         $facts['rank'] = self::rank($points);
         return $facts;
@@ -150,6 +157,8 @@ final class Profiles
             'albummeister' => in_array('album_set', $f['royal_special'] ?? [], true),
             'glueckspilz' => in_array('slot_jackpot', $f['royal_special'] ?? [], true),
             'highroller' => in_array('highroller', $f['royal_special'] ?? [], true),
+            'wochensieger' => ($f['week_wins'] ?? 0) >= 1,
+            'fleissig' => ($f['task_days'] ?? 0) >= 30,
         ]));
         $banners = array_keys(array_filter([
             'nacht' => true,
@@ -254,7 +263,10 @@ final class Profiles
                 'podiums' => $facts['podiums'],
                 'levels' => $facts['levels'],
                 'nova_stars' => $facts['nova_stars'],
+                'week_wins' => $facts['week_wins'],
+                'task_days' => $facts['task_days'],
             ],
+            'trophies' => (new Activity($this->pdo, $this->clock))->trophies($userId),
             'levels' => $this->levels($userId),
             'activity' => $settings['activity'] && !$this->statsOptOut($userId) ? $this->activity($userId) : null,
         ];
