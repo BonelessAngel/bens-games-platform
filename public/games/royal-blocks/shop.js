@@ -90,9 +90,46 @@ export const CHARMS = [
 
 export const START_BONUS = { id: 'start-bonus', name: 'Start-Bonus', price: 350 };
 
+// Nur für kurze Zeit: kaufbar von `from` bis einschließlich `until` (Datum auf dem Gerät).
+// Wer sie gekauft hat, behält sie. Nicht in Truhen, nicht im Album, zählen nicht zu „alles gesammelt“.
+export const LIMITED = [
+  // Halloween bis 10. November 2026
+  { kind: 'theme', id: 'halloween', name: 'Kürbisnacht', price: 4000, rarity: 'epic', color: '#120612', event: 'Halloween', from: '2026-10-27', until: '2026-11-10' },
+  { kind: 'tiles', id: 'pumpkin', name: 'Kürbis', price: 3500, rarity: 'epic', event: 'Halloween', from: '2026-10-27', until: '2026-11-10' },
+  { kind: 'backgrounds', id: 'bg-spooky', name: 'Geisterstunde', price: 2500, rarity: 'rare', event: 'Halloween', from: '2026-10-27', until: '2026-11-10' },
+  { kind: 'frames', id: 'frame-cobweb', name: 'Spinnennetz', price: 2500, rarity: 'rare', event: 'Halloween', from: '2026-10-27', until: '2026-11-10' },
+  { kind: 'chips', id: 'chip-pumpkin', name: 'Kürbis-Chip', price: 1500, rarity: 'common', event: 'Halloween', from: '2026-10-27', until: '2026-11-10' },
+  { kind: 'jingles', id: 'jingle-spooky', name: 'Gruselorgel', price: 2000, rarity: 'rare', event: 'Halloween', from: '2026-10-27', until: '2026-11-10' },
+  // Wochen-Artikel: jeden Montag ein neuer
+  { kind: 'backgrounds', id: 'bg-autumn', name: 'Herbstlaub', price: 2400, rarity: 'rare', event: 'Wochen-Artikel', from: '2026-11-09', until: '2026-11-15' },
+  { kind: 'chips', id: 'chip-copper', name: 'Kupfer-Chip', price: 1800, rarity: 'rare', event: 'Wochen-Artikel', from: '2026-11-16', until: '2026-11-22' },
+  { kind: 'frames', id: 'frame-marquee', name: 'Leuchtreklame', price: 3800, rarity: 'epic', animated: true, event: 'Wochen-Artikel', from: '2026-11-23', until: '2026-11-29' },
+  { kind: 'theme', id: 'snow', name: 'Schneenacht', price: 4200, rarity: 'epic', color: '#0b1a2e', event: 'Wochen-Artikel', from: '2026-11-30', until: '2026-12-06' },
+  { kind: 'jingles', id: 'jingle-bells', name: 'Schlittenglocken', price: 2500, rarity: 'rare', event: 'Wochen-Artikel', from: '2026-12-07', until: '2026-12-13' },
+  { kind: 'tiles', id: 'giftwrap', name: 'Geschenkpapier', price: 3800, rarity: 'epic', event: 'Wochen-Artikel', from: '2026-12-14', until: '2026-12-20' },
+  { kind: 'backgrounds', id: 'bg-xmas', name: 'Weihnachtsmarkt', price: 3200, rarity: 'epic', event: 'Wochen-Artikel', from: '2026-12-21', until: '2026-12-27' },
+  { kind: 'frames', id: 'frame-sparkler', name: 'Wunderkerze', price: 3800, rarity: 'epic', animated: true, event: 'Wochen-Artikel', from: '2026-12-28', until: '2027-01-03' },
+];
+
+// Prestige: goldene Varianten, nur aus der Prestige-Truhe – die erscheint erst, wenn man alles andere hat
+export const MYTHIC = [
+  { kind: 'theme', id: 'midas', name: 'Midas', color: '#140d00' },
+  { kind: 'tiles', id: 'goldbar', name: 'Goldbarren', animated: true },
+  { kind: 'backgrounds', id: 'bg-treasure', name: 'Schatzkammer' },
+  { kind: 'cards', id: 'card-gold', name: 'Goldschrift' },
+  { kind: 'frames', id: 'frame-midas', name: 'Königsrahmen', animated: true },
+  { kind: 'chips', id: 'chip-midas', name: 'Midas-Chip' },
+  { kind: 'jingles', id: 'jingle-midas', name: 'Königsfanfare' },
+  { kind: 'charms', id: 'charm-crown', name: 'Goldene Krone', bonus_chips: 0.2, icon: '👑' },
+].map((item) => ({ price: 0, rarity: 'mythic', ...item }));
+
+const extra = (kind) => [...LIMITED, ...MYTHIC].filter((item) => item.kind === kind).map(({ kind: _kind, ...item }) => item);
+
 export const SHOP_ITEMS = {
-  theme: THEMES, tiles: TILE_STYLES, effects: EFFECTS, backgrounds: BACKGROUNDS, cards: CARDS,
-  frames: FRAMES, sounds: SOUND_PACKS, jingles: JINGLES, chips: CHIP_STYLES, charms: CHARMS, extras: [START_BONUS],
+  theme: [...THEMES, ...extra('theme')], tiles: [...TILE_STYLES, ...extra('tiles')], effects: EFFECTS,
+  backgrounds: [...BACKGROUNDS, ...extra('backgrounds')], cards: [...CARDS, ...extra('cards')], frames: [...FRAMES, ...extra('frames')],
+  sounds: SOUND_PACKS, jingles: [...JINGLES, ...extra('jingles')], chips: [...CHIP_STYLES, ...extra('chips')],
+  charms: [...CHARMS, ...extra('charms')], extras: [START_BONUS],
 };
 
 // Welche Einstellung ein Bereich setzt (settings[...] in main.js)
@@ -111,6 +148,7 @@ export const RARITY = {
   rare: { name: 'Selten', dupe: 300 },
   epic: { name: 'Episch', dupe: 700 },
   legendary: { name: 'Legendär', dupe: 1500 },
+  mythic: { name: 'Mythisch', dupe: 2500 },
 };
 
 // Sammelalbum: ein komplettes Set schaltet den Bonus-Artikel frei
@@ -126,8 +164,21 @@ export const FREE_ITEMS = Object.values(SHOP_ITEMS).flat().filter((item) => item
 export const ALL_ITEMS = Object.entries(SHOP_ITEMS).flatMap(([kind, items]) => items.map((item) => ({ ...item, kind })));
 export const itemById = (id) => ALL_ITEMS.find((item) => item.id === id) ?? null;
 
-// Direkt kaufbar: Preis > 0 und weder legendär noch Set-Bonus
-export const buyable = (item) => item.price > 0 && item.rarity !== 'legendary' && !item.bonus;
+// Zeitlich begrenzte Artikel: heute erhältlich? (today im Format JJJJ-MM-TT)
+export const isLimited = (item) => Boolean(item.from && item.until);
+export const limitedOpen = (item, today) => isLimited(item) && today >= item.from && today <= item.until;
+export function daysLeft(item, today) {
+  const day = (d) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
+  return Math.round((day(item.until) - day(today)) / 86_400_000) + 1;
+}
+
+// Direkt kaufbar: Preis > 0, weder legendär/mythisch noch Set-Bonus; Zeitlich begrenztes nur im Zeitraum
+export const buyable = (item, today = null) =>
+  item.price > 0 && !['legendary', 'mythic'].includes(item.rarity) && !item.bonus && (!isLimited(item) || (today !== null && limitedOpen(item, today)));
+
+// Die feste Sammlung (ohne Zeitlich begrenztes und ohne Prestige) – wer die komplett hat, bekommt die Prestige-Truhe
+export const COLLECTION = ALL_ITEMS.filter((item) => item.kind !== 'extras' && !isLimited(item) && item.rarity !== 'mythic');
+export const MYTHIC_ITEMS = ALL_ITEMS.filter((item) => item.rarity === 'mythic');
 
 export function setItems(setId) {
   return ALL_ITEMS.filter((item) => item.set === setId);

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" data-version="1.7.0" data-theme="neon" data-tiles="standard">
+<html lang="de" data-version="1.8.0" data-theme="neon" data-tiles="standard">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -142,7 +142,7 @@
         <button class="close-btn" data-action="back" type="button" aria-label="Shop schließen">×</button>
       </header>
       <nav class="shop-main" role="tablist" aria-label="Shop-Bereiche">
-        <button data-shop-main="buy" type="button" role="tab"><span>🛒</span>Kaufen</button>
+        <button data-shop-main="buy" type="button" role="tab"><span>🛒</span>Kaufen<i id="buy-dot" class="dot" hidden></i></button>
         <button data-shop-main="luck" type="button" role="tab"><span>🎰</span>Glück<i id="luck-dot" class="dot" hidden></i></button>
         <button data-shop-main="album" type="button" role="tab"><span>📖</span>Album<i id="album-dot" class="dot" hidden></i></button>
       </nav>
@@ -316,7 +316,7 @@
   <div id="achievements" class="overlay" hidden>
     <div class="panel scroll">
       <h2>Erfolge</h2>
-      <p class="small">Deine königlichen Meilensteine</p>
+      <p class="small" id="achievement-count">Deine königlichen Meilensteine</p>
       <div id="achievement-list" class="achievement-grid"></div>
       <button class="btn primary" data-action="back" type="button">Zurück</button>
     </div>

@@ -7,15 +7,17 @@ import {
 } from './game.js';
 import {
   ACHIEVEMENTS, GIFT_DAYS, JACKPOT_GROWTH, JACKPOT_START, SCRATCH_EVERY, chestReward, dailyGift, earnedAchievements,
-  emptyStats, jackpotWin, levelFromXp, levelReward, praiseFor, recordMove, recordRound, scratchPrize, xpForRound,
+  TIERED, TIERS, TIER_NAMES, emptyStats, jackpotWin, levelFromXp, levelReward, praiseFor, recordMove, recordRound, scratchPrize,
+  tierProgress, xpForRound,
 } from './progress.js';
 import { createScratchCard } from './scratch.js';
 import {
-  ALL_ITEMS, FREE_ITEMS, RARITY, SETS, SHOP_ITEMS, SHOP_LABELS, SHOP_SETTING, THEMES, buyable, setBonus, setItems, setProgress,
+  ALL_ITEMS, COLLECTION, FREE_ITEMS, MYTHIC_ITEMS, RARITY, SETS, SHOP_ITEMS, SHOP_LABELS, SHOP_SETTING, THEMES, buyable, daysLeft,
+  isLimited, limitedOpen, setBonus, setItems, setProgress,
 } from './shop.js';
 import {
-  CHESTS, SLOT_BETS, SLOT_DAILY_SPINS, SLOT_SYMBOLS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, dropPool, openChestRoll,
-  slotOdds, slotReturn, spinSlot, spinWheel, ticketPrize, wheelAngle, withCharm,
+  CHESTS, SLOT_BETS, SLOT_CHEAP_SPINS, SLOT_SYMBOLS, TICKETS, TICKET_ODDS, WHEEL, WHEEL_TOTAL, casinoDay, dropPool, openChestRoll, prestigeOpen,
+  slotOdds, slotPrice, slotReturn, spinSlot, spinWheel, ticketPrize, wheelAngle, withCharm,
 } from './casino.js';
 import { HANDS, SUITS, rankLabel } from './poker.js';
 import {
@@ -1108,12 +1110,13 @@ const el = (tag, className, text) => {
 
 const KIND_ICONS = {
   theme: '🎨', tiles: '🟦', effects: '✨', backgrounds: '🌌', cards: '🃏', frames: '🖼️',
-  sounds: '🔊', jingles: '🎺', chips: '🪙', charms: '🍀', extras: '➕',
+  sounds: '🔊', jingles: '🎺', chips: '🪙', charms: '🍀', extras: '➕', limited: '⏳',
 };
 const ITEM_ICONS = {
   'effect-classic': '✦', 'effect-confetti': '🎊', 'effect-pixel': '▦', 'effect-fireworks': '🎆', 'effect-sparks': '✨',
   'sound-classic': '🎹', 'sound-retro': '👾', 'sound-casino': '🔔', 'sound-jazz': '🎷', 'sound-crystal': '💠',
   'jingle-none': '🔇', 'jingle-fanfare': '🎺', 'jingle-arcade': '🕹️', 'jingle-slot': '🎰', 'jingle-harp': '🪕', 'jingle-orchestra': '🎻',
+  'jingle-spooky': '👻', 'jingle-bells': '🔔', 'jingle-midas': '🏛',
   'start-bonus': '⟳+1',
 };
 
@@ -1167,13 +1170,19 @@ function shopItem(item, kind) {
   const active = setting ? settings[setting] === item.id : kind === 'extras' && startBonusReady;
   const has = kind === 'extras' ? startBonusReady : owned.has(item.id);
   if (active) card.classList.add('active');
-  if (!has && !buyable(item)) card.classList.add('locked');
+  const now = today();
+  if (!has && !buyable(item, now)) card.classList.add('locked');
+  if (isLimited(item)) card.classList.add('limited');
   card.append(swatch(item, kind));
   const head = el('div', 'shop-item-head');
   head.append(el('strong', 'shop-name', item.name), rarityTag(item));
   card.append(head);
   if (item.set) card.append(el('small', 'set-tag', `${SETS[item.set].icon} ${SETS[item.set].name}`));
   if (item.animated) card.append(el('small', 'set-tag', '✦ animiert'));
+  if (limitedOpen(item, now)) {
+    const left = daysLeft(item, now);
+    card.append(el('small', 'limited-tag', `⏳ ${item.event} · ${left === 1 ? 'nur noch heute' : `noch ${left} Tage`}`));
+  }
 
   const actions = el('div', 'shop-actions');
   if (['effects', 'sounds', 'jingles'].includes(kind) && item.id !== 'jingle-none') {
@@ -1193,7 +1202,13 @@ function shopItem(item, kind) {
   } else if (item.bonus) {
     btn.textContent = `📖 Set ${SETS[item.bonus].name}`;
     btn.disabled = true;
-  } else if (!buyable(item)) {
+  } else if (item.rarity === 'mythic') {
+    btn.textContent = '🏛 Prestige-Truhe';
+    btn.disabled = true;
+  } else if (isLimited(item) && !limitedOpen(item, now)) {
+    btn.textContent = now < item.from ? 'Bald erhältlich' : 'Nicht mehr erhältlich';
+    btn.disabled = true;
+  } else if (!buyable(item, now)) {
     btn.textContent = '🎁 Nur aus Truhen';
     btn.disabled = true;
   } else {
@@ -1213,6 +1228,11 @@ function shopItem(item, kind) {
 let shopMain = 'buy';
 let shopCat = 'theme';
 
+// Gerade erhältliche Aktions-Artikel (Halloween, Wochen-Artikel …)
+const openLimited = () => ALL_ITEMS.filter((item) => limitedOpen(item, today()));
+// Im Shop sichtbar: alles außer Aktions-Artikeln, die man nicht hat und gerade nicht kaufen kann
+const visibleIn = (kind) => SHOP_ITEMS[kind].filter((item) => !isLimited(item) || owned.has(item.id) || limitedOpen(item, today()));
+
 function luckReady() {
   refreshCasinoDay();
   return !casino.wheel;
@@ -1220,10 +1240,16 @@ function luckReady() {
 function albumReady() {
   return Object.keys(SETS).some((id) => setProgress(id, owned).complete && !owned.has(setBonus(id)?.id));
 }
+// Neue Aktion, die man sich noch nicht angesehen hat
+function limitedNew() {
+  const seen = new Set(settings.seenLimited ?? []);
+  return openLimited().some((item) => !seen.has(item.id) && !owned.has(item.id));
+}
 function renderDots() {
   $('luck-dot').hidden = !luckReady();
   $('album-dot').hidden = !albumReady();
-  $('start-shop-dot').hidden = !luckReady() && !albumReady();
+  $('buy-dot').hidden = !limitedNew();
+  $('start-shop-dot').hidden = !luckReady() && !albumReady() && !limitedNew();
 }
 
 function renderShop() {
@@ -1236,14 +1262,21 @@ function renderShop() {
   const cats = $('shop-cats');
   cats.hidden = shopMain !== 'buy';
   if (shopMain === 'buy') {
-    cats.replaceChildren(...Object.keys(SHOP_ITEMS).map((kind) => {
-      const b = el('button', kind === shopCat ? 'active' : '');
+    const offers = openLimited();
+    if (shopCat === 'limited' && !offers.length) shopCat = 'theme';
+    const kinds = [...(offers.length ? ['limited'] : []), ...Object.keys(SHOP_ITEMS)];
+    cats.replaceChildren(...kinds.map((kind) => {
+      const b = el('button', `${kind === shopCat ? 'active' : ''}${kind === 'limited' ? ' cat-limited' : ''}`);
       b.type = 'button';
       b.dataset.shopCat = kind;
       b.setAttribute('role', 'tab');
-      b.append(el('span', '', KIND_ICONS[kind]), document.createTextNode(SHOP_LABELS[kind]));
+      b.append(el('span', '', KIND_ICONS[kind]), document.createTextNode(kind === 'limited' ? 'Aktion' : SHOP_LABELS[kind]));
       return b;
     }));
+    if (shopCat === 'limited') {
+      settings.seenLimited = [...new Set([...(settings.seenLimited ?? []), ...offers.map((item) => item.id)])].slice(-60);
+      saveSettings();
+    }
   }
   const body = $('shop-body');
   if (shopMain === 'buy') body.replaceChildren(buyView());
@@ -1261,9 +1294,27 @@ function buyView() {
     jingles: 'Jingles spielen bei starken Pokerhänden und beim Jackpot.',
     extras: 'Der Start-Bonus gibt dir in der nächsten Normal-Runde einmal Passen extra.',
   };
+  if (shopCat === 'limited') {
+    const offers = openLimited();
+    for (const event of [...new Set(offers.map((item) => item.event))]) {
+      const items = offers.filter((item) => item.event === event);
+      const left = Math.min(...items.map((item) => daysLeft(item, today())));
+      const head = el('div', `event-head${event === 'Halloween' ? ' halloween' : ''}`);
+      head.append(
+        el('strong', '', event === 'Halloween' ? '🎃 Halloween' : '⭐ Wochen-Artikel'),
+        el('span', '', left === 1 ? 'Nur noch heute!' : `Nur noch ${left} Tage`),
+      );
+      wrap.append(head);
+      const grid = el('div', 'shop-grid');
+      grid.append(...items.map((item) => shopItem(item, item.kind)));
+      wrap.append(grid);
+    }
+    wrap.append(el('p', 'shop-note', 'Aktions-Artikel gibt es nur für kurze Zeit – danach verschwinden sie aus dem Shop. Was du gekauft hast, behältst du. Jeden Montag kommt ein neuer Wochen-Artikel.'));
+    return wrap;
+  }
   if (notes[shopCat]) wrap.append(el('p', 'shop-note', notes[shopCat]));
   const grid = el('div', 'shop-grid');
-  grid.append(...SHOP_ITEMS[shopCat].map((item) => shopItem(item, shopCat)));
+  grid.append(...visibleIn(shopCat).map((item) => shopItem(item, shopCat)));
   wrap.append(grid);
   return wrap;
 }
@@ -1299,13 +1350,37 @@ function luckView() {
     cls: 'wheel-card', icon: '🎡', title: 'Glücksrad', text: wheelFree ? 'Heute gratis drehen!' : 'Morgen wieder gratis',
     button: [document.createTextNode(wheelFree ? 'Gratis drehen' : 'Ansehen')], data: { action: 'open-wheel' }, odds: 'wheel',
   }));
-  const spinsLeft = SLOT_DAILY_SPINS - casino.spins;
   wrap.append(luckCard({
-    cls: 'slot-card', icon: '🎰', title: 'Spielautomat', text: `Einsatz ${SLOT_BETS.join(' / ')} · noch ${spinsLeft} von ${SLOT_DAILY_SPINS} Drehs heute`,
+    cls: 'slot-card', icon: '🎰', title: 'Spielautomat', text: casino.spins < SLOT_CHEAP_SPINS ? `Einsatz ${SLOT_BETS.join(' / ')} · noch ${SLOT_CHEAP_SPINS - casino.spins} Drehs zum Normalpreis` : `Heute schon ${casino.spins} Drehs – jetzt teurer`,
     button: [document.createTextNode('Spielen')], data: { action: 'open-slot' }, odds: 'slot',
   }));
   wrap.append(el('h3', '', 'Truhen'));
+  // Prestige-Truhe: erst, wenn die feste Sammlung komplett ist – vorher als Ziel mit Fortschritt
+  const have = COLLECTION.filter((item) => owned.has(item.id)).length;
+  if (prestigeOpen(owned)) {
+    const mythicHave = MYTHIC_ITEMS.filter((item) => owned.has(item.id)).length;
+    wrap.append(luckCard({
+      cls: 'chest-card c-prestige', icon: '', title: CHESTS.prestige.name,
+      text: `Goldene Prestige-Sachen (Mythisch) · ${mythicHave}/${MYTHIC_ITEMS.length} gesammelt`,
+      button: priceLabel(CHESTS.prestige.price), data: { chest: 'prestige' }, disabled: wallet < CHESTS.prestige.price, odds: 'chest:prestige',
+    }));
+  } else {
+    const teaser = el('div', 'luck-card prestige-teaser');
+    const copy = el('div', 'luck-copy');
+    copy.append(
+      el('strong', '', '🏛 Prestige-Truhe'),
+      el('small', '', `Erscheint, wenn du alles gesammelt hast: ${have}/${COLLECTION.length} – darin warten goldene Prestige-Sachen.`),
+    );
+    const bar = el('div', 'xp-bar');
+    const fill = el('i');
+    fill.style.width = `${Math.round((100 * have) / COLLECTION.length)}%`;
+    bar.append(fill);
+    copy.append(bar);
+    teaser.append(el('div', 'luck-art', '🔒'), copy);
+    wrap.append(teaser);
+  }
   for (const [type, chest] of Object.entries(CHESTS)) {
+    if (type === 'prestige') continue;
     const best = Object.keys(chest.odds).at(-1);
     wrap.append(luckCard({
       cls: `chest-card c-${type}`, icon: '', title: chest.name,
@@ -1375,7 +1450,7 @@ function useDesign(kind, id) {
 
 function buyDesign(kind, id) {
   const item = SHOP_ITEMS[kind]?.find((entry) => entry.id === id);
-  if (!item || !buyable(item) || (kind === 'extras' ? startBonusReady : owned.has(id))) return;
+  if (!item || !buyable(item, today()) || (kind === 'extras' ? startBonusReady : owned.has(id))) return;
   const key = `${kind}:${id}`;
   if (confirmBuy !== key) {
     confirmBuy = key;
@@ -1543,6 +1618,8 @@ function spinTheWheel() {
       const box = $('wheel-disc').getBoundingClientRect();
       chipBurst(box.left + box.width / 2, box.top + box.height / 2, 20);
     } else if (field.chest) {
+      casino.chests = (casino.chests || 0) + 1;
+      saveCasino();
       $('wheel-reward').textContent = field.label;
       setTimeout(() => showChest(field.chest, openChestRoll(field.chest, owned, Math.random)), 700);
     } else if (field.ticket) {
@@ -1559,7 +1636,6 @@ let slotBusy = false;
 const SLOT_ICON = Object.fromEntries(SLOT_SYMBOLS.map((s) => [s.id, s.icon]));
 function renderSlot() {
   refreshCasinoDay();
-  const left = SLOT_DAILY_SPINS - casino.spins;
   $('slot-bets').replaceChildren(...SLOT_BETS.map((bet) => {
     const b = el('button', `btn small-btn${bet === slotBet ? ' active' : ''}`);
     b.type = 'button';
@@ -1567,9 +1643,13 @@ function renderSlot() {
     b.append(...priceLabel(bet));
     return b;
   }));
-  $('slot-spin').disabled = slotBusy || left <= 0 || wallet < slotBet;
-  $('slot-spin').textContent = left <= 0 ? 'Morgen wieder' : `Drehen · ${slotBet}`;
-  $('slot-left').textContent = `Noch ${left} von ${SLOT_DAILY_SPINS} Drehs heute · Guthaben ${fmt(wallet)} Chips`;
+  const price = slotPrice(slotBet, casino.spins);
+  $('slot-spin').disabled = slotBusy || wallet < price;
+  $('slot-spin').textContent = price > slotBet ? `Drehen · ${fmt(price)} (Einsatz ${slotBet})` : `Drehen · ${slotBet}`;
+  const cheap = SLOT_CHEAP_SPINS - casino.spins;
+  $('slot-left').textContent = cheap > 0
+    ? `Noch ${cheap} Drehs heute zum Normalpreis, danach wird es teurer · Guthaben ${fmt(wallet)} Chips`
+    : `Heute schon ${casino.spins} Drehs – jeder Dreh kostet jetzt ${fmt(price)} Chips · Guthaben ${fmt(wallet)} Chips`;
 }
 function openSlot() {
   for (const strip of document.querySelectorAll('.reel-strip')) {
@@ -1582,7 +1662,7 @@ function openSlot() {
 }
 function spinTheSlot() {
   refreshCasinoDay();
-  if (slotBusy || casino.spins >= SLOT_DAILY_SPINS || !spend(slotBet)) return;
+  if (slotBusy || !spend(slotPrice(slotBet, casino.spins))) return;
   casino.spins++;
   saveCasino();
   const bet = slotBet;
@@ -1670,7 +1750,7 @@ function showOdds(what) {
     for (const field of WHEEL) rows.push([`${WHEEL_ICONS[field.label] ?? '◉'} ${field.label}${field.chips ? ' Chips' : ''}`, pct(field.weight / WHEEL_TOTAL), '']);
   } else if (what === 'slot') {
     title = 'Gewinntabelle';
-    note = `Jede Walze dreht unabhängig. Höchstens ${SLOT_DAILY_SPINS} Drehs am Tag. Im Schnitt gibt der Automat ${Math.round(slotReturn() * 100)} von 100 gesetzten Chips zurück.`;
+    note = `Jede Walze dreht unabhängig. Die ersten ${SLOT_CHEAP_SPINS} Drehs am Tag kosten den Einsatz, danach wird jeder Dreh teurer (alle 10 Drehs +50 %), die Gewinne bleiben gleich. Im Schnitt gibt der Automat ${Math.round(slotReturn() * 100)} von 100 gesetzten Chips zurück.`;
     for (const row of slotOdds()) rows.push([row.label, pct(row.chance), row.pays === 'jackpot' ? 'Legendärer Gegenstand' : `${row.pays} × Einsatz`]);
   }
   $('odds-title').textContent = title;
@@ -2178,17 +2258,45 @@ function refreshAchievements(announce = true) {
     stats, xp, gift: load('gift', null), proBest: getBest('pro'), casino,
     legendary: ALL_ITEMS.some((item) => item.rarity === 'legendary' && owned.has(item.id)),
     setDone: Object.keys(SETS).some((id) => setProgress(id, owned).complete),
+    prestigeDone: MYTHIC_ITEMS.every((item) => owned.has(item.id)),
   });
   const added = unlocked.filter((id) => !achievements.has(id));
   if (!added.length) return;
   for (const id of added) achievements.add(id);
   save('achievements', [...achievements]);
-  if (announce) toast(`${ACHIEVEMENTS[added[0]].icon} Erfolg: ${ACHIEVEMENTS[added[0]].name}${ACHIEVEMENTS[added[0]].profile ? ' · auch im Profil!' : ''}`);
+  // Erfolgsstufen bringen Chips (Bronze 50, Silber 150, Gold 500)
+  const bonus = added.reduce((sum, id) => sum + (ACHIEVEMENTS[id].chips ?? 0), 0);
+  if (bonus) addChips(bonus);
+  const first = ACHIEVEMENTS[added[0]];
+  const more = added.length > 1 ? ` (+${added.length - 1} weitere)` : '';
+  if (announce) toast(`${first.icon} Erfolg: ${first.name}${more}${bonus ? ` · +${fmt(bonus)} Chips` : ''}${first.profile ? ' · auch im Profil!' : ''}`);
 }
 
+const MEDALS = { bronze: '🥉', silver: '🥈', gold: '🥇' };
 function renderAchievements() {
   refreshAchievements(false);
-  $('achievement-list').replaceChildren(...Object.entries(ACHIEVEMENTS).map(([id, achievement]) => {
+  // Erfolgsstufen: eine Karte pro Kategorie mit drei Medaillen und Fortschritt zum nächsten Ziel
+  const tierCards = TIERED.map((cat) => {
+    const { value, reached, next } = tierProgress(cat, stats, casino);
+    const card = el('div', `achievement tiered${reached ? ' unlocked' : ''}${reached === 3 ? ' maxed' : ''}`);
+    const medals = el('div', 'medals');
+    TIERS.forEach((tier, k) => {
+      const medal = el('span', `medal${k < reached ? ' on' : ''}`, MEDALS[tier]);
+      medal.title = `${TIER_NAMES[tier]}: ${fmt(cat.goals[k])} ${cat.unit} · +${ACHIEVEMENTS[`${cat.id}_${tier}`].chips} Chips`;
+      medals.append(medal);
+    });
+    const bar = el('div', 'xp-bar');
+    const fill = el('i');
+    const from = reached ? cat.goals[reached - 1] : 0;
+    fill.style.width = next ? `${Math.round((100 * (value - from)) / (next - from))}%` : '100%';
+    bar.append(fill);
+    card.append(
+      el('span', 'achievement-icon', cat.icon), el('strong', '', cat.name), medals, bar,
+      el('small', '', next ? `${fmt(value)} / ${fmt(next)} ${cat.unit}` : `Alle Stufen geschafft – ${fmt(value)} ${cat.unit}`),
+    );
+    return card;
+  });
+  const single = Object.entries(ACHIEVEMENTS).filter(([, a]) => !a.tier).map(([id, achievement]) => {
     const unlocked = achievements.has(id);
     const item = document.createElement('div');
     item.className = `achievement${unlocked ? ' unlocked' : ''}`;
@@ -2202,7 +2310,14 @@ function renderAchievements() {
       item.append(Object.assign(document.createElement('em'), { textContent: 'Schaltet auch etwas in deinem Profil auf bens-games.de frei' }));
     }
     return item;
-  }));
+  });
+  const total = Object.keys(ACHIEVEMENTS).length;
+  const done = Object.keys(ACHIEVEMENTS).filter((id) => achievements.has(id)).length;
+  $('achievement-count').textContent = `${done} von ${total} Erfolgen · jede Stufe zählt auch auf bens-games.de`;
+  $('achievement-list').replaceChildren(
+    el('h3', 'achievement-group', 'Stufen: Bronze · Silber · Gold'), ...tierCards,
+    el('h3', 'achievement-group', 'Besondere Erfolge'), ...single,
+  );
 }
 
 function toast(text) {
@@ -2337,6 +2452,7 @@ const actions = {
     const from = visibleOverlay();
     if (from !== 'shop') returnTo = from ?? 'menu';
     shopMain = 'buy';
+    if (limitedNew()) shopCat = 'limited';
     renderShop();
     openOverlay('shop');
   },

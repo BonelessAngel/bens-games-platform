@@ -30,11 +30,45 @@ export const ACHIEVEMENTS = {
   album_set: { name: 'Sammler', icon: '📖', how: 'Vervollständige ein Set im Sammelalbum', profile: true },
   slot_jackpot: { name: 'Glückspilz', icon: '🎰', how: 'Hol den Hauptgewinn 👑👑👑 am Spielautomaten', profile: true },
   highroller: { name: 'Highroller', icon: '🤑', how: 'Gib insgesamt 50.000 Chips im Shop aus', profile: true },
+  prestige_all: { name: 'Midas', icon: '🏛', how: 'Sammle alle mythischen Prestige-Sachen' },
 };
+
+// Erfolgsstufen: jede Kategorie in Bronze, Silber und Gold – jede Stufe ist ein eigener Erfolg (auch auf bens-games.de)
+export const TIERS = ['bronze', 'silver', 'gold'];
+export const TIER_NAMES = { bronze: 'Bronze', silver: 'Silber', gold: 'Gold' };
+export const TIER_CHIPS = { bronze: 50, silver: 150, gold: 500 };
+export const TIERED = [
+  { id: 'lines', name: 'Reihen-Räumer', icon: '🧱', unit: 'Reihen abgeräumt', goals: [100, 1000, 5000], value: (s) => s.lines },
+  { id: 'flush', name: 'Flush-Fan', icon: '🌊', unit: 'Flushs', goals: [10, 50, 200], value: (s) => s.hands?.[5] },
+  { id: 'fullhouse', name: 'Volles Haus', icon: '🏠', unit: 'Full Houses', goals: [5, 25, 100], value: (s) => s.hands?.[6] },
+  { id: 'quads', name: 'Vierling-Jäger', icon: '🍀', unit: 'Vierlinge', goals: [3, 15, 50], value: (s) => s.hands?.[7] },
+  { id: 'games', name: 'Stammgast', icon: '🎮', unit: 'Runden gespielt', goals: [25, 100, 500], value: (s) => s.games },
+  { id: 'missions', name: 'Auftragsprofi', icon: '📜', unit: 'Aufträge erfüllt', goals: [25, 150, 500], value: (s) => s.missions },
+  { id: 'chips', name: 'Chip-Sammler', icon: '🪙', unit: 'Chips verdient', goals: [10_000, 100_000, 500_000], value: (s) => s.chipsEarned },
+  { id: 'streak', name: 'Serienkönig', icon: '⚡', unit: 'beste Serie', goals: [8, 15, 25], value: (s) => s.bestStreak },
+  { id: 'golden', name: 'Goldgräber', icon: '✨', unit: 'Goldkarten', goals: [25, 150, 500], value: (s) => s.golden },
+  { id: 'chests', name: 'Schatzsucher', icon: '🧰', unit: 'Truhen geöffnet', goals: [10, 50, 200], value: (s, casino) => casino.chests },
+];
+for (const cat of TIERED) {
+  cat.goals.forEach((goal, k) => {
+    const tier = TIERS[k];
+    ACHIEVEMENTS[`${cat.id}_${tier}`] = {
+      name: `${cat.name} · ${TIER_NAMES[tier]}`, icon: cat.icon, how: `${goal.toLocaleString('de-DE')} ${cat.unit}`,
+      tier, category: cat.id, chips: TIER_CHIPS[tier],
+    };
+  });
+}
+
+// Fortschritt einer Kategorie: aktuelle Zahl, nächstes Ziel, erreichte Stufen
+export function tierProgress(cat, stats = {}, casino = {}) {
+  const value = Math.max(0, Number(cat.value(stats, casino)) || 0);
+  const reached = cat.goals.filter((goal) => value >= goal).length;
+  return { value, reached, next: cat.goals[reached] ?? null };
+}
 
 export const HIGHROLLER_CHIPS = 50_000;
 
-export function earnedAchievements({ stats = {}, xp = 0, gift = null, proBest = 0, casino = {}, legendary = false, setDone = false } = {}) {
+export function earnedAchievements({ stats = {}, xp = 0, gift = null, proBest = 0, casino = {}, legendary = false, setDone = false, prestigeDone = false } = {}) {
   const earned = [];
   if (Number(stats.hands?.[9]) > 0) earned.push('royal_flush');
   if (Number(stats.jackpots) >= 10) earned.push('jackpots_10');
@@ -45,6 +79,11 @@ export function earnedAchievements({ stats = {}, xp = 0, gift = null, proBest = 
   if (setDone) earned.push('album_set');
   if (Number(casino.slotJackpots) > 0) earned.push('slot_jackpot');
   if (Number(casino.spent) >= HIGHROLLER_CHIPS) earned.push('highroller');
+  if (prestigeDone) earned.push('prestige_all');
+  for (const cat of TIERED) {
+    const { reached } = tierProgress(cat, stats, casino);
+    for (let k = 0; k < reached; k++) earned.push(`${cat.id}_${TIERS[k]}`);
+  }
   return earned;
 }
 
