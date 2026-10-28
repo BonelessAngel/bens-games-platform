@@ -15,15 +15,41 @@
       "Spielstand im Konto – auf jedem Gerät weiterspielen"
     ],
     "controls": {
-      "pc": ["Bauplatz anklicken und Turm wählen – ein Klick baut", "Turm anklicken zum Ausbauen, Spezialisieren oder Verkaufen", "Tempo oben rechts: x1, x2, x3 oder BAU-Pause"],
-      "handy": ["Quer halten", "Antippen genügt – ein Tipp baut", "Heldin antippen und dann auf den Weg tippen, wohin sie laufen soll"]
+      "pc": [
+        "Bauplatz anklicken und Turm wählen – ein Klick baut",
+        "Turm anklicken zum Ausbauen, Spezialisieren oder Verkaufen",
+        "Tempo oben rechts: x1, x2, x3 oder BAU-Pause"
+      ],
+      "handy": [
+        "Quer halten",
+        "Antippen genügt – ein Tipp baut",
+        "Heldin antippen und dann auf den Weg tippen, wohin sie laufen soll"
+      ]
     },
     "images": [
-      { "src": "/bilder/spiele/nova-bastion-1.jpg", "alt": "Einsatz in der Lavawelt Ignis: Türme am Weg, Heldin Vega in der Mitte", "width": 1280, "height": 720 },
-      { "src": "/bilder/spiele/nova-bastion-2.jpg", "alt": "Sternenkarte der Frostwelt Kryos mit geschafften Einsätzen", "width": 1280, "height": 720 },
-      { "src": "/bilder/spiele/nova-bastion-3.jpg", "alt": "Lexikon mit Ausbaustufen und Spezialisierungen der Railgun", "width": 1280, "height": 720 }
+      {
+        "src": "/bilder/spiele/nova-bastion-1.jpg",
+        "alt": "Einsatz in der Lavawelt Ignis: Türme am Weg, Heldin Vega in der Mitte",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "src": "/bilder/spiele/nova-bastion-2.jpg",
+        "alt": "Sternenkarte der Frostwelt Kryos mit geschafften Einsätzen",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "src": "/bilder/spiele/nova-bastion-3.jpg",
+        "alt": "Lexikon mit Ausbaustufen und Spezialisierungen der Railgun",
+        "width": 1280,
+        "height": 720
+      }
     ],
-    "leaderboard": { "board": "endlos", "title": "Endlos-Rekorde" }
+    "leaderboard": {
+      "board": "endlos",
+      "title": "Endlos-Rekorde"
+    }
   },
   "royal-blocks": {
     "tagline": "Block-Puzzle mit Pokerhänden",
@@ -44,14 +70,88 @@
       "Spielstand im Konto – auf jedem Gerät weiterspielen"
     ],
     "controls": {
-      "pc": ["Teile mit der Maus aufs Feld ziehen"],
-      "handy": ["Hochkant spielen", "Teile mit dem Finger aufs Feld ziehen"]
+      "pc": [
+        "Teile mit der Maus aufs Feld ziehen"
+      ],
+      "handy": [
+        "Hochkant spielen",
+        "Teile mit dem Finger aufs Feld ziehen"
+      ]
     },
     "images": [
-      { "src": "/bilder/spiele/royal-blocks-1.jpg", "alt": "Spielfeld mit Karten-Blöcken in Orange und Blau", "width": 1280, "height": 720 },
-      { "src": "/bilder/spiele/royal-blocks-2.jpg", "alt": "Royal Blocks am Handy mit einer fast vollen Reihe", "width": 430, "height": 900 },
-      { "src": "/bilder/spiele/royal-blocks-3.jpg", "alt": "Startbildschirm mit Chips, Jackpot und Rekord", "width": 430, "height": 900 }
+      {
+        "src": "/bilder/spiele/royal-blocks-1.jpg",
+        "alt": "Spielfeld mit Karten-Blöcken in Orange und Blau",
+        "width": 1280,
+        "height": 720
+      },
+      {
+        "src": "/bilder/spiele/royal-blocks-2.jpg",
+        "alt": "Royal Blocks am Handy mit einer fast vollen Reihe",
+        "width": 430,
+        "height": 900
+      },
+      {
+        "src": "/bilder/spiele/royal-blocks-3.jpg",
+        "alt": "Startbildschirm mit Chips, Jackpot und Rekord",
+        "width": 430,
+        "height": 900
+      }
     ],
-    "leaderboard": { "board": "standard", "title": "Bestenliste" }
+    "leaderboard": {
+      "board": "standard",
+      "title": "Bestenliste"
+    }
+  },
+  "drei-fronten": {
+    "tagline": "Fantasy-Kartenduell an drei Fronten",
+    "intro": [
+      "Drei Schlachtfelder, zwei Feldherren, eine Hand voller Fantasy-Wesen. Beide legen gleichzeitig und verdeckt ihre Karten – dann wird aufgedeckt. Wer an zwei von drei Fronten stärker ist, holt sich das Banner.",
+      "Jede Runde hat drei Züge: Aufmarsch, Verstärkung und Finale. Bluffe mit der Kriegstrommel, nutze die Ereignisse der Fronten und bau dein eigenes Deck aus 49 gemalten Karten."
+    ],
+    "features": [
+      "49 Karten: Wesen und Aktionen in vier Seltenheiten, dazu seltene goldene Karten",
+      "13 Fronten mit eigenen Regeln – vom Vulkanhang bis zum Spiegelsee",
+      "Kriegstrommel: Einsatz verdoppeln und den Gegner zum Aufgeben bluffen",
+      "Kampagne mit 8 Kapiteln und 6 Gegnern mit eigener Persönlichkeit",
+      "Pakete-Shop nur mit Spielmünzen, eigene Decks und 26 Erfolge mit Titeln",
+      "Ruhm-Rangliste und Spielstand im Konto – auf jedem Gerät weiterspielen"
+    ],
+    "controls": {
+      "pc": [
+        "Karte nach oben auf eine Front ziehen – oder erst Karte, dann Front anklicken",
+        "„Aufdecken!“ beendet deinen Zug",
+        "Trommel-Knopf für doppelten Einsatz"
+      ],
+      "handy": [
+        "Hochkant halten",
+        "Karte mit dem Finger auf eine Front ziehen oder antippen",
+        "Waagerecht wischen blättert durch die Hand"
+      ]
+    },
+    "images": [
+      {
+        "src": "/bilder/spiele/drei-fronten-1.jpg",
+        "alt": "Startbildschirm mit Titelbild, Kampf-Knopf, Kampagne und Gegnerwahl",
+        "width": 430,
+        "height": 900
+      },
+      {
+        "src": "/bilder/spiele/drei-fronten-2.jpg",
+        "alt": "Spielfeld mit drei Fronten, gelegten Wesen und Handkarten",
+        "width": 430,
+        "height": 900
+      },
+      {
+        "src": "/bilder/spiele/drei-fronten-3.jpg",
+        "alt": "Karten und Decks: Sammlung mit gemalten Kartenbildern",
+        "width": 430,
+        "height": 900
+      }
+    ],
+    "leaderboard": {
+      "board": "ruhm",
+      "title": "Ruhm-Serie"
+    }
   }
 }

@@ -1,0 +1,106 @@
+{
+  "erster_sieg": {
+    "name": "Erster Sieg",
+    "icon": "⚔️"
+  },
+  "sieger_10": {
+    "name": "Erfahrener Kämpfer",
+    "icon": "🏅"
+  },
+  "sieger_50": {
+    "name": "Veteran",
+    "icon": "🎖️"
+  },
+  "meister_1": {
+    "name": "Meisterprüfung",
+    "icon": "👑"
+  },
+  "meister_10": {
+    "name": "Schrecken der Meister",
+    "icon": "🐉"
+  },
+  "serie_3": {
+    "name": "Heiße Serie",
+    "icon": "🔥"
+  },
+  "serie_5": {
+    "name": "Unaufhaltsam",
+    "icon": "☄️"
+  },
+  "makellos": {
+    "name": "Makellos",
+    "icon": "💎"
+  },
+  "trommel_sieg": {
+    "name": "Mit Pauken und Trompeten",
+    "icon": "🥁"
+  },
+  "trommel_flucht": {
+    "name": "Einschüchterung",
+    "icon": "🏳️"
+  },
+  "spiegel": {
+    "name": "Verkehrte Welt",
+    "icon": "🪞"
+  },
+  "hort": {
+    "name": "Drachengold",
+    "icon": "💰"
+  },
+  "nebel": {
+    "name": "Durch den Nebel",
+    "icon": "🌫️"
+  },
+  "alle_fronten": {
+    "name": "Totaler Triumph",
+    "icon": "🏰"
+  },
+  "eigenes_deck": {
+    "name": "Deckbauer",
+    "icon": "✏️"
+  },
+  "pakete_1": {
+    "name": "Neugierig",
+    "icon": "🎁"
+  },
+  "pakete_10": {
+    "name": "Paketjäger",
+    "icon": "📦"
+  },
+  "pakete_30": {
+    "name": "Schatzsucher",
+    "icon": "🏺"
+  },
+  "legendaer": {
+    "name": "Legende!",
+    "icon": "🌟"
+  },
+  "gold": {
+    "name": "Pures Gold",
+    "icon": "✨"
+  },
+  "gold_5": {
+    "name": "Goldschmied",
+    "icon": "🪙"
+  },
+  "sammler_35": {
+    "name": "Sammler",
+    "icon": "📚"
+  },
+  "sammler_alle": {
+    "name": "Großsammler",
+    "icon": "🏛️"
+  },
+  "kampagne_1": {
+    "name": "Der Weg beginnt",
+    "icon": "📜"
+  },
+  "kampagne_4": {
+    "name": "Halbzeit",
+    "icon": "🗺️"
+  },
+  "kampagne_8": {
+    "name": "Feldherr der drei Fronten",
+    "icon": "⚜️"
+  }
+}

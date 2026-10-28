@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
-import { FORBIDDEN_HOSTS, GAMES, normalizeServiceWorker, unlistedFiles } from '../lib/games.js';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { FORBIDDEN_HOSTS, GAMES, gameFiles, normalizeServiceWorker, unlistedFiles } from '../lib/games.js';
 
 const apps = JSON.parse(readFileSync(new URL('../src/data/apps.json', import.meta.url), 'utf8'));
 const gameDir = (id) => new URL(`../public/games/${id}/`, import.meta.url);
@@ -26,6 +26,12 @@ test('neue Dateien im Build werden erkannt', () => {
   assert.deepEqual(unlistedFiles(game, ['index.html', 'main.js', 'platform.js', 'neu.css']), ['neu.css', 'platform.js']);
 });
 
+test('ganze Bild-Ordner werden übernommen', () => {
+  const game = { files: ['index.html'], directories: ['karten'] };
+  assert.deepEqual(unlistedFiles(game, ['index.html', 'karten/drache.webp', 'gegner/lio.webp']), ['gegner/lio.webp']);
+  assert.deepEqual(gameFiles(game, () => ['b.webp', 'a.webp']), ['index.html', 'karten/a.webp', 'karten/b.webp']);
+});
+
 for (const id of Object.keys(GAMES)) {
   test(`${id}: alle importierten JS-Module des Spiels sind übernommen`, { skip: !existsSync(new URL('VERSION.json', gameDir(id))) && 'noch nicht übernommen' }, () => {
     for (const file of GAMES[id].files.filter((f) => f.endsWith('.js'))) {
@@ -45,7 +51,8 @@ for (const id of Object.keys(GAMES)) {
     assert.equal(info.id, id);
     assert.match(info.tag, /^v\d+\.\d+\.\d+$/);
     assert.match(info.commit, /^[0-9a-f]{40}$/);
-    assert.deepEqual(Object.keys(info.files).sort(), [...GAMES[id].files].sort());
+    const listDirectory = (directory) => readdirSync(new URL(`${directory}/`, gameDir(id)));
+    assert.deepEqual(Object.keys(info.files).sort(), gameFiles(GAMES[id], listDirectory).sort());
     for (const [file, hash] of Object.entries(info.files)) {
       const actual = createHash('sha256').update(readFileSync(new URL(file, gameDir(id)))).digest('hex');
       assert.equal(actual, hash, `${file} wurde nach der Übernahme verändert`);
