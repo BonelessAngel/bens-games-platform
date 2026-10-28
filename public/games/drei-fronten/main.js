@@ -7,6 +7,8 @@ import { acceptDrum, planBot } from './bot.js';
 import { createPlatformClient, leaderboardPath, platformHosted } from './platform.js';
 import { OPPONENT_BY_ID, OPPONENTS } from './opponents.js';
 import { CHAPTER_BY_ID, CHAPTERS } from './campaign.js';
+import { TUTORIAL } from './tutorial.js';
+import { createApiTransport, createLocalTransport, mirrorFrame, mirrorState } from './online.js';
 import { ACHIEVEMENTS, goalOf, progressOf, readyToClaim, titlesFor } from './achievements.js';
 import { play, setMusic, setSound, unlockAudio } from './audio.js';
 import { cardBurst, confetti, frontEffect, FX_OF, shake } from './fx.js';
@@ -54,6 +56,7 @@ function loadSave() {
     losses: count(data.losses),
     streak: count(data.streak),
     rulesSeen: data.rulesSeen === true,
+    tutorialDone: data.tutorialDone === true,
     golden: Object.fromEntries(Object.keys(data.golden ?? {}).filter((id) => CARD_BY_ID[id] && !CARD_BY_ID[id].token).map((id) => [id, true])),
     campaign: Math.min(CHAPTERS.length, count(data.campaign)),
     stats: Object.fromEntries(Object.entries(data.stats ?? {}).map(([key, value]) => [key, count(value)])),
@@ -360,6 +363,16 @@ function coinText(text, className = '') {
 
 // Gegner-Porträt aus gegner/<id>.webp; fehlt es, dient das Kartenbild als Ersatz.
 function avatarElement(opponent, className) {
+  if (opponent.online) {
+    const box = h('div', `${className} online-avatar`);
+    if (opponent.avatarUrl) {
+      const image = h('img');
+      image.src = opponent.avatarUrl;
+      image.alt = '';
+      box.append(image);
+    } else box.textContent = opponent.name.replace(/^Gast\s*/, '').slice(0, 2).toUpperCase();
+    return box;
+  }
   if (missingArt.has(`gegner:${opponent.id}`)) return artElement(opponent.portrait, className);
   const box = h('div', className);
   const image = h('img');
@@ -423,6 +436,7 @@ function chipElement(entry, { hidden, pending, focus } = {}) {
 }
 
 function showInfo(id, extra) {
+  if (ui.coach) { renderCoach(); return; }
   const info = $('#info');
   info.replaceChildren();
   if (!id) {
@@ -578,8 +592,10 @@ function renderControls() {
   const drum = $('#drum');
   drum.disabled = ui.busy || state.drumUsed[0];
   drum.classList.toggle('active', ui.drum);
+  if (ui.match?.tutorial) drum.disabled = true;
   $('#ready').disabled = ui.busy;
   $('#ready').textContent = ui.busy ? '…' : ui.plan.length ? 'Aufdecken!' : 'Nichts legen';
+  if (ui.coach) highlightCoach();
 }
 
 // ---------- Planen ----------
@@ -655,6 +671,7 @@ function startDrag(event, card) {
 function selectCard(uid) {
   if (ui.busy || ui.justDragged) return;
   const card = handCard(uid);
+  if (!coachAllowsCard(card.id)) return;
   if (ui.selected === uid) {
     ui.selected = null;
     showInfo(null, 'Zieh eine Karte auf eine Front – oder tippe erst die Karte, dann die Front an.');
@@ -668,6 +685,7 @@ function selectCard(uid) {
 }
 
 function placeSelected(fi) {
+  if (!coachAllowsPlace(handCard(ui.selected)?.id, fi)) return;
   const step = { uid: ui.selected, front: fi };
   const check = E.checkPlan(state, 0, [...ui.plan, step]);
   if (!check.ok) {
@@ -679,6 +697,7 @@ function placeSelected(fi) {
   play('place');
   showInfo(null, 'Geplant! Tippe die Karte auf dem Feld an, um sie zurückzunehmen.');
   render();
+  coachAdvance('place');
 }
 
 function unplan(uid) {
@@ -700,7 +719,7 @@ function beginZug() {
   ui.reveal = false;
   ui.frame = null;
   const opponent = currentOpponent();
-  ui.bot = planBot(state, 1, opponent.level, Math.random, opponent.boldness);
+  ui.bot = ui.online ? null : ui.match?.tutorial ? tutorialBotPlan() : planBot(state, 1, opponent.level, Math.random, opponent.boldness);
   $('#log').textContent = state.zug === 1
     ? 'Aufmarsch: Lege verdeckt Karten an die Fronten.'
     : state.zug < E.ZUEGE
@@ -708,16 +727,23 @@ function beginZug() {
       : 'Finale: Letzter Zug – danach wird gewertet!';
   showInfo(null, 'Zieh eine Karte auf eine Front – oder tippe erst die Karte, dann die Front an.');
   render();
-  if (state.zug === 1) toast(`Runde ${state.round} – neue Fronten!`);
+  if (state.zug === 1 && !ui.match?.tutorial) toast(`Runde ${state.round} – neue Fronten!`);
+  if (ui.match?.tutorial) startCoach(state.zug);
 }
 
 async function ready() {
   if (!state || ui.busy) return;
+  if (!coachAllowsReady()) return;
+  coachAdvance('ready');
   ui.busy = true;
   ui.selected = null;
   render();
-  const game = state;
-  const stale = () => game !== state || $('#game').hidden;
+  if (ui.online) {
+    await onlineSubmit();
+    return;
+  }
+  const gameId = ui.gameId;
+  const stale = () => gameId !== ui.gameId || $('#game').hidden;
   const bot = ui.bot;
   const drums = [ui.drum, bot.drum && !state.drumUsed[1]];
   const accept = [true, true];
@@ -735,19 +761,40 @@ async function ready() {
     toast('Beide trommeln! Der Einsatz steigt doppelt.');
     await sleep(900);
   }
-  const outcome = E.resolveDrums(state, drums, accept);
-  if (outcome.fold === 1 && drums[0]) bump('drumFolds');
+  await resolveTurn([ui.plan, bot.plan], drums, accept, stale);
+}
+
+// Die echte Partie: offline der Bildschirm-Stand selbst, online die gemeinsame Partie (Platz 0 und 1).
+function engineState() {
+  return ui.online?.canon ?? state;
+}
+
+// Bildschirm-Stand aus der gemeinsamen Partie: wer auf Platz 1 sitzt, sieht sie gespiegelt (er selbst ist unten).
+function refreshView() {
+  const canon = ui.online?.canon;
+  if (canon) state = ui.online.seat === 1 ? mirrorState(canon) : canon;
+}
+
+// Löst einen Zug auf: Trommeln, Aufdecken, nächster Zug oder Wertung. plans, drums und accept in Spieler-Reihenfolge der Partie.
+async function resolveTurn(plans, drums, accept, stale) {
+  const game = engineState();
+  const outcome = E.resolveDrums(game, drums, accept);
+  refreshView();
+  if (!ui.online && outcome.fold === 1 && drums[0]) bump('drumFolds');
   if (outcome.fold !== null) {
     await roundEnd();
     return;
   }
-  const frames = E.applyTurn(state, [ui.plan, bot.plan]);
+  let frames = E.applyTurn(game, plans);
+  if (ui.online?.seat === 1) frames = frames.map(mirrorFrame);
+  refreshView();
   ui.plan = [];
   await playFrames(frames, stale);
   ui.frame = null;
   if (stale()) return;
-  if (state.zug < E.ZUEGE) {
-    E.nextZug(state);
+  if (game.zug < E.ZUEGE) {
+    E.nextZug(game);
+    refreshView();
     beginZug();
     return;
   }
@@ -757,7 +804,8 @@ async function ready() {
   play('reveal');
   await sleep(1200);
   if (stale()) return;
-  E.scoreRound(state);
+  E.scoreRound(game);
+  refreshView();
   await roundEnd();
 }
 
@@ -828,7 +876,7 @@ async function roundEnd() {
   const result = state.lastResult;
   const opponent = currentOpponent();
   render();
-  trackRound(result);
+  if (!ui.match?.tutorial) trackRound(result);
   const body = h('div', 'result');
   if (result.fold !== null) {
     body.append(h('p', '', result.fold === 0 ? 'Du hast aufgegeben.' : 'Der Gegner hat aufgegeben.'));
@@ -849,13 +897,22 @@ async function roundEnd() {
   body.append(h('p', 'result-score', `Stand: Du ${state.banners[0]} – ${state.banners[1]} ${opponent.name} (Ziel: ${state.goal})`));
   if (result.winner === 0) play('banner');
 
+  if (ui.match?.tutorial) {
+    await tutorialEnd(body);
+    return;
+  }
+  if (state.phase === 'over' && ui.online) {
+    await onlineMatchEnd(body);
+    return;
+  }
   if (state.phase === 'over') {
     await matchEnd(body);
     return;
   }
   await dialog(result.winner === 0 ? 'Runde gewonnen!' : result.winner === 1 ? 'Runde verloren' : 'Gleichstand', body,
     [{ label: 'Nächste Runde', value: true, primary: true }]);
-  E.startRound(state);
+  E.startRound(engineState());
+  refreshView();
   beginZug();
 }
 
@@ -979,6 +1036,7 @@ function deckCards(deckId) {
 }
 
 function currentOpponent() {
+  if (ui.online?.opponent) return ui.online.opponent;
   return OPPONENT_BY_ID[ui.match?.opponent ?? save.opponent] ?? OPPONENTS[0];
 }
 
@@ -1008,6 +1066,7 @@ async function startGame(match = { opponent: save.opponent }) {
   bump('games');
   store();
   platform.beginLevel(chapter ? `kapitel-${chapter.id}` : opponent.id);
+  ui.gameId = (ui.gameId ?? 0) + 1;
   ui.seen.clear();
   $('#enemy-name').textContent = opponent.name;
   $('#enemy-avatar').replaceChildren(avatarElement(opponent, 'top-avatar'));
@@ -1043,6 +1102,7 @@ function showPage(page) {
   if (page === 'campaign') renderCampaign();
   if (page === 'decks') renderDecks();
   if (page === 'shop') renderShop();
+  if (page === 'multi') renderLobby();
   window.scrollTo(0, 0);
 }
 
@@ -1238,7 +1298,7 @@ async function openChapter(chapter) {
     { label: 'Zurück', value: false }, { label: '⚔️ Kämpfen!', value: true, primary: true },
   ]);
   if (!go) return;
-  if (!save.rulesSeen) await showRules();
+  if (!save.rulesSeen && await offerTutorial()) return;
   startGame({ chapter: chapter.id });
 }
 
@@ -1332,6 +1392,10 @@ async function showSettings() {
   rules.type = 'button';
   rules.addEventListener('click', () => { $('#dialog').hidden = true; showRules(); });
   box.append(rules);
+  const practice = h('button', 'plain-btn', '🎓 Übungspartie');
+  practice.type = 'button';
+  practice.addEventListener('click', () => { $('#dialog').hidden = true; startTutorial(); });
+  box.append(practice);
   await dialog('Einstellungen', box, [{ label: 'Fertig', value: true, primary: true }]);
 }
 
@@ -1484,13 +1548,467 @@ async function showRules() {
   store();
 }
 
+// ---------- Online-Duelle (Räume der Webseite, lokal zum Testen simuliert) ----------
+
+const net = platform.hosted
+  ? createApiTransport({ getCsrf: async () => (await platform.prepareAccount())?.csrf ?? null })
+  : createLocalTransport();
+const ROOM_SESSION = 'drei-fronten:raum';
+// Auf bens-games.de erst einschalten, wenn die Räume-Schnittstelle der Webseite live ist (AUFTRAG-MULTIPLAYER.md, Abschnitt C).
+const ONLINE_ON_PLATFORM = false;
+const onlineAvailable = () => net.kind === 'lokal' || ONLINE_ON_PLATFORM;
+const ROOM_ERRORS = {
+  room_not_found: 'Diesen Raum gibt es nicht (mehr). Stimmt der Code?',
+  room_full: 'Der Raum ist schon voll.',
+  already_started: 'Dort läuft schon eine Partie.',
+  too_many_attempts: 'Zu viele Versuche – bitte kurz warten.',
+};
+
+const activePlayers = (online) => online.room.players.filter((player) => !player.left);
+const roomLink = (code) => `${location.origin}${location.pathname}?raum=${encodeURIComponent(code)}`;
+
+async function onlineEnter(kind, code) {
+  if (ui.online) await onlineLeave();
+  try {
+    const options = { max_players: 2, mode: 'duell' };
+    const result = kind === 'create' ? await net.create({ ...options, visibility: 'private' })
+      : kind === 'join' ? await net.join(code) : await net.quick(options);
+    ui.online = {
+      seat: result.you.seat, room: result.room, after: 0, decks: {}, plans: {}, answers: {}, asked: {},
+      canon: null, deckSent: false, resolving: false, finished: false,
+    };
+    try { sessionStorage.setItem(ROOM_SESSION, JSON.stringify(net.session())); } catch { /* egal */ }
+    play('click');
+    renderLobby();
+    scheduleOnline(0);
+  } catch (error) {
+    toast(ROOM_ERRORS[error?.code] ?? 'Die Verbindung klappt gerade nicht. Bitte später nochmal.');
+  }
+}
+
+async function onlineLeave() {
+  clearTimeout(ui.onlineTimer);
+  const online = ui.online;
+  ui.online = null;
+  if (ui.match?.online) ui.match = null;
+  try { sessionStorage.removeItem(ROOM_SESSION); } catch { /* egal */ }
+  if (online) { try { await net.leave(); } catch { /* Raum schon weg */ } }
+  if (ui.page === 'multi') renderLobby();
+}
+
+function scheduleOnline(ms) {
+  clearTimeout(ui.onlineTimer);
+  ui.onlineTimer = setTimeout(() => void onlineTick(), ms);
+}
+
+const cleanPlan = (plan) => (Array.isArray(plan) ? plan.slice(0, 12)
+  .filter((step) => Number.isInteger(step?.uid) && Number.isInteger(step?.front))
+  .map((step) => ({ uid: step.uid, front: step.front })) : []);
+
+function ingest(online, action) {
+  const data = action.data ?? {};
+  const key = `${data.round}-${data.zug}`;
+  if (data.type === 'deck' && !online.decks[action.seat]) {
+    const cards = cleanDeck(data.cards);
+    online.decks[action.seat] = deckReady(cards) ? cards : [...DECKS.flammen.cards];
+  } else if (data.type === 'plan') {
+    online.plans[key] ??= {};
+    online.plans[key][action.seat] ??= { plan: cleanPlan(data.plan), drum: data.drum === true };
+  } else if (data.type === 'answer' && online.answers[key] === undefined) {
+    online.answers[key] = data.accept === true;
+  }
+}
+
+async function onlineTick() {
+  const online = ui.online;
+  if (!online) return;
+  try {
+    const result = await net.poll(online.after);
+    if (ui.online !== online) return;
+    online.room = result.room;
+    for (const action of result.actions ?? []) {
+      online.after = Math.max(online.after, action.seq);
+      ingest(online, action);
+    }
+    if (online.room.status === 'waiting') {
+      if (online.room.host_seat === online.seat && activePlayers(online).length >= 2) await net.start();
+    } else if (!online.deckSent) {
+      online.deckSent = true;
+      await net.action({ type: 'deck', cards: deckCards(save.deck) });
+    }
+    if (ui.page === 'multi' && !online.canon) renderLobby();
+    if (online.canon && !online.finished) checkOpponent(online);
+    if (!online.finished) await onlineAdvance(online);
+  } catch (error) {
+    if (ui.online === online && (error?.status === 404 || error?.status === 403)) {
+      await onlineGone('Der Raum wurde geschlossen.');
+      return;
+    }
+  }
+  if (ui.online === online && !online.finished) scheduleOnline(online.canon ? 1000 : 1500);
+}
+
+function startOnlineGame(online) {
+  const players = [...online.room.players].sort((a, b) => a.seat - b.seat);
+  const other = players.find((player) => player.seat !== online.seat);
+  online.opponent = {
+    id: 'online', online: true, name: other?.name ?? 'Gegner', title: '', avatarUrl: safeLink(other?.avatar_url),
+    portrait: 'funkenkobold', stars: 2, intro: '', win: 'Gut gespielt!', lose: 'Gut gespielt!',
+  };
+  const names = players.slice(0, 2).map((player) => (player.seat === online.seat ? 'Du' : player.name));
+  online.canon = E.createGame({ seed: online.room.seed, decks: [online.decks[0], online.decks[1]], names });
+  ui.match = { online: true, opponent: 'online', chapter: null };
+  ui.gameId = (ui.gameId ?? 0) + 1;
+  refreshView();
+  platform.beginLevel('online');
+  ui.seen.clear();
+  $('#enemy-name').textContent = online.opponent.name;
+  $('#enemy-avatar').replaceChildren(avatarElement(online.opponent, 'top-avatar'));
+  $('#hub').hidden = true;
+  $('#game').hidden = false;
+  beginZug();
+  toast(`⚔️ Duell gegen ${online.opponent.name}!`);
+}
+
+async function onlineAdvance(online) {
+  if (!online.canon) {
+    if (online.decks[0] && online.decks[1] && Number.isInteger(online.room.seed)) startOnlineGame(online);
+    return;
+  }
+  const game = online.canon;
+  if (online.resolving || game.phase !== 'plan') return;
+  const key = `${game.round}-${game.zug}`;
+  const entry = online.plans[key];
+  if (!entry?.[0] || !entry?.[1]) return;
+  const plans = [0, 1].map((seat) => (E.checkPlan(game, seat, entry[seat].plan).ok ? entry[seat].plan : []));
+  const drums = [0, 1].map((seat) => entry[seat].drum && !game.drumUsed[seat]);
+  const accept = [true, true];
+  if (drums[0] !== drums[1]) {
+    const answerer = drums[0] ? 1 : 0;
+    if (online.answers[key] === undefined) {
+      if (answerer === online.seat && !online.asked[key]) {
+        online.asked[key] = true;
+        void askOnlineDrum(game);
+      } else if (answerer !== online.seat) $('#log').textContent = '🥁 Du trommelst! Der Gegner überlegt …';
+      return;
+    }
+    accept[answerer] = online.answers[key];
+    if (answerer !== online.seat) toast(accept[answerer] ? 'Der Gegner geht mit!' : 'Der Gegner gibt die Runde auf!');
+  } else if (drums[0]) toast('Beide trommeln! Der Einsatz steigt doppelt.');
+  if (drums.some(Boolean)) play('drum');
+  online.resolving = true;
+  const gameId = ui.gameId;
+  try {
+    await resolveTurn(plans, drums, accept, () => gameId !== ui.gameId || $('#game').hidden);
+  } finally {
+    online.resolving = false;
+  }
+}
+
+async function askOnlineDrum(game) {
+  play('drum');
+  const accept = await dialog('🥁 Kriegstrommel!',
+    `Dein Gegner schlägt die Kriegstrommel. Wenn du mitgehst, zählt diese Runde ${game.stakes + 1} Banner.\nGibst du auf, bekommt er sofort ${game.stakes} Banner.`,
+    [{ label: 'Aufgeben', value: false }, { label: 'Mitgehen!', value: true, primary: true }]);
+  try {
+    await net.action({ type: 'answer', round: game.round, zug: game.zug, accept });
+  } catch {
+    toast('Senden hat nicht geklappt.');
+  }
+  scheduleOnline(200);
+}
+
+async function onlineSubmit() {
+  const game = ui.online.canon;
+  $('#log').textContent = 'Warte auf deinen Gegner …';
+  try {
+    await net.action({ type: 'plan', round: game.round, zug: game.zug, plan: ui.plan, drum: ui.drum && !state.drumUsed[0] });
+  } catch {
+    toast('Senden hat nicht geklappt – bitte nochmal.');
+    ui.busy = false;
+    render();
+    return;
+  }
+  scheduleOnline(150);
+}
+
+function checkOpponent(online) {
+  const other = online.room.players.find((player) => player.seat !== online.seat);
+  if (other?.left) {
+    void onlineGone(`${other.name} hat das Duell verlassen – du gewinnst!`, true);
+    return;
+  }
+  if (other && !other.online && ui.busy && !online.resolving) $('#log').textContent = `${other.name} ist gerade offline – warte …`;
+}
+
+async function onlineGone(text, win = false) {
+  const online = ui.online;
+  if (!online || online.finished) return;
+  online.finished = true;
+  if (win) {
+    save.wins++;
+    save.coins += 30;
+    store();
+  }
+  const body = h('div', 'result');
+  if (win) body.append(symbol('sieg', 'result-symbol'));
+  body.append(h('p', '', text));
+  if (win) body.append(coinText('+30', 'reward-value'));
+  await dialog(win ? '🏆 Sieg!' : 'Duell beendet', body, [{ label: 'Weiter', value: true, primary: true }]);
+  await onlineLeave();
+  showHub('multi');
+}
+
+async function onlineMatchEnd(body) {
+  const online = ui.online;
+  online.finished = true;
+  const won = state.winner === 0;
+  const coins = won ? 60 : state.winner === null ? 30 : 20;
+  if (won) {
+    save.wins++;
+    bump('wins');
+    bump('onlineWins');
+  } else if (state.winner === 1) save.losses++;
+  save.coins += coins;
+  store();
+  platform.endLevel({ result: won ? 'win' : 'lose', score: state.banners[0], data: { deck: save.deck, runden: state.round } });
+  if (online.room.host_seat === online.seat) {
+    const canon = online.canon;
+    const results = [0, 1].map((seat) => ({ seat, place: canon.winner === null ? 1 : canon.winner === seat ? 1 : 2, score: canon.banners[seat] }));
+    net.finish(results).catch(() => {});
+  }
+  if (state.winner !== null) body.prepend(symbol(won ? 'sieg' : 'niederlage', 'result-symbol'));
+  const reward = h('div', 'reward');
+  const row = h('div', 'reward-row');
+  row.append(h('span', '', won ? 'Online-Sieg' : 'Online-Duell'), coinText(`+${coins}`, 'reward-value'));
+  reward.append(row);
+  body.append(reward);
+  if (won) { play('win'); confetti(); } else if (state.winner === 1) play('lose');
+  await dialog(won ? '🏆 Sieg!' : state.winner === 1 ? '💀 Niederlage' : 'Unentschieden', body, [{ label: 'Zurück', value: true, primary: true }]);
+  announceAchievements();
+  await onlineLeave();
+  showHub('multi');
+}
+
+function renderLobby() {
+  const box = $('#online-lobby');
+  if (!box) return;
+  box.replaceChildren();
+  const online = ui.online;
+  if (!online && !onlineAvailable()) {
+    const soon = h('div', 'lobby-card');
+    soon.append(h('b', '', '🤝 Online-Duelle'), h('span', '', 'Freundes-Duelle per Code und schnelle Duelle gegen andere Spieler kommen sehr bald!'));
+    box.append(soon);
+    return;
+  }
+  if (!online) {
+    const friend = h('div', 'lobby-card');
+    friend.append(h('b', '', '🤝 Freundes-Duell'), h('span', '', 'Erstelle einen Raum und schick den Code an einen Freund.'));
+    const create = h('button', 'big-btn small-btn', 'Raum erstellen');
+    create.type = 'button';
+    create.addEventListener('click', () => onlineEnter('create'));
+    const joinRow = h('form', 'join-row');
+    const input = h('input', 'code-input');
+    input.placeholder = 'CODE';
+    input.maxLength = 6;
+    input.autocomplete = 'off';
+    input.setAttribute('aria-label', 'Raum-Code');
+    const join = h('button', 'plain-btn small-btn', 'Beitreten');
+    join.type = 'submit';
+    joinRow.append(input, join);
+    joinRow.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const code = input.value.trim().toUpperCase();
+      if (/^[A-Z0-9]{6}$/.test(code)) onlineEnter('join', code); else toast('Der Code hat 6 Zeichen.');
+    });
+    friend.append(create, joinRow);
+    const quick = h('div', 'lobby-card');
+    quick.append(h('b', '', '⚡ Schnelles Duell'), h('span', '', 'Gegen jemanden, der gerade auch ein Duell sucht.'));
+    const search = h('button', 'big-btn small-btn', 'Gegner suchen');
+    search.type = 'button';
+    search.addEventListener('click', () => onlineEnter('quick'));
+    quick.append(search);
+    box.append(friend, quick);
+    if (net.kind === 'lokal') box.append(h('p', 'lobby-note', '🧪 Testmodus: Ohne Webseite laufen Duelle nur zwischen zwei Fenstern dieses Browsers. Öffne das Spiel einfach ein zweites Mal.'));
+    return;
+  }
+  const room = online.room;
+  const card = h('div', 'lobby-card waiting');
+  const others = activePlayers(online).length;
+  const host = room.host_seat === online.seat;
+  card.append(h('b', '', room.visibility === 'public' ? '⚡ Suche Gegner …' : host ? '🤝 Dein Raum' : `🤝 Raum ${room.code}`));
+  if (room.visibility !== 'public' && host) {
+    card.append(h('span', '', 'Gib deinem Freund diesen Code:'), h('div', 'room-code', room.code));
+    const share = h('button', 'plain-btn small-btn', '🔗 Einladung teilen');
+    share.type = 'button';
+    share.addEventListener('click', async () => {
+      const url = roomLink(room.code);
+      try {
+        if (navigator.share) await navigator.share({ title: 'Drei Fronten', text: `Duell mich in Drei Fronten! Code: ${room.code}`, url });
+        else { await navigator.clipboard.writeText(url); toast('Link kopiert!'); }
+      } catch { /* abgebrochen */ }
+    });
+    card.append(share);
+  }
+  const list = h('ul', 'lobby-players');
+  for (const player of room.players.filter((entry) => !entry.left)) {
+    const item = h('li', player.online ? 'on' : 'off', `${player.seat === online.seat ? '🟢 Du' : `🟢 ${player.name}`}`);
+    list.append(item);
+  }
+  card.append(list, h('p', 'lobby-status', room.status === 'waiting' ? (others < 2 ? 'Warte auf Mitspieler …' : 'Gleich geht’s los …') : 'Die Partie startet …'));
+  const cancel = h('button', 'plain-btn small-btn', 'Abbrechen');
+  cancel.type = 'button';
+  cancel.addEventListener('click', () => onlineLeave());
+  card.append(cancel);
+  box.append(card);
+}
+
+// ---------- Übungspartie mit Trainer ----------
+
+async function offerTutorial() {
+  const choice = await dialog('Zum ersten Mal hier?', 'Lern Drei Fronten in einer kurzen Übungspartie (2 Minuten) – Schritt für Schritt. Dafür gibt es 100 Münzen.', [
+    { label: 'Regeln lesen', value: 'rules' }, { label: 'Direkt spielen', value: 'skip' }, { label: '🎓 Übungspartie', value: 'tutorial', primary: true },
+  ]);
+  if (choice === 'tutorial') { startTutorial(); return true; }
+  if (choice === 'rules') await showRules();
+  save.rulesSeen = true;
+  store();
+  return false;
+}
+
+function startTutorial() {
+  ui.match = { opponent: 'lio', chapter: null, tutorial: true };
+  const opponent = currentOpponent();
+  state = E.createGame({ seed: 7, decks: [[], []], names: ['Du', opponent.name], goal: 1 });
+  state.fronts = TUTORIAL.fronts.map((id) => ({ id, sides: [[], []], shield: [false, false] }));
+  state.lastFronts = [...TUTORIAL.fronts];
+  state.initiative = 0;
+  const hand = (ids) => ids.map((id) => ({ uid: state.nextUid++, id }));
+  state.players[0].hand = hand(TUTORIAL.hand);
+  state.players[1].hand = hand(TUTORIAL.enemyHand);
+  ui.gameId = (ui.gameId ?? 0) + 1;
+  ui.seen.clear();
+  $('#enemy-name').textContent = opponent.name;
+  $('#enemy-avatar').replaceChildren(avatarElement(opponent, 'top-avatar'));
+  $('#hub').hidden = true;
+  $('#game').hidden = false;
+  beginZug();
+}
+
+function tutorialBotPlan() {
+  const hand = state.players[1].hand;
+  const plan = (TUTORIAL.enemyPlan[state.zug] ?? []).map(([id, front]) => ({ uid: hand.find((card) => card.id === id)?.uid, front }))
+    .filter((step) => step.uid);
+  return { plan, drum: false, chance: 0.5 };
+}
+
+function startCoach(zug) {
+  ui.coach = { steps: TUTORIAL.steps[zug] ?? [], index: 0 };
+  renderCoach();
+  render();
+}
+
+function currentStep() {
+  return ui.coach?.steps[ui.coach.index] ?? null;
+}
+
+function renderCoach() {
+  const step = currentStep();
+  const info = $('#info');
+  info.replaceChildren();
+  info.classList.toggle('coach', Boolean(step));
+  if (!step) return;
+  const text = h('div', 'coach-text');
+  text.append(h('span', 'coach-icon', '🎓'), h('span', '', step.text));
+  info.append(text);
+  if (step.type === 'info') {
+    const next = h('button', 'big-btn small-btn coach-next', 'Weiter');
+    next.type = 'button';
+    next.addEventListener('click', () => coachAdvance('info'));
+    info.append(next);
+  }
+}
+
+function highlightCoach() {
+  for (const element of document.querySelectorAll('.coach-target')) element.classList.remove('coach-target');
+  const step = currentStep();
+  if (!step) return;
+  if (step.front !== undefined) document.querySelector(`.front[data-front="${step.front}"]`)?.classList.add('coach-target');
+  if (step.type === 'place' && ui.selected === null) {
+    const card = state.players[0].hand.find((entry) => entry.id === step.card);
+    const index = [...state.players[0].hand].filter((entry) => !ui.plan.some((p) => p.uid === entry.uid)).indexOf(card);
+    document.querySelectorAll('#hand .card')[index]?.classList.add('coach-target');
+  }
+  if (step.type === 'ready') $('#ready').classList.add('coach-target');
+}
+
+function coachAdvance(kind) {
+  const step = currentStep();
+  if (!step || step.type !== kind) return;
+  ui.coach.index++;
+  renderCoach();
+  highlightCoach();
+}
+
+function coachAllowsCard(cardId) {
+  const step = currentStep();
+  if (!ui.coach || !step) return true;
+  if (step.type === 'place' && step.card === cardId) return true;
+  toast(step.type === 'place' ? 'Nimm die leuchtende Karte.' : step.type === 'ready' ? 'Drück jetzt „Aufdecken!“.' : 'Lies den Hinweis und tippe auf „Weiter“.');
+  return false;
+}
+
+function coachAllowsPlace(cardId, front) {
+  const step = currentStep();
+  if (!ui.coach || !step) return true;
+  if (step.type === 'place' && step.card === cardId && step.front === front) return true;
+  toast('Leg die Karte auf die leuchtende Front.');
+  return false;
+}
+
+function coachAllowsReady() {
+  const step = currentStep();
+  if (!ui.coach || !step) return true;
+  if (step.type === 'ready') return true;
+  toast(step.type === 'place' ? 'Leg zuerst die leuchtende Karte.' : 'Lies den Hinweis und tippe auf „Weiter“.');
+  return false;
+}
+
+async function tutorialEnd(body) {
+  ui.coach = null;
+  $('#info').classList.remove('coach');
+  const first = !save.tutorialDone;
+  save.tutorialDone = true;
+  save.rulesSeen = true;
+  if (first) save.coins += TUTORIAL.reward;
+  store();
+  play('win');
+  confetti();
+  const box = h('div', 'tutorial-end');
+  box.append(body);
+  const tips = h('ul', 'tutorial-tips');
+  for (const tip of [
+    'Du hast Urwald und Gezeitensee gewonnen – 2 von 3 Fronten reichen für das Banner.',
+    'Mit der 🥁 Kriegstrommel zählt eine Runde ein Banner mehr – der Gegner kann mitgehen oder aufgeben.',
+    'Neue Karten gibt es im Shop, Gegner mit eigener Persönlichkeit in der Kampagne.',
+  ]) tips.append(h('li', '', tip));
+  box.append(tips);
+  if (first) box.append(coinText(`+${TUTORIAL.reward}`, 'reward-value'));
+  const choice = await dialog('🎓 Übung geschafft!', box, [
+    { label: 'Zum Start', value: 'home' }, { label: '📜 Zur Kampagne', value: 'campaign', primary: true },
+  ]);
+  ui.match = null;
+  state = null;
+  showHub(choice === 'campaign' ? 'campaign' : 'home');
+}
+
 function init() {
   $('#version').textContent = version;
   for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click', () => { play('click'); showPage(tab.dataset.page); });
   $('#home-deck').addEventListener('click', () => { viewedDeck = save.deck; showPage('decks'); });
   if (platformHosted(version)) $('#back-link').hidden = false;
   $('#play').addEventListener('click', async () => {
-    if (!save.rulesSeen) await showRules();
+    if (!save.rulesSeen && await offerTutorial()) return;
     startGame();
   });
   $('#play-info').addEventListener('click', () => $('#opponents-choice').scrollIntoView({ behavior: 'smooth', block: 'center' }));
@@ -1524,6 +2042,13 @@ function init() {
         { label: 'Nein', value: false }, { label: 'Ja, aufgeben', value: true, primary: true },
       ]);
       if (sure) {
+        if (ui.online) {
+          save.losses++;
+          store();
+          await onlineLeave();
+          showHub('multi');
+          return;
+        }
         save.losses++;
         save.streak = 0;
         save.ruhm = 0;
@@ -1542,6 +2067,12 @@ function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && cloudTimer) void pushCloud({ keepalive: true });
   });
+  const invite = new URLSearchParams(location.search).get('raum');
+  if (invite && /^[A-Za-z0-9]{6}$/.test(invite) && onlineAvailable()) {
+    history.replaceState(null, '', location.pathname);
+    showHub('multi');
+    void onlineEnter('join', invite.toUpperCase());
+  }
   void loadHub();
   void connectAccount();
   void showPatchNotes();
