@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="de" data-version="0.9.0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'">
+  <title>Drei Fronten</title>
+  <meta name="description" content="Fantasy-Kartenduell: Lege verdeckt Wesen an drei Fronten, decke auf und gewinne zwei von drei.">
+  <meta name="theme-color" content="#1a1036">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Drei Fronten">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <section id="hub" class="hub">
+    <header class="hub-top">
+      <a id="back-link" class="back-link" href="/" hidden>← Bens Games</a>
+      <div id="hub-title" class="hub-title"></div>
+      <div id="hub-stats" class="hub-stats"></div>
+      <button id="settings-btn" class="icon-btn" type="button" aria-label="Einstellungen" title="Einstellungen">⚙️</button>
+    </header>
+
+    <div class="hub-pages">
+      <!-- Karten & Decks -->
+      <section id="page-decks" class="page" hidden>
+        <h2 class="page-title">Karten &amp; Decks</h2>
+        <div id="deck-tabs" class="deck-tabs"></div>
+        <div id="deck-head" class="deck-head"></div>
+        <h3 class="section-title">Im Deck</h3>
+        <div id="deck-cards" class="card-grid"></div>
+        <h3 class="section-title">Sammlung <span id="collection-count" class="section-count"></span> <span id="collection-hint" class="section-hint"></span></h3>
+        <div id="collection-filter" class="filter-row"></div>
+        <div id="collection" class="card-grid"></div>
+      </section>
+
+      <!-- Hauptbildschirm -->
+      <section id="page-home" class="page">
+        <div class="title">
+          <div class="hero">
+            <img class="hero-img" src="umgebung/titelbild.webp" alt="">
+            <h1>Drei Fronten</h1>
+            <div class="hero-battle">
+              <button id="play" class="big-btn battle-btn" type="button">⚔️ Kampf!</button>
+              <button id="play-info" class="play-info" type="button"></button>
+            </div>
+          </div>
+        </div>
+        <div id="announcement" class="announcement" hidden></div>
+        <div id="account-box" class="account-box" hidden></div>
+        <div class="home-actions">
+          <button id="campaign-btn" class="home-action campaign-action" type="button"></button>
+          <button id="achievements-btn" class="home-action" type="button"></button>
+        </div>
+        <div id="opponents-choice" class="choice opponents-choice">
+          <h2>Gegner wählen</h2>
+          <div id="opponent-choice" class="opponent-row"></div>
+          <p id="opponent-intro" class="opponent-intro"></p>
+        </div>
+        <button id="home-deck" class="home-deck" type="button"></button>
+        <p class="tagline">Lege verdeckt deine Wesen an drei Fronten. Deck auf. Gewinne zwei von drei.</p>
+        <p class="version">Version <span id="version"></span></p>
+      </section>
+
+      <!-- Kampagne (ohne eigenen Reiter, erreichbar über die Startseite) -->
+      <section id="page-campaign" class="page" hidden>
+        <button id="campaign-back" class="plain-btn small-btn back-btn" type="button">← Zurück</button>
+        <h2 class="page-title">Der Weg des Feldherrn</h2>
+        <p class="page-intro">Acht Kapitel, acht Gegner, acht Sonderregeln. Jedes geschaffte Kapitel bringt Münzen und eine neue Karte.</p>
+        <div id="chapter-list" class="chapter-list"></div>
+      </section>
+
+      <!-- Shop -->
+      <section id="page-shop" class="page" hidden>
+        <h2 class="page-title">Shop</h2>
+        <p class="page-intro">Münzen bekommst du für jede Partie – mehr für Siege und den ersten Sieg des Tages. Hier gibt es nur Spielmünzen, kein echtes Geld.</p>
+        <div id="pack-list" class="pack-list"></div>
+        <div id="shop-info" class="shop-info"></div>
+      </section>
+
+      <!-- Mehrspieler -->
+      <section id="page-multi" class="page" hidden>
+        <h2 class="page-title">Mehrspieler</h2>
+        <p class="page-intro">Bald kannst du hier gegen echte Menschen antreten. Beide planen gleichzeitig – dann wird aufgedeckt!</p>
+        <div class="soon-list">
+          <div class="soon"><b>🤝 Freundes-Duell</b><span>Erstelle einen Code und schick ihn einem Freund.</span><i>Kommt bald</i></div>
+          <div class="soon"><b>🏆 Ranglisten-Duell</b><span>Kämpfe gegen Spieler auf deinem Niveau und steig in der Rangliste auf.</span><i>Kommt bald</i></div>
+          <div class="soon"><b>🎴 Draft-Turnier</b><span>Wähle deine Karten erst während des Turniers.</span><i>Kommt bald</i></div>
+        </div>
+      </section>
+    </div>
+
+    <nav class="tabbar" aria-label="Menü">
+      <button class="tab" type="button" data-page="shop"><img class="tab-icon tab-img" src="symbole/muenze.webp" alt=""><span>Shop</span></button>
+      <button class="tab" type="button" data-page="decks"><span class="tab-icon">🃏</span><span>Karten</span></button>
+      <button class="tab main-tab" type="button" data-page="home"><span class="tab-icon">🏰</span><span>Start</span></button>
+      <button class="tab" type="button" data-page="multi"><span class="tab-icon">⚔️</span><span>Mehrspieler</span></button>
+    </nav>
+  </section>
+
+  <section id="game" class="screen" hidden>
+    <header class="top">
+      <div class="score-board">
+        <div class="who own-who"><span class="who-name">Du</span><span id="banners-0" class="banners"></span></div>
+        <div class="who enemy-who"><span id="enemy-avatar"></span><span id="enemy-name" class="who-name">Gegner</span><span id="banners-1" class="banners"></span></div>
+      </div>
+      <div class="round-info">
+        <div id="round-label" class="round-label"></div>
+        <div id="stakes" class="stakes"></div>
+      </div>
+      <button id="menu-btn" class="icon-btn" type="button" aria-label="Menü">☰</button>
+    </header>
+
+    <main id="board" class="board" aria-label="Spielfeld"></main>
+    <div id="log" class="log" aria-live="polite"></div>
+
+    <footer class="bottom">
+      <div id="info" class="info"></div>
+      <div id="hand" class="hand" aria-label="Deine Hand"></div>
+      <div class="controls">
+        <div id="energy" class="energy"></div>
+        <button id="drum" class="drum-btn" type="button" title="Kriegstrommel: Die Runde zählt ein Banner mehr"><img class="sym drum-img" src="symbole/trommel.webp" alt=""><span class="drum-text">Trommel</span></button>
+        <button id="ready" class="ready-btn" type="button">Aufdecken!</button>
+      </div>
+    </footer>
+  </section>
+
+  <div id="dialog" class="dialog" hidden>
+    <div class="dialog-box" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <h2 id="dialog-title"></h2>
+      <div id="dialog-body" class="dialog-body"></div>
+      <div id="dialog-buttons" class="dialog-buttons"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <div id="update-banner" class="update-banner" hidden><span>Neue Version verfügbar</span><button id="update-btn" class="big-btn small-btn" type="button">Neu laden</button></div>
+</body>
+</html>

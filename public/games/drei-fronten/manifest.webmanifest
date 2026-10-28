@@ -1,0 +1,16 @@
+{
+  "name": "Drei Fronten",
+  "short_name": "Drei Fronten",
+  "description": "Fantasy-Kartenduell: Lege verdeckt Wesen an drei Fronten, decke auf und gewinne zwei von drei.",
+  "lang": "de",
+  "id": "/games/drei-fronten/",
+  "start_url": "/games/drei-fronten/",
+  "scope": "/games/drei-fronten/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1036",
+  "theme_color": "#1a1036",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

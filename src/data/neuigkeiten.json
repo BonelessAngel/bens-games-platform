@@ -1,5 +1,17 @@
 [
   {
+    "app": "drei-fronten",
+    "version": "0.9",
+    "date": "2026-10-28",
+    "title": "Neues Spiel: Drei Fronten ⚔️",
+    "points": [
+      "Fantasy-Kartenduell: Wesen verdeckt an drei Fronten legen, aufdecken, zwei von drei gewinnen",
+      "Kampagne mit 8 Kapiteln, 6 Gegner, 49 gemalte Karten und ein Pakete-Shop nur mit Spielmünzen",
+      "Ruhm-Rangliste und Spielstand im Konto"
+    ],
+    "reinstall": false
+  },
+  {
     "app": "nova-bastion",
     "version": "1.13",
     "date": "2026-10-28",

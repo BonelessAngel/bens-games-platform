@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b1f7a"/>
+      <stop offset="1" stop-color="#140a2e"/>
+    </linearGradient>
+    <linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset="1" stop-color="#ff5a36"/></linearGradient>
+    <linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7be7ff"/><stop offset="1" stop-color="#2f8cff"/></linearGradient>
+    <linearGradient id="e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b7e36f"/><stop offset="1" stop-color="#3fa34d"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <g stroke="#1a1036" stroke-width="10">
+    <rect x="70" y="150" width="110" height="170" rx="18" fill="url(#f)" transform="rotate(-12 125 235)"/>
+    <rect x="201" y="120" width="110" height="170" rx="18" fill="url(#w)"/>
+    <rect x="332" y="150" width="110" height="170" rx="18" fill="url(#e)" transform="rotate(12 387 235)"/>
+  </g>
+  <path d="M120 400 L256 350 L392 400" fill="none" stroke="#ffd166" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="205" r="34" fill="#fff6d6"/>
+</svg>

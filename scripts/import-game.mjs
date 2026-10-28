@@ -10,9 +10,9 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FORBIDDEN_HOSTS, GAMES, normalizeServiceWorker, unlistedFiles } from '../lib/games.js';
+import { FORBIDDEN_HOSTS, GAMES, gameFiles, normalizeServiceWorker, unlistedFiles } from '../lib/games.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -72,7 +72,11 @@ const source = join(repo, game.buildDir);
 for (const file of game.files) {
   if (!existsSync(join(source, file))) fail(`${file} fehlt in ${source}. Wurde das Spiel gebaut?`);
 }
-const extra = unlistedFiles(game, readdirSync(source, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name));
+// Alle Dateien im Build, auch in Unterordnern (als „ordner/datei“).
+const buildFiles = readdirSync(source, { recursive: true, withFileTypes: true })
+  .filter((entry) => entry.isFile())
+  .map((entry) => join(entry.parentPath, entry.name).slice(source.length + 1).replaceAll('\\', '/'));
+const extra = unlistedFiles(game, buildFiles);
 if (extra.length) {
   fail(`Neue Dateien im Build, die nicht in lib/games.js stehen: ${extra.join(', ')}.\n` +
     'Ohne sie würde das Spiel auf der Webseite fehlen. Bitte in die Dateiliste (files) oder bewusst in ignore eintragen.');
@@ -85,9 +89,13 @@ if (forbidden) fail(`index.html lädt Inhalte von ${forbidden[1]} – das gibt I
 const target = join(root, 'public', 'games', id);
 mkdirSync(target, { recursive: true });
 for (const file of game.files) rmSync(join(target, file), { force: true });
+// Ganze Ordner vorher leeren, damit entfernte Bilder nicht liegen bleiben.
+for (const directory of game.directories ?? []) rmSync(join(target, directory), { recursive: true, force: true });
 
+const listDirectory = (directory) => (existsSync(join(source, directory)) ? readdirSync(join(source, directory)) : []);
 const files = {};
-for (const file of game.files) {
+for (const file of gameFiles(game, listDirectory)) {
+  mkdirSync(dirname(join(target, file)), { recursive: true });
   copyFileSync(join(source, file), join(target, file));
   files[file] = createHash('sha256').update(readFileSync(join(target, file))).digest('hex');
 }

@@ -20,5 +20,16 @@
     "visibility": "all",
     "version": "1.8.1",
     "path": "/games/royal-blocks/"
+  },
+  {
+    "id": "drei-fronten",
+    "name": "Drei Fronten",
+    "type": "game",
+    "description": "Fantasy-Kartenduell: Lege verdeckt Wesen an drei Fronten, deck auf und gewinne zwei von drei.",
+    "icon": "/app-icons/drei-fronten.svg",
+    "status": "beta",
+    "visibility": "all",
+    "version": "0.9.0",
+    "path": "/games/drei-fronten/"
   }
 ]
