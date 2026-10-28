@@ -7,7 +7,7 @@
     "icon": "/app-icons/nova-bastion.svg",
     "status": "public",
     "visibility": "all",
-    "version": "1.12.0",
+    "version": "1.13.0",
     "path": "/games/nova-bastion/"
   },
   {
@@ -18,7 +18,7 @@
     "icon": "/app-icons/royal-blocks.png",
     "status": "public",
     "visibility": "all",
-    "version": "1.8.0",
+    "version": "1.8.1",
     "path": "/games/royal-blocks/"
   }
 ]

@@ -2036,3 +2036,11 @@ button { font: inherit; color: inherit; }
 .medal { filter: grayscale(1) opacity(0.35); }
 .medal.on { filter: none; }
 .achievement.maxed { border-color: var(--gold); box-shadow: 0 0 18px rgba(255, 211, 77, 0.35); }
+
+/* Patchnotes nach einem Update (v1.8.1) */
+.notes-panel { text-align: left; }
+.notes-badge { align-self: center; padding: 3px 12px; border-radius: 999px; background: linear-gradient(135deg, var(--pink), var(--accent2)); font-size: 12px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.notes-list { margin: 0; padding-left: 20px; line-height: 1.45; }
+.notes-list li { margin-bottom: 6px; }
+.notes-reinstall { padding: 10px 12px; border: 1px solid var(--gold); border-radius: 12px; color: var(--gold); font-weight: 700; }
+.notes-reinstall[hidden] { display: none; }

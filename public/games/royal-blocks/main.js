@@ -1970,6 +1970,33 @@ function claimGift() {
   }
 }
 
+// ---------- Patchnotes nach einem Update ----------
+// Die Webseite liefert /neuigkeiten.json („Was ist neu?“). Einmal pro neuer Version zeigen, nicht für ganz neue Spieler.
+let notesReturn = null;
+async function showPatchNotes() {
+  if (!platform.hosted || !/^\d+\.\d+\.\d+$/.test(version)) return;
+  const seen = load('notes-seen', null);
+  save('notes-seen', version);
+  if (seen === version || (!seen && !stats.games)) return;
+  let data = null;
+  try {
+    const response = await fetch('/neuigkeiten.json', { cache: 'no-store', credentials: 'same-origin' });
+    data = response.ok ? await response.json() : null;
+  } catch {
+    return;
+  }
+  const minor = version.split('.').slice(0, 2).join('.');
+  const note = (data?.['royal-blocks'] ?? []).find((n) => n.version === version || n.version === minor);
+  if (!note || !Array.isArray(note.points)) return;
+  $('notes-version').textContent = `Neu in Version ${minor}`;
+  $('notes-title').textContent = String(note.title ?? 'Was ist neu?');
+  $('notes-list').replaceChildren(...note.points.slice(0, 8).map((p) => Object.assign(document.createElement('li'), { textContent: String(p) })));
+  const app = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+  $('notes-reinstall').hidden = !(note.reinstall === true && app);
+  notesReturn = visibleOverlay();
+  openOverlay('notes');
+}
+
 // ---------- Startbildschirm, Statistik, Teilen, Rubbellos ----------
 
 const dismissedAnnouncements = new Set(
@@ -2477,6 +2504,7 @@ const actions = {
     openOverlay('shop');
   },
   'odds-back': () => openOverlay(oddsReturn),
+  'notes-done': () => (notesReturn ? openOverlay(notesReturn) : closeOverlays()),
   sound() {
     settings.sound = !settings.sound;
     setSoundEnabled(settings.sound);
@@ -2632,6 +2660,7 @@ else {
 }
 onSave(scheduleCloudSave);
 void initCloudSave();
+setTimeout(() => void showPatchNotes(), 1200);
 
 // Offline-Betrieb (nur im gebauten Spiel; beim Entwickeln würde der Cache stören)
 if (version !== 'dev' && 'serviceWorker' in navigator) {
