@@ -2592,86 +2592,91 @@ a.news__game:hover {
 .ranks__links { display: inline-flex; align-items: center; gap: 12px; }
 .ranks__hall { font-weight: 700; color: var(--accent); text-decoration: none; }
 
-/* ======== Konto-Menü in der Kopfzeile (wie bei Steam: Klick aufs Bild → Profil, Pfeil → Menü) ======== */
-.nav-menu {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.nav-menu__toggle {
-  padding: 4px 6px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  cursor: pointer;
-}
-
-.nav-menu__toggle:hover,
-.nav-menu__toggle[aria-expanded="true"] {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-
-.nav-menu__list {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 60;
+/* ======== Eigenes Profil: Leiste „so sehen es andere“ mit Einstellungen (wie bei Steam) ======== */
+.own-bar {
   display: flex;
-  flex-direction: column;
-  min-width: 220px;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
 }
 
-.nav-menu__list[hidden] {
+.own-bar[hidden] {
   display: none;
 }
 
-.nav-menu__list a,
-.nav-menu__logout {
-  padding: 9px 12px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.nav-menu__list a:hover,
-.nav-menu__logout:hover {
-  background: var(--bg-hover);
-}
-
-.nav-menu__logout {
-  margin-top: 4px;
-  border-top: 1px solid var(--border);
-  border-radius: 0 0 9px 9px;
-  color: var(--text-muted);
-}
-
-/* ======== Profil & Einstellungen: Seitenleiste wie bei Steam, Live-Vorschau ======== */
-.profile-card__actions {
+.own-bar__text {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+}
+
+.own-bar__text span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.own-bar__text a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.own-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+/* ======== Einstellungen: Zurück zum Profil, Seitenleiste mit Erklärung, Live-Vorschau ======== */
+.settings-head {
+  margin-bottom: 16px;
+}
+
+.settings-head h1 {
+  margin: 4px 0 0;
+  font-size: 1.9rem;
+}
+
+.settings-head__back {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.settings-head__back:hover {
+  text-decoration: underline;
+}
+
+.profile-card .profile-card__name {
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.4rem;
+  text-overflow: ellipsis;
 }
 
 .profile-card .profile-card__private {
   margin-top: 8px;
   font-size: 0.85rem;
+}
+
+.tabs button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.tabs button small {
+  display: none;
+  font-size: 0.78rem;
+  font-weight: 400;
+  opacity: 0.8;
 }
 
 .style-preview {
@@ -2684,20 +2689,6 @@ a.news__game:hover {
   font-size: clamp(1.4rem, 4vw, 2rem);
 }
 
-.player-hero__share {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.player-hero__edit {
-  background: rgb(0 0 0 / 0.4);
-  border: 1px solid rgb(255 255 255 / 0.45);
-  color: #fff;
-  backdrop-filter: blur(4px);
-}
-
 @media (min-width: 900px) {
   .konto.konto--settings {
     max-width: 1040px;
@@ -2705,7 +2696,7 @@ a.news__game:hover {
 
   .konto-layout {
     display: grid;
-    grid-template-columns: 230px minmax(0, 1fr);
+    grid-template-columns: 250px minmax(0, 1fr);
     gap: 24px;
     align-items: start;
   }
@@ -2719,7 +2710,12 @@ a.news__game:hover {
 
   .konto-layout .tabs button {
     flex: none;
+    align-items: flex-start;
     text-align: left;
+  }
+
+  .konto-layout .tabs button small {
+    display: block;
   }
 }
 
@@ -2728,12 +2724,23 @@ a.news__game:hover {
     flex-wrap: wrap;
   }
 
-  .profile-card__actions {
-    flex-direction: row;
-    width: 100%;
+  .own-bar__actions,
+  .own-bar__actions .button {
+    flex: 1;
   }
 
-  .profile-card__actions > * {
-    flex: 1;
+  .profile-card [data-logout] {
+    flex-basis: 100%;
+  }
+
+  /* Alle Bereiche auf einen Blick statt seitlich wischen */
+  .konto-layout .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: visible;
+  }
+
+  .konto-layout .tabs button {
+    white-space: normal;
   }
 }

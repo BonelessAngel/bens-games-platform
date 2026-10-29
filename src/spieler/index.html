@@ -40,6 +40,18 @@
     </div>
 
     <div data-player-details hidden>
+      <div class="own-bar" data-player-ownbar hidden>
+        <div class="own-bar__text">
+          <strong>👁 Das ist dein Profil – so sehen es andere.</strong>
+          <span data-player-private hidden>🔒 Im Moment sieht es nur du, weil du nicht in den Ranglisten erscheinst.
+            <a href="/konto/#spiele">Ändern</a></span>
+        </div>
+        <div class="own-bar__actions">
+          <a class="button button--small button--secondary" href="/konto/#aussehen">🎨 Aussehen ändern</a>
+          <a class="button button--small" href="/konto/">⚙️ Einstellungen</a>
+        </div>
+      </div>
+
       <section class="player-hero" data-player-hero>
         <div class="player-hero__main">
           <span class="player-hero__avatar" data-player-avatar></span>
@@ -48,18 +60,11 @@
             <h1 data-player-name></h1>
             <p class="player-hero__since" data-player-since></p>
           </div>
-          <span class="player-hero__share">
-            <a class="button button--small player-hero__edit" href="/konto/#profil" data-player-edit hidden>✏️ Profil bearbeiten</a>
-            <span data-player-share></span>
-          </span>
+          <span class="player-hero__share" data-player-share></span>
         </div>
         <div class="player-rank" data-player-rank></div>
       </section>
 
-      <p class="notice" data-player-private hidden>
-        🔒 Dieses Profil siehst gerade nur du. Andere sehen es, sobald du in den Ranglisten erscheinst –
-        einschalten unter <a href="/konto/#spiele">Spiele & Ranglisten</a>.
-      </p>
 
       <div class="player-stats" data-player-stats></div>
 

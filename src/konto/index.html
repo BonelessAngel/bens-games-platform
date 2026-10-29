@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Profil & Einstellungen – Bens Games</title>
+  <title>Einstellungen – Bens Games</title>
   <meta name="color-scheme" content="dark light">
   <!-- HEAD -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -27,28 +27,30 @@
 
   <main class="container auth auth--wide konto konto--settings" data-page="konto">
     <div data-details hidden>
+      <div class="settings-head">
+        <a class="settings-head__back" href="/spieler/" data-profile-link>← Zurück zu meinem Profil</a>
+        <h1>Einstellungen</h1>
+      </div>
+
       <section class="profile-card">
         <span class="profile-card__avatar" data-profile-avatar></span>
         <div class="profile-card__text">
-          <h1 data-name></h1>
+          <h2 class="profile-card__name" data-name></h2>
           <p data-email></p>
           <p class="profile-card__badges" data-badges></p>
-          <p class="profile-card__private" data-profile-private hidden>🔒 Dein Profil sieht gerade nur du – andere erst, wenn du unter „Spiele & Ranglisten“ in den Ranglisten erscheinst.</p>
+          <p class="profile-card__private" data-profile-private hidden>🔒 Dein Profil sieht gerade nur du. Andere sehen es, wenn du unter „Spiele & Ranglisten“ in den Ranglisten erscheinst.</p>
           <a class="profile-card__link profile-card__admin" href="https://admin.bens-games.de/" data-admin-link hidden>Zur Zentrale →</a>
         </div>
-        <div class="profile-card__actions">
-          <a class="button button--small" href="/spieler/" data-profile-link>👤 Mein Profil</a>
-          <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
-        </div>
+        <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
       </section>
 
       <div class="konto-layout">
       <nav class="tabs" role="tablist" aria-label="Einstellungen">
-        <button type="button" role="tab" data-tab-target="profil">✏️ <span>Profil</span></button>
-        <button type="button" role="tab" data-tab-target="aussehen">🎨 <span>Aussehen</span></button>
-        <button type="button" role="tab" data-tab-target="spiele">🎮 <span>Spiele & Ranglisten</span></button>
-        <button type="button" role="tab" data-tab-target="sicherheit">🔒 <span>Sicherheit</span></button>
-        <button type="button" role="tab" data-tab-target="konto">⚙️ <span>Konto</span></button>
+        <button type="button" role="tab" data-tab-target="profil"><span>✏️ Profilbild & Name</span><small>So erkennen dich andere</small></button>
+        <button type="button" role="tab" data-tab-target="aussehen"><span>🎨 Aussehen</span><small>Banner, Titel, Abzeichen</small></button>
+        <button type="button" role="tab" data-tab-target="spiele"><span>🎮 Spiele & Ranglisten</span><small>Spielstände, wer dich sieht</small></button>
+        <button type="button" role="tab" data-tab-target="sicherheit"><span>🔒 Sicherheit</span><small>Passwort, Geräte</small></button>
+        <button type="button" role="tab" data-tab-target="konto"><span>⚙️ Konto</span><small>Deine Daten, löschen</small></button>
       </nav>
       <div class="konto-layout__content">
 

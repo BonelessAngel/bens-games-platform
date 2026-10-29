@@ -194,7 +194,7 @@ async function load() {
   show('[data-player-title]', !!profile.title);
   $('[data-player-since]').textContent = `Dabei seit ${memberSince(profile.member_since)}`;
   // Eigenes Profil (wie bei Steam): Knopf zum Bearbeiten, Hinweis, falls es andere gerade nicht sehen.
-  show('[data-player-edit]', profile.me);
+  show('[data-player-ownbar]', profile.me);
   show('[data-player-private]', profile.me && profile.listed === false);
   $('[data-player-share]').replaceChildren(shareButton(() => ({
     title: `${profile.display_name} bei Bens Games`,
