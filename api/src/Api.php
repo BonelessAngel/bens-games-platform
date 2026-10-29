@@ -39,7 +39,7 @@ final class Api
         // Pfade mit Spiel-ID, z. B. games/nova-bastion/save → games/{id}/save
         $path = $request->path;
         $gameId = '';
-        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?|scores|leaderboard|hub|campaign|levels(?:/get|/upload|/like|/result|/delete)?)$#', $path, $match)) {
+        if (preg_match('#^games/([a-z0-9]+(?:-[a-z0-9]+)*)/(save(?:/put|/delete)?|scores|leaderboard|hub|campaign|levels(?:/get|/upload|/like|/result|/delete)?|rooms/(?:create|join|quick|poll|ready|start|action|finish|leave|kick))$#', $path, $match)) {
             $gameId = $match[1];
             $path = 'games/{id}/' . $match[2];
         }
@@ -94,6 +94,18 @@ final class Api
             // Ergebnis auch ohne Konto (wie die Spielstatistik: Herkunftsprüfung statt CSRF-Token).
             'games/{id}/levels/result' => ['POST', false, fn (): Response => $this->levels()->result($this->sessions()->current($request), $gameId, $request->json(), $request)],
             'games/{id}/campaign' => ['GET', false, fn (): Response => $this->content()->get($gameId, 'campaign')],
+            // Räume für Mehrspieler (docs/raeume-api.md): auch für Gäste. Der eigene Platz hängt am X-Room-Token,
+            // angemeldete Spieler schicken zusätzlich ihr CSRF-Token mit.
+            'games/{id}/rooms/create' => ['POST', false, fn (): Response => $this->rooms()->create($gameId, $request->json(), $this->roomSession($request), $request)],
+            'games/{id}/rooms/join' => ['POST', false, fn (): Response => $this->rooms()->join($gameId, $request->json(), $this->roomSession($request), $request)],
+            'games/{id}/rooms/quick' => ['POST', false, fn (): Response => $this->rooms()->quick($gameId, $request->json(), $this->roomSession($request), $request)],
+            'games/{id}/rooms/poll' => ['GET', false, fn (): Response => $this->rooms()->poll($gameId, $request->query, $request)],
+            'games/{id}/rooms/ready' => ['POST', false, fn (): Response => $this->rooms()->ready($gameId, $request->json(), $request)],
+            'games/{id}/rooms/start' => ['POST', false, fn (): Response => $this->rooms()->start($gameId, $request->json(), $request)],
+            'games/{id}/rooms/action' => ['POST', false, fn (): Response => $this->rooms()->action($gameId, $request->json(), $request)],
+            'games/{id}/rooms/finish' => ['POST', false, fn (): Response => $this->rooms()->finish($gameId, $request->json(), $request)],
+            'games/{id}/rooms/leave' => ['POST', false, fn (): Response => $this->rooms()->leave($gameId, $request->json(), $request)],
+            'games/{id}/rooms/kick' => ['POST', false, fn (): Response => $this->rooms()->kick($gameId, $request->json(), $request)],
             'account/recent' => ['GET', true, fn (array $session): Response => $this->community()->recent($session, new AppCatalog($this->pdo(), $this->clock))],
             'players/profile' => ['GET', false, fn (): Response => $this->community()->profile($request->query, $this->sessions()->current($request))],
             'health' => ['GET', false, fn (): Response => $this->health()],
@@ -396,6 +408,26 @@ final class Api
         }
         (new AuditLog($this->pdo(), $this->clock))->log($optOut ? 'user.stats_opt_out' : 'user.stats_opt_in', $request, actorUserId: (int) $session['id'], targetType: 'user', targetId: (string) $session['id']);
         return new Response(200, ['opt_out' => $optOut]);
+    }
+
+    private function rooms(): Rooms
+    {
+        $pdo = $this->pdo();
+        return new Rooms($pdo, $this->clock, new RateLimiter($pdo, $this->clock));
+    }
+
+    /**
+     * Konto für einen Raum-Platz: Gäste dürfen ohne Anmeldung spielen. Wer angemeldet ist, muss das CSRF-Token
+     * mitschicken – sonst könnte eine fremde Seite Plätze im Namen des Kontos belegen.
+     * @return array<string, mixed>|null
+     */
+    private function roomSession(Request $request): ?array
+    {
+        $session = $this->sessions()->current($request);
+        if ($session !== null && !hash_equals((string) $session['csrf_token'], $request->header('x-csrf-token'))) {
+            throw new HttpError(403, 'csrf');
+        }
+        return $session;
     }
 
     private function gameSaves(): GameSaves
