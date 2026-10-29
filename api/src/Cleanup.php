@@ -53,6 +53,8 @@ final class Cleanup
             ),
             'login_challenges' => $this->delete('DELETE FROM login_challenges WHERE expires_at < ?', [$now]),
             'rate_limits' => $this->delete('DELETE FROM rate_limits WHERE window_start < ?', [$days(self::RATE_LIMIT_DAYS)]),
+            // Mehrspieler-Räume: spätestens nach 24 Stunden, Lobby nach 30 Minuten, Partie nach 2 Stunden ohne Aktivität.
+            'rooms' => (new Rooms($this->pdo, $this->clock, new RateLimiter($this->pdo, $this->clock)))->removeExpired(),
         ];
     }
 

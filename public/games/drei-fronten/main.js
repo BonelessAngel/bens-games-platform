@@ -1555,7 +1555,7 @@ const net = platform.hosted
   : createLocalTransport();
 const ROOM_SESSION = 'drei-fronten:raum';
 // Auf bens-games.de erst einschalten, wenn die Räume-Schnittstelle der Webseite live ist (AUFTRAG-MULTIPLAYER.md, Abschnitt C).
-const ONLINE_ON_PLATFORM = false;
+const ONLINE_ON_PLATFORM = true;
 const onlineAvailable = () => net.kind === 'lokal' || ONLINE_ON_PLATFORM;
 const ROOM_ERRORS = {
   room_not_found: 'Diesen Raum gibt es nicht (mehr). Stimmt der Code?',

@@ -162,6 +162,26 @@
       Bezug zu dir erhalten.
     </p>
 
+    <h3>Mehrspieler-Räume</h3>
+    <p>
+      In manchen Spielen (z. B. Drei Fronten) kannst du gegen andere Menschen spielen – mit Freunden über einen Raum-Code
+      oder im schnellen Spiel gegen jemanden, der gerade auch sucht. Dafür speichern wir auf unserem eigenen Server den Raum
+      (Code, Spielmodus, Status, Startwert für den Zufall), die Plätze im Raum und die Spielzüge, die die Spiele untereinander
+      austauschen. Zu deinem Platz gehören ein zufälliges Platz-Token (gespeichert wird nur sein Hash), ob du bereit bist,
+      wann dein Spiel zuletzt nachgefragt hat und am Ende Platz und Punkte. Ohne Konto heißt du im Raum „Gast“ mit einer
+      Zufallszahl; mit Konto wird der Platz deinem Konto zugeordnet und deine Mitspieler im selben Raum sehen deinen
+      Anzeigenamen und dein Profilbild. Es gibt keine freien Texte oder Chats, und IP-Adressen werden nicht gespeichert
+      (gegen das Raten von Codes zählen wir Versuche wie bei der Anmeldung nur über einen Fingerabdruck der gekürzten
+      IP-Adresse bzw. deines Kontos, siehe Abschnitt 8).
+      Das Platz-Token liegt nur für die Dauer des Tabs im Sitzungsspeicher deines Browsers (Session Storage).
+    </p>
+    <p>
+      Räume löschen wir automatisch: eine Lobby nach 30 Minuten ohne Aktivität, eine Partie nach 2 Stunden ohne Aktivität
+      und alles spätestens 24 Stunden nach dem Erstellen. Wenn du dein Konto löschst, wird die Zuordnung deiner Plätze
+      sofort entfernt. Rechtsgrundlage ist die Bereitstellung des von dir gewünschten Mehrspieler-Spiels
+      (Art. 6 Abs. 1 lit. b DSGVO).
+    </p>
+
     <h3>Fehlermeldungen aus den Spielen</h3>
     <p>
       Tritt in einem Spiel ein technischer Fehler auf, meldet das Spiel ihn an unseren eigenen Server, damit wir ihn
