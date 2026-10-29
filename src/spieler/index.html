@@ -40,6 +40,18 @@
     </div>
 
     <div data-player-details hidden>
+      <div class="own-bar" data-player-ownbar hidden>
+        <div class="own-bar__text">
+          <strong>👁 Das ist dein Profil – so sehen es andere.</strong>
+          <span data-player-private hidden>🔒 Im Moment sieht es nur du, weil du nicht in den Ranglisten erscheinst.
+            <a href="/konto/#spiele">Ändern</a></span>
+        </div>
+        <div class="own-bar__actions">
+          <a class="button button--small button--secondary" href="/konto/#aussehen">🎨 Aussehen ändern</a>
+          <a class="button button--small" href="/konto/">⚙️ Einstellungen</a>
+        </div>
+      </div>
+
       <section class="player-hero" data-player-hero>
         <div class="player-hero__main">
           <span class="player-hero__avatar" data-player-avatar></span>
@@ -53,10 +65,6 @@
         <div class="player-rank" data-player-rank></div>
       </section>
 
-      <p class="notice" data-player-own hidden>
-        Das ist dein öffentliches Profil. Banner, Titel und Lieblings-Abzeichen wählst du unter
-        <a href="/konto/#profil">Mein Konto → Profil</a>, dort kannst du dich auch aus den Ranglisten herausnehmen.
-      </p>
 
       <div class="player-stats" data-player-stats></div>
 

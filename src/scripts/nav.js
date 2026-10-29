@@ -1,4 +1,5 @@
-// Kopfzeile: Nach der Anmeldung steht statt „Anmelden“ das Profilbild mit Namen (Link zu „Mein Konto“).
+// Kopfzeile: Nach der Anmeldung steht statt „Anmelden“ das Profilbild mit Namen. Ein Klick zeigt das eigene Profil
+// so, wie andere es sehen (wie bei Steam); von dort geht es mit „Einstellungen“ weiter zum Bearbeiten.
 import { avatarSvg } from '../../lib/avatars.js';
 import './theme.js';
 import './announcements.js';
@@ -14,10 +15,13 @@ export async function currentUser() {
   }
 }
 
+export const profileUrl = (name) => `/spieler/?name=${encodeURIComponent(name)}`;
+
 export function renderNavUser(user) {
   const link = document.querySelector('[data-account-link]');
   if (!link || !user) return;
-  link.href = '/konto/';
+  link.href = profileUrl(user.display_name);
+  link.title = 'Mein Profil';
   link.classList.add('nav-user');
   link.innerHTML = `${avatarSvg({ avatar: user.avatar, color: user.avatar_color, name: user.display_name }, 28)}<span></span>`;
   link.querySelector('span').textContent = user.display_name;

@@ -193,7 +193,9 @@ async function load() {
   $('[data-player-title]').textContent = profile.title?.name ?? '';
   show('[data-player-title]', !!profile.title);
   $('[data-player-since]').textContent = `Dabei seit ${memberSince(profile.member_since)}`;
-  show('[data-player-own]', profile.me);
+  // Eigenes Profil (wie bei Steam): Knopf zum Bearbeiten, Hinweis, falls es andere gerade nicht sehen.
+  show('[data-player-ownbar]', profile.me);
+  show('[data-player-private]', profile.me && profile.listed === false);
   $('[data-player-share]').replaceChildren(shareButton(() => ({
     title: `${profile.display_name} bei Bens Games`,
     text: profile.me ? 'Schau dir mein Profil bei Bens Games an:' : `Schau dir das Profil von ${profile.display_name} an:`,

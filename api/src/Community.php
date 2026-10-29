@@ -77,12 +77,14 @@ final class Community
             throw new HttpError(404, 'not_found');
         }
         $statement = $this->pdo->prepare(
-            "SELECT id, display_name, avatar, avatar_color, created_at FROM users
-             WHERE display_name = ? AND status = 'active' AND leaderboard_opt_out = 0 AND email_verified_at IS NOT NULL"
+            "SELECT id, display_name, avatar, avatar_color, created_at, leaderboard_opt_out FROM users
+             WHERE display_name = ? AND status = 'active' AND email_verified_at IS NOT NULL"
         );
         $statement->execute([$name]);
         $user = $statement->fetch();
-        if (!$user) {
+        $me = $user && $session !== null && (int) $session['id'] === (int) $user['id'];
+        // Wer aus den Ranglisten raus ist, hat kein öffentliches Profil – sieht sein eigenes aber trotzdem (als Vorschau).
+        if (!$user || ((int) $user['leaderboard_opt_out'] === 1 && !$me)) {
             throw new HttpError(404, 'not_found');
         }
         $userId = (int) $user['id'];
@@ -121,7 +123,8 @@ final class Community
             'avatar' => $user['avatar'],
             'avatar_color' => $user['avatar_color'],
             'member_since' => substr((string) $user['created_at'], 0, 7),
-            'me' => $session !== null && (int) $session['id'] === $userId,
+            'me' => $me,
+            'listed' => (int) $user['leaderboard_opt_out'] === 0,
             'games' => array_values($games),
         ] + ($this->profiles?->publicParts($userId) ?? [])]);
     }
