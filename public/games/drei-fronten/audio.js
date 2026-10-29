@@ -97,44 +97,105 @@ export function play(name) {
   SOUNDS[name]?.();
 }
 
-// Leise, mystische Musik: tiefer schwebender Klangteppich und zufällige Glockentöne aus einer Moll-Tonleiter.
-const BELLS = [220, 261.6, 293.7, 329.6, 392, 440, 523.3, 587.3];
+// Leise, mystische Musik: weiche Akkordflächen mit viel Hall, die langsam ineinander übergehen,
+// dazu ab und zu ein heller Glockenton aus dem Akkord. Kein Brummen, kein Wabern.
+const CHORDS = [
+  [110, 220, 261.6, 329.6, 493.9], // a-Moll (mit None)
+  [87.3, 174.6, 220, 261.6, 329.6], // F-Dur (große Septime)
+  [65.4, 196, 261.6, 329.6, 392], // C-Dur
+  [82.4, 164.8, 246.9, 329.6, 392], // e-Moll
+  [73.4, 174.6, 220, 293.7, 440], // d-Moll
+  [82.4, 207.7, 246.9, 329.6, 493.9], // E-Dur (führt zurück nach a-Moll)
+];
+const CHORD_TIME = 9;
+
+let musicBus = null;
+let chordIndex = 0;
+
+// Künstlicher Hall: abklingendes Rauschen als Raumantwort.
+function makeReverb(seconds = 4.5) {
+  const length = Math.ceil(ctx.sampleRate * seconds);
+  const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+  for (let channel = 0; channel < 2; channel++) {
+    const data = impulse.getChannelData(channel);
+    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 2.6;
+  }
+  const reverb = ctx.createConvolver();
+  reverb.buffer = impulse;
+  return reverb;
+}
+
+// Ein Flächenton: zwei leicht verstimmte Oszillatoren, weich gefiltert, langsam ein- und ausgeblendet.
+function padNote(freq, when, length, volume) {
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 900;
+  filter.Q.value = 0.3;
+  gain.gain.setValueAtTime(0.0001, when);
+  gain.gain.linearRampToValueAtTime(volume, when + length * 0.35);
+  gain.gain.setValueAtTime(volume, when + length * 0.6);
+  gain.gain.linearRampToValueAtTime(0.0001, when + length);
+  filter.connect(gain);
+  gain.connect(musicBus);
+  for (const [type, detune] of [['sine', -5], ['triangle', 5]]) {
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.detune.value = detune;
+    osc.connect(filter);
+    osc.start(when);
+    osc.stop(when + length + 0.1);
+  }
+}
+
+function bellNote(freq, when) {
+  tone(freq, { start: when - ctx.currentTime, length: 3.5, type: 'sine', volume: 0.045, attack: 0.04, target: musicBus });
+  tone(freq * 3, { start: when - ctx.currentTime, length: 1.2, type: 'sine', volume: 0.008, attack: 0.02, target: musicBus });
+}
+
+function nextChord() {
+  if (!musicBus) return;
+  const chord = CHORDS[chordIndex % CHORDS.length];
+  chordIndex++;
+  const when = ctx.currentTime + 0.05;
+  // Flächen überlappen sich, damit die Akkorde fließend wechseln.
+  chord.forEach((freq, i) => padNote(freq, when, CHORD_TIME * 1.6, i === 0 ? 0.05 : 0.028));
+  // Ein bis drei Glockentöne aus dem Akkord, eine Oktave höher.
+  const bells = 1 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < bells; i++) {
+    const freq = chord[1 + Math.floor(Math.random() * (chord.length - 1))] * 2;
+    bellNote(freq, when + 1.5 + Math.random() * (CHORD_TIME - 2.5));
+  }
+  musicTimer = setTimeout(nextChord, CHORD_TIME * 1000);
+}
 
 function startMusic() {
-  if (!ensure() || drone) return;
-  drone = [55, 82.4, 110.3].map((freq, i) => {
-    const osc = ctx.createOscillator();
-    osc.type = i === 2 ? 'triangle' : 'sine';
-    osc.frequency.value = freq;
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.07 + i * 0.03;
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.6;
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    const gain = ctx.createGain();
-    gain.gain.value = i === 2 ? 0.05 : 0.09;
-    osc.connect(gain);
-    gain.connect(musicGain);
-    osc.start();
-    lfo.start();
-    return { osc, lfo };
-  });
-  const bell = () => {
-    const freq = BELLS[Math.floor(Math.random() * BELLS.length)];
-    tone(freq, { length: 2.8, type: 'sine', volume: 0.07, attack: 0.08, target: musicGain });
-    tone(freq * 2, { start: 0.02, length: 1.6, type: 'sine', volume: 0.02, attack: 0.05, target: musicGain });
-    musicTimer = setTimeout(bell, 1800 + Math.random() * 3200);
-  };
-  bell();
+  if (!ensure() || musicBus) return;
+  musicBus = ctx.createGain();
+  const dry = ctx.createGain();
+  dry.gain.value = 0.45;
+  const wet = ctx.createGain();
+  wet.gain.value = 0.9;
+  const reverb = makeReverb();
+  musicBus.connect(dry);
+  musicBus.connect(reverb);
+  reverb.connect(wet);
+  dry.connect(musicGain);
+  wet.connect(musicGain);
+  drone = { bus: musicBus, nodes: [dry, wet, reverb] };
+  chordIndex = 0;
+  nextChord();
   musicGain.gain.setTargetAtTime(settings.music ? 0.5 : 0, ctx.currentTime, 1.5);
 }
 
 function stopMusic() {
   if (!drone) return;
   clearTimeout(musicTimer);
-  for (const { osc, lfo } of drone) { osc.stop(); lfo.stop(); }
+  drone.bus.disconnect();
+  for (const node of drone.nodes) node.disconnect();
   drone = null;
+  musicBus = null;
 }
 
 export function setSound(on) {
