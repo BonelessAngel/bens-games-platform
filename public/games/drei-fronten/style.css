@@ -698,14 +698,14 @@ button:disabled { cursor: default; opacity: 0.5; }
 
 body {
   background:
-    linear-gradient(180deg, rgba(7, 5, 26, 0.25), rgba(7, 5, 26, 0.55)),
+    linear-gradient(180deg, rgba(7, 5, 26, 0.25), rgba(7, 5, 26, 0.55)) fixed,
     url("umgebung/hintergrund-hoch.webp") center top / cover no-repeat fixed,
     #07051a;
 }
 @media (min-aspect-ratio: 1 / 1) {
   body {
     background:
-      linear-gradient(180deg, rgba(7, 5, 26, 0.25), rgba(7, 5, 26, 0.55)),
+      linear-gradient(180deg, rgba(7, 5, 26, 0.25), rgba(7, 5, 26, 0.55)) fixed,
       url("umgebung/hintergrund-quer.webp") center / cover no-repeat fixed,
       #07051a;
   }

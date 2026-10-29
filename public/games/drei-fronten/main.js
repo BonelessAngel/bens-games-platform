@@ -1053,6 +1053,8 @@ function bump(stat, amount = 1) {
 
 // match = { opponent, chapter } – ohne Angabe: freies Duell gegen den gewählten Gegner.
 async function startGame(match = { opponent: save.opponent }) {
+  // Ein offener Online-Raum (Lobby oder Suche) würde sonst die Partie gegen den Computer kapern.
+  if (ui.online) await onlineLeave();
   if (!deckReady(deckCards(save.deck))) save.deck = 'flammen';
   const chapter = match.chapter ? CHAPTER_BY_ID[match.chapter] : null;
   ui.match = { opponent: chapter ? chapter.opponent : match.opponent, chapter: chapter?.id ?? null };

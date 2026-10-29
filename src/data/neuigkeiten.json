@@ -1,6 +1,18 @@
 [
   {
     "app": "drei-fronten",
+    "version": "0.11.1",
+    "date": "2026-10-29",
+    "title": "Ruhigere Musik und Fehlerbehebungen",
+    "points": [
+      "Neue, mystische Hintergrundmusik: weiche Klangflächen mit Hall statt Brummton",
+      "Partie gegen den Computer hängt nicht mehr bei „Warte auf deinen Gegner …“",
+      "Kein mitlaufender Balken mehr im Hintergrund beim Scrollen"
+    ],
+    "reinstall": false
+  },
+  {
+    "app": "drei-fronten",
     "version": "0.11",
     "date": "2026-10-29",
     "title": "Online-Duelle ⚔️",
