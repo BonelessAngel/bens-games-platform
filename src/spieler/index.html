@@ -48,14 +48,17 @@
             <h1 data-player-name></h1>
             <p class="player-hero__since" data-player-since></p>
           </div>
-          <span class="player-hero__share" data-player-share></span>
+          <span class="player-hero__share">
+            <a class="button button--small player-hero__edit" href="/konto/#profil" data-player-edit hidden>✏️ Profil bearbeiten</a>
+            <span data-player-share></span>
+          </span>
         </div>
         <div class="player-rank" data-player-rank></div>
       </section>
 
-      <p class="notice" data-player-own hidden>
-        Das ist dein öffentliches Profil. Banner, Titel und Lieblings-Abzeichen wählst du unter
-        <a href="/konto/#profil">Mein Konto → Profil</a>, dort kannst du dich auch aus den Ranglisten herausnehmen.
+      <p class="notice" data-player-private hidden>
+        🔒 Dieses Profil siehst gerade nur du. Andere sehen es, sobald du in den Ranglisten erscheinst –
+        einschalten unter <a href="/konto/#spiele">Spiele & Ranglisten</a>.
       </p>
 
       <div class="player-stats" data-player-stats></div>

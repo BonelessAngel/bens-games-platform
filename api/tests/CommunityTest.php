@@ -94,6 +94,7 @@ dbTest('Spielerprofil: öffentlich nur mit Ranglisten-Teilnahme, ohne private Da
     same('Anna', $profile['display_name'], 'Groß-/Kleinschreibung egal');
     same(gmdate('Y-m', $app->time), $profile['member_since']);
     same(false, $profile['me']);
+    same(true, $profile['listed']);
     same(['2', '10'], array_column($profile['games'][0]['boards'], 'board'));
     same([2, 1], array_column($profile['games'][0]['boards'], 'rank'));
     same(['stars30'], $profile['games'][0]['achievements']);
@@ -106,6 +107,10 @@ dbTest('Spielerprofil: öffentlich nur mit Ranglisten-Teilnahme, ohne private Da
     same(['2'], array_column(siteGet($app, 'players/profile', ['name' => 'Anna'])->body['profile']['games'][0]['boards'], 'board'));
     same(200, $app->postAs($anna, 'account/leaderboard/settings', ['opt_out' => true])->status);
     same(404, siteGet($app, 'players/profile', ['name' => 'Anna'])->status);
+    $own = siteGet($app, 'players/profile', ['name' => 'Anna'], $anna['cookies']);
+    same(200, $own->status, 'das eigene Profil bleibt für einen selbst sichtbar');
+    same([true, false], [$own->body['profile']['me'], $own->body['profile']['listed']]);
+    same(404, siteGet($app, 'players/profile', ['name' => 'Anna'], $max['cookies'])->status, 'andere sehen es nicht');
     $app->pdo->exec("UPDATE users SET status = 'locked' WHERE display_name = 'Max'");
     same(404, siteGet($app, 'players/profile', ['name' => 'Max'])->status);
 });

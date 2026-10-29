@@ -434,6 +434,8 @@ function setupTabs(root) {
       show(tab.dataset.tabTarget);
     });
   }
+  // Das Menü in der Kopfzeile springt auf derselben Seite nur im Anker (#sicherheit …).
+  window.addEventListener('hashchange', () => show(window.location.hash.slice(1)));
   show(window.location.hash.slice(1));
 }
 
@@ -447,7 +449,6 @@ function setupProfile(root, user, csrf) {
     root.querySelector('[data-name]').textContent = current.display_name;
     const badges = [current.email_verified ? 'E-Mail bestätigt' : 'E-Mail unbestätigt', current.two_factor ? 'Zwei-Faktor an' : 'Zwei-Faktor aus'];
     root.querySelector('[data-badges]').replaceChildren(...badges.map((text) => Object.assign(document.createElement('span'), { className: 'pill', textContent: text })));
-    // Sichtbar nur, solange das Konto in Ranglisten erscheint (setzt loadStats).
     root.querySelector('[data-profile-link]').href = `/spieler/?name=${encodeURIComponent(current.display_name)}`;
     // Nur für Konten mit Rechten: Link zur passenden Zentrale (Testseite → Test-Zentrale)
     const admin = root.querySelector('[data-admin-link]');
@@ -537,14 +538,15 @@ async function loadStats(root, csrf) {
     return item;
   }));
   const ranks = root.querySelector('[data-leaderboard-optin]');
-  const profileLink = root.querySelector('[data-profile-link]');
+  // Das eigene Profil ist immer erreichbar; andere sehen es nur, solange man in den Ranglisten erscheint.
+  const privateHint = root.querySelector('[data-profile-private]');
   ranks.checked = !data.leaderboard_opt_out;
-  profileLink.hidden = !ranks.checked;
+  privateHint.hidden = ranks.checked;
   ranks.onchange = async () => {
     ranks.disabled = true;
     await api('account/leaderboard/settings', { method: 'POST', body: { opt_out: !ranks.checked }, csrf });
     ranks.disabled = false;
-    profileLink.hidden = !ranks.checked;
+    privateHint.hidden = ranks.checked;
   };
   toggle.onchange = async () => {
     if (!toggle.checked && !window.confirm('Statistik nicht mehr deinem Konto zuordnen? Auch die bisherige wird vom Konto getrennt und zählt nur noch anonym.')) {
@@ -685,7 +687,10 @@ pages[root?.dataset.page]?.(root);
 async function setupStyle(root, user, csrf) {
   const panel = root.querySelector('[data-style-panel]');
   const { ok, data } = await api('account/profile-style');
-  if (!ok || !panel) return;
+  if (!ok || !panel) {
+    root.querySelector('[data-style-loading]').textContent = 'Das Aussehen lässt sich gerade nicht laden. Bitte später noch einmal versuchen.';
+    return;
+  }
   const choice = { ...data.current, pins: [...data.current.pins] };
   const unlockedBanner = data.banners.find((b) => b.unlocked && b.id === choice.banner);
   if (!unlockedBanner) choice.banner = 'nacht';
@@ -701,7 +706,20 @@ async function setupStyle(root, user, csrf) {
   const names = Object.fromEntries(await Promise.all([...new Set(data.achievements.map((a) => a.app_id))]
     .map(async (app) => [app, await loadAchievementNames(app)])));
 
+  // Live-Vorschau oben: Banner, Profilbild, Titel und Name, wie sie andere sehen
+  const preview = root.querySelector('[data-style-preview]');
+  const renderPreview = () => {
+    preview.className = `player-hero style-preview banner--${choice.banner ?? 'nacht'}`;
+    root.querySelector('[data-preview-avatar]').innerHTML = avatarSvg({ avatar: user.avatar, color: user.avatar_color, name: user.display_name }, 72);
+    root.querySelector('[data-preview-name]').textContent = user.display_name;
+    const title = data.titles.find((t) => t.id === choice.title);
+    const titleBox = root.querySelector('[data-preview-title]');
+    titleBox.textContent = title?.name ?? '';
+    titleBox.hidden = !title;
+  };
+
   const render = () => {
+    renderPreview();
     banners.replaceChildren(...data.banners.map((banner) => {
       const button = document.createElement('button');
       button.type = 'button';
@@ -757,4 +775,5 @@ async function setupStyle(root, user, csrf) {
 
   render();
   panel.hidden = false;
+  root.querySelector('[data-style-loading]').hidden = true;
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mein Konto – Bens Games</title>
+  <title>Profil & Einstellungen – Bens Games</title>
   <meta name="color-scheme" content="dark light">
   <!-- HEAD -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -19,11 +19,13 @@
       </a>
       <nav aria-label="Hauptnavigation">
         <a href="/">Bibliothek</a>
+        <a href="/ranglisten/">Ranglisten</a>
+        <!-- ACCOUNT_NAV -->
       </nav>
     </div>
   </header>
 
-  <main class="container auth auth--wide konto" data-page="konto">
+  <main class="container auth auth--wide konto konto--settings" data-page="konto">
     <div data-details hidden>
       <section class="profile-card">
         <span class="profile-card__avatar" data-profile-avatar></span>
@@ -31,23 +33,29 @@
           <h1 data-name></h1>
           <p data-email></p>
           <p class="profile-card__badges" data-badges></p>
-          <a class="profile-card__link" href="/spieler/" data-profile-link hidden>Mein öffentliches Profil ansehen →</a>
+          <p class="profile-card__private" data-profile-private hidden>🔒 Dein Profil sieht gerade nur du – andere erst, wenn du unter „Spiele & Ranglisten“ in den Ranglisten erscheinst.</p>
           <a class="profile-card__link profile-card__admin" href="https://admin.bens-games.de/" data-admin-link hidden>Zur Zentrale →</a>
         </div>
-        <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
+        <div class="profile-card__actions">
+          <a class="button button--small" href="/spieler/" data-profile-link>👤 Mein Profil</a>
+          <button class="button button--secondary button--small" type="button" data-logout>Abmelden</button>
+        </div>
       </section>
 
+      <div class="konto-layout">
       <nav class="tabs" role="tablist" aria-label="Einstellungen">
-        <button type="button" role="tab" data-tab-target="profil">Profil</button>
-        <button type="button" role="tab" data-tab-target="spiele">Spiele</button>
-        <button type="button" role="tab" data-tab-target="sicherheit">Sicherheit</button>
-        <button type="button" role="tab" data-tab-target="konto">Konto</button>
+        <button type="button" role="tab" data-tab-target="profil">✏️ <span>Profil</span></button>
+        <button type="button" role="tab" data-tab-target="aussehen">🎨 <span>Aussehen</span></button>
+        <button type="button" role="tab" data-tab-target="spiele">🎮 <span>Spiele & Ranglisten</span></button>
+        <button type="button" role="tab" data-tab-target="sicherheit">🔒 <span>Sicherheit</span></button>
+        <button type="button" role="tab" data-tab-target="konto">⚙️ <span>Konto</span></button>
       </nav>
+      <div class="konto-layout__content">
 
       <div data-group="profil" role="tabpanel">
         <section class="panel" aria-labelledby="titel-profil">
           <h2 id="titel-profil">Profilbild</h2>
-          <p class="auth__lead">Erscheint oben in der Kopfzeile und in den Ranglisten.</p>
+          <p class="auth__lead">Erscheint in deinem Profil, oben in der Kopfzeile und in den Ranglisten.</p>
           <div class="avatar-picker" data-avatar-grid role="radiogroup" aria-label="Motiv"></div>
           <h3 class="picker-title">Farbe</h3>
           <div class="color-picker" data-color-grid role="radiogroup" aria-label="Farbe"></div>
@@ -71,10 +79,23 @@
             <button class="button" type="submit">Name speichern</button>
           </form>
         </section>
+      </div>
 
+      <div data-group="aussehen" role="tabpanel">
+        <p class="auth__lead" data-style-loading>Wird geladen …</p>
         <section class="panel" aria-labelledby="titel-gestalten" data-style-panel hidden>
-          <h2 id="titel-gestalten">Profil gestalten</h2>
-          <p class="auth__lead">So sieht dein <a data-style-link href="/spieler/">öffentliches Profil</a> aus. Neue Banner und Titel schaltest du mit Erfolgen, Platzierungen und eigenen Leveln frei.</p>
+          <h2 id="titel-gestalten">Aussehen deines Profils</h2>
+          <p class="auth__lead">Die Vorschau zeigt, wie andere dein <a data-style-link href="/spieler/">Profil</a> sehen. Neue Banner und Titel schaltest du mit Erfolgen, Platzierungen und eigenen Leveln frei.</p>
+          <div class="player-hero style-preview" data-style-preview aria-label="Vorschau">
+            <div class="player-hero__main">
+              <span class="player-hero__avatar" data-preview-avatar></span>
+              <div class="player-hero__text">
+                <p class="player-hero__title" data-preview-title hidden></p>
+                <h1 data-preview-name></h1>
+                <p class="player-hero__since">Vorschau</p>
+              </div>
+            </div>
+          </div>
           <p class="notice" data-style-rank></p>
 
           <p class="style-label">Banner</p>
@@ -218,7 +239,7 @@
         <h2 id="titel-daten">Deine Daten</h2>
         <p class="auth__lead">
           Was wir speichern und wie lange, steht in der <a href="/datenschutz/">Datenschutzerklärung</a>.
-          Spielstatistik und Ranglisten kannst du unter „Spiele“ abschalten.
+          Spielstatistik und Ranglisten kannst du unter „Spiele & Ranglisten“ abschalten.
         </p>
       </section>
 
@@ -239,6 +260,8 @@
           <button class="button button--danger" type="submit">Konto löschen</button>
         </form>
       </section>
+      </div>
+      </div>
       </div>
     </div>
   </main>
