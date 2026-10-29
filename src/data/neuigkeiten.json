@@ -1,6 +1,18 @@
 [
   {
     "app": "drei-fronten",
+    "version": "0.11",
+    "date": "2026-10-29",
+    "title": "Online-Duelle ⚔️",
+    "points": [
+      "Fordere Freunde mit einem Raum-Code oder Einladungslink heraus",
+      "Schnelles Duell gegen jemanden, der gerade auch sucht",
+      "Ohne Konto als Gast spielbar – mit Konto mit Namen und Profilbild"
+    ],
+    "reinstall": false
+  },
+  {
+    "app": "drei-fronten",
     "version": "0.10",
     "date": "2026-10-28",
     "title": "Neues Spiel: Drei Fronten ⚔️",
